@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minion Survivor — 5 Minute Run</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="hud-stat">
+          <span class="label">TIME</span>
+          <span id="timer" class="value">5:00</span>
+        </div>
+        <div class="hud-stat center">
+          <span class="label">WAVE</span>
+          <span id="wave" class="value">1</span>
+        </div>
+        <div class="hud-stat right">
+          <span class="label">KILLS</span>
+          <span id="kills" class="value">0</span>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="hp-bar-wrap">
+          <div id="hp-bar" class="hp-bar"></div>
+          <span id="hp-text">100 / 100</span>
+        </div>
+        <div class="xp-bar-wrap">
+          <div id="xp-bar" class="xp-bar"></div>
+          <span id="level-text">LV 1</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <h1>MINION SURVIVOR</h1>
+      <p class="subtitle">Brotato-inspired 5-minute survival</p>
+      <div class="minion-preview"></div>
+      <p class="instructions">
+        <kbd>WASD</kbd> or <kbd>Arrow Keys</kbd> to move<br>
+        Auto-attack the horde. Collect XP. Pick upgrades.<br>
+        <strong>Survive 5 minutes!</strong>
+      </p>
+      <button id="start-btn" class="btn-primary">START RUN</button>
+    </div>
+
+    <div id="upgrade-screen" class="overlay hidden">
+      <h2>LEVEL UP!</h2>
+      <p class="subtitle">Choose an upgrade</p>
+      <div id="upgrade-cards"></div>
+    </div>
+
+    <div id="end-screen" class="overlay hidden">
+      <h2 id="end-title">VICTORY!</h2>
+      <div id="end-stats"></div>
+      <button id="restart-btn" class="btn-primary">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
