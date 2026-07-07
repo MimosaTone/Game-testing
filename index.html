@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minion Mayhem — 5 Min Survival</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>🍌 Minion Mayhem</h1>
+      <p class="tagline">Survive 5 minutes. Bananas optional.</p>
+    </header>
+
+    <div id="game-container">
+      <canvas id="game" width="960" height="640"></canvas>
+
+      <div id="hud" class="hidden">
+        <div class="hud-row">
+          <div class="hud-item timer">
+            <span class="label">Time</span>
+            <span id="timer-display">5:00</span>
+          </div>
+          <div class="hud-item">
+            <span class="label">Wave</span>
+            <span id="wave-display">1</span>
+          </div>
+          <div class="hud-item">
+            <span class="label">Kills</span>
+            <span id="kills-display">0</span>
+          </div>
+          <div class="hud-item">
+            <span class="label">Score</span>
+            <span id="score-display">0</span>
+          </div>
+        </div>
+        <div class="health-bar-wrap">
+          <div id="health-bar"></div>
+        </div>
+        <div class="xp-bar-wrap">
+          <div id="xp-bar"></div>
+          <span id="level-display">Lv 1</span>
+        </div>
+      </div>
+
+      <div id="overlay">
+        <div id="start-screen" class="screen">
+          <div class="minion-preview"></div>
+          <h2>Minion Mayhem</h2>
+          <p class="desc">Brotato-style survival — dodge, auto-banana, level up!</p>
+          <ul class="controls">
+            <li><kbd>WASD</kbd> or <kbd>↑↓←→</kbd> — Move</li>
+            <li>Auto-attacks nearest enemy</li>
+            <li>Collect XP orbs to level up</li>
+            <li><strong>Survive 5 minutes to win!</strong></li>
+          </ul>
+          <button id="start-btn" class="btn-primary">Start Mayhem</button>
+        </div>
+
+        <div id="levelup-screen" class="screen hidden">
+          <h2>Level Up!</h2>
+          <p>Choose an upgrade:</p>
+          <div id="upgrade-choices"></div>
+        </div>
+
+        <div id="end-screen" class="screen hidden">
+          <h2 id="end-title">Victory!</h2>
+          <p id="end-message"></p>
+          <div id="end-stats"></div>
+          <button id="restart-btn" class="btn-primary">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
