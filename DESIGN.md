@@ -1,6 +1,6 @@
 # Army Commander — Game Design Document
 
-**Version 1.2** — Command Instruments reframed around battlefield decisions and active leadership interactions. M2 implements the command layer per the milestone roadmap below. Features not listed in a milestone are out of scope until that milestone ships.
+**Version 1.3** — Range systems separated (Bond, Command, Designation). Scout Report locked as Longbow ability. Presence documented for future. M2 implements the command layer per the milestone roadmap below.
 
 ## Core Pillars
 
@@ -322,24 +322,52 @@ INSTRUMENT
 
 | Action | Input | Effect | Damage |
 |---|---|---|---|
-| **Designate** | RMB on enemy / Focus order | Priority mark with **threat tier** (skull icon); army obeys Focus with extended range | None |
-| **Survey** | Hold `Tab` or short cooldown key | Reveals enemies in a forward **cone** for 3s (fog, stealth, approaching waves) | None |
-| **Signal Arrow** | Click ground (short CD) | Fires a **non-damaging** marker bolt to a location; pings allies toward that point (soft Rally) | Negligible |
+| **Designate** | RMB on enemy / Focus order | Priority mark with **threat tier**; uses **Designation Range** (not Bond Range) | None |
+| **Scout Report** | Ability bar (CP or cooldown) | Generates **battlefield intelligence** (see below) — not a map reveal | None |
+| **Signal Arrow** | Click ground (short CD) | **Non-damaging** marker bolt; soft Rally ping toward location | Negligible |
+
+#### Scout Report *(locked name)*
+
+Renamed from "Survey." Chosen over Scout / Recon / Battlefield Recon because it matches existing commander language ("scout reports" from enemy commanders) and reinforces the **intelligence officer** fantasy.
+
+**Input:** Commander Ability on the **ability bar** — not a held key (`Tab`). Keeps all commander actions in one interface; supports keyboard, controller, and future mobile; leaves room for upgrades.
+
+**Output:** Battlefield **intelligence**, not fog-of-war removal. Each Scout Report presents 1–3 actionable insights drawn from current battlefield state:
+
+| Intelligence Type | Example | Decision It Enables |
+|---|---|---|
+| **Enemy Commander identified** | "Warlord elite squad northeast" | Prepare focus fire or avoidance |
+| **Largest threat** | "Brute unit approaching companion" | Reposition or Defend |
+| **Incoming reinforcements** | "Reinforcements arriving east in 15s" | Intercept or fortify |
+| **Weak flank** | "Enemy left flank exposed" | Flank order or exploitation |
+| **Nearby objective** | "Capture point undefended" | Contest or ignore |
+| **Elite detected** | "Elite marker on artillery" | Priority designation |
+
+**Design rules:**
+- Intelligence must be **actionable** — tied to a decision the player can take with existing orders
+- Scout Report does not permanently reveal the map — it delivers a **report** (UI panel + optional world ping)
+- Using Scout Report before Designate grants **bonus obedience** on the next Focus (reward for assess → execute loop)
+- Upgrade path (future): more insights per report, longer intel duration, enemy commander tells
 
 **Battlefield awareness mechanics:**
 - Threat indicators persist on designated targets until changed
-- Survey reveals off-screen spawns during events (Artillery Barrage zones, reinforcement direction)
-- Commander gains **elevated awareness** at range — HUD shows threat vectors toward companion/objective
-- Designating a target while Survey is active grants **bonus obedience** on Focus (reward for reading the field)
+- Scout Report intel expires after 10–15s — player must re-scout as battlefield shifts
+- HUD threat vectors toward companion/objective when intel is active
 
 **Order expression:**
-- Focus Target and Rally Point issued from **extended range**
-- Commander does **not** need to be in melee for orders to carry full weight
-- Orders issued while commander is surrounded have +1s obedience delay (commander must stay composed)
+- Focus Target uses **Designation Range**
+- Other orders use **Command Range** (extended for Longbow, separate from Bond)
+- Commander does **not** need to be in melee for designation
+- Orders issued while commander is surrounded have +1s obedience delay
 
-**Limitation:** No frontline authority. If the army collapses into melee around the commander, designation becomes unreliable.
+**Bond interaction:**
+- Long designation range does **not** extend Bond Range
+- Player can mark threats from afar but must still manage companion synchronization separately
+- Rear command is viable — not a bypass of cohesion tension
 
-**What it is NOT:** A ranged DPS weapon. The arrow is a signal, not a bullet.
+**Limitation:** No frontline authority. Surrounded commander loses designation clarity. Bond still matters.
+
+**What it is NOT:** A ranged DPS weapon or a map hack. The arrow is a signal; Scout Report is intelligence.
 
 ---
 
@@ -357,16 +385,30 @@ INSTRUMENT
 
 | Action | Input | Effect | Damage |
 |---|---|---|---|
-| **Plant Banner** | Key `F` (toggle) | Creates a visible **Influence Zone** (circle) centered on commander; zone moves when commander moves | None |
-| **Rally Cry** | `Q` (replaces War Cry) | Units inside influence zone gain obedience speed + damage for 6s; **requires** units to be in zone | None |
-| **Hold the Line** | `E` (replaces Tactical Rally) | Influence zone becomes a **fortified area** for 4s — units inside resist displacement and gain DR | None |
+| **Plant Banner** | Key `F` | Creates **Influence Zone** centered on commander | None |
+| **Rally Cry** | `Q` (replaces War Cry) | Units inside zone: obedience speed + damage for 6s | None |
+| **Hold the Line** | `E` (replaces Tactical Rally) | Zone fortified 4s — resist displacement + DR | None |
+
+#### Banner Relocation *(locked behavior)*
+
+When the commander moves beyond a threshold distance, the banner enters a **0.5s setup period** to relocate.
+
+| During Setup | Commander |
+|---|---|
+| Influence zone **inactive** (no morale buffs) | **Fully responsive** — can move, issue orders, use abilities |
+| Previous zone benefits **lost temporarily** | Not stunned, not punished |
+
+**Decision created:** *"Do I keep my current morale zone, or sacrifice it briefly to reposition for stronger advantage?"*
+
+This is a **tactical tradeoff**, not a punishment. No damage vulnerability, no control lockout. The cost is temporary loss of influence — the player chooses when that cost is worth paying.
 
 **Area of influence mechanics:**
-- Influence zone is always visible (colored ground ring, banner sprite above commander)
-- Units inside zone: faster order obedience, small morale regen (future: affects swarm count cap)
-- Units outside zone: normal behavior, no penalty — but **no banner benefit** (incentivizes positioning, not punishment)
-- Commander **cannot attack**. No weapon animation. Leadership is the action.
-- CP regenerates faster while 2+ allied units are inside influence zone
+- Influence zone visible when active (colored ground ring, banner sprite)
+- **Inactive during 0.5s setup** — clear visual (dimmed ring, planting animation)
+- Units inside active zone: faster obedience, morale regen (future)
+- Units outside zone: normal behavior, no penalty
+- Commander **cannot attack**. No weapon animation.
+- CP regenerates faster while 2+ allied units inside **active** zone
 
 **Order expression:**
 - Rally Point placed **inside** influence zone has 2× effect radius
@@ -428,7 +470,7 @@ The commander's direct combat output is always negligible. Instruments provide *
 
 | Instrument | Direct Combat | Primary Activity |
 |---|---|---|
-| Longbow | Signal Arrow (ping only) | Designate, Survey, direct focus |
+| Longbow | Signal Arrow (ping only) | Designate, Scout Report, direct focus |
 | Battle Banner | None | Plant zone, Rally Cry, anchor ground |
 | Greatsword (future) | Weak melee + taunt | Challenge, frontline legitimization |
 | Sword & Shield (future) | Weak melee + brace | Anchor, redirect |
@@ -480,6 +522,86 @@ When commander and companion separate beyond bond radius, the companion does not
 | **Attack** | Full-speed pursuit | Cautious advance, stops at mid-range |
 | **Rally Point** | Moves directly to point | Slow pathing; may stop to fight en route |
 | **Defend** | Intercepts threats to commander | Defends self first, commander second |
+
+---
+
+## Commander Range Systems
+
+Range and influence are **separate systems**. They must remain independently tunable so no single upgrade (e.g. Longbow designation) bypasses the others. Architecture should support a fourth system — **Presence** — in the future without refactoring.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  RANGE & INFLUENCE (independent, stackable, never merged)   │
+├─────────────────┬───────────────────────────────────────────┤
+│  Bond Range     │  Commander ↔ Companion synchronization    │
+│  (M2)           │  Cohesion, obedience, synergy bonuses     │
+├─────────────────┼───────────────────────────────────────────┤
+│  Command Range  │  How far battlefield orders propagate     │
+│  (M4.5)         │  Full effectiveness within range        │
+├─────────────────┼───────────────────────────────────────────┤
+│  Designation    │  How far Longbow marks priority targets   │
+│  Range (M4.5)   │  Independent of Bond and Command          │
+├─────────────────┼───────────────────────────────────────────┤
+│  Presence       │  Commander proximity influence on army    │
+│  (FUTURE)       │  Morale, discipline, response time      │
+└─────────────────┴───────────────────────────────────────────┘
+```
+
+### Bond Range *(implemented M2)*
+
+**What it governs:** Synchronization between Commander and Companion only.
+
+| In Range | Out of Range |
+|---|---|
+| Instant obedience | Obedience delay |
+| Synergy bonuses (+dmg, +DR) | Desynced behavior (defensive drift) |
+| Resync animation on re-entry | "I've lost my partner" |
+
+**Does NOT govern:** How far orders travel. How far Longbow marks targets. Army-wide morale.
+
+**Current value:** 120 units (placeholder tuning).
+
+### Command Range *(M4.5)*
+
+**What it governs:** How far Tier 1 battlefield orders (Hold, Attack, Defend, Rally, Focus) propagate with **full effectiveness**.
+
+| Within Command Range | Beyond Command Range |
+|---|---|
+| Orders execute normally | Orders weakened, delayed, or ignored (tune per order) |
+| Commander leadership reaches the army | Army fights on its own initiative |
+
+**Default (no instrument):** Command Range ≈ Bond Range — commander must stay near companion for orders to carry.
+
+**Longbow modifier:** Extends Command Range significantly. Commander can issue orders from rear echelon — but Bond Range is unchanged. Long-range command is an advantage; it does not replace the need to maintain companion synchronization.
+
+**Key rule:** Extending Command Range never extends Bond Range.
+
+### Designation Range *(M4.5, Longbow only)*
+
+**What it governs:** How far the Longbow can **mark priority targets** (Designate / Focus Target).
+
+- Separate from Bond Range and Command Range
+- Allows target marking at distance without implying cohesion or full order authority at that distance
+- Designating a far target still requires Command Range to reach companion for Focus to execute — or companion must already be in range of the target
+
+**Decision tension:** "I can *see* and *mark* that threat, but can my army *act* on it without me repositioning?"
+
+### Presence *(FUTURE — do not implement until post-M4.5)*
+
+**What it will govern:** The influence a Commander has by being **physically near their army** — distinct from Bond (companion sync), Command (order propagation), and Designation (target marking).
+
+High Presence may eventually improve:
+- Morale
+- Formation discipline
+- Order response time
+- Cohesion
+- Confidence
+
+**Why document now:** Code architecture for range checks, ability systems, and instrument modifiers must use **separate values and systems** — not one merged "commander radius." Presence slots in later without refactoring.
+
+**Battle Banner influence zone** is instrument-specific area control, not Presence. Presence is a universal commander stat; banner zone is an instrument mechanic. They may interact in the future but are not the same system.
+
+---
 
 ## Dynamic Battlefield Events
 
@@ -750,12 +872,13 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 ### M4.5: Command Instruments
 - **Instrument selection** at run start (2 instruments: Longbow, Battle Banner)
-- **Longbow:** Designate, Survey, Signal Arrow — target awareness, not ranged DPS
-- **Battle Banner:** Plant Banner influence zone, Rally Cry, Hold the Line — no commander attack
-- Instrument-specific abilities replace War Cry / Tactical Rally where noted
-- Setup screen expanded with instrument choice + decision-loop tutorial tooltips
+- **Range systems:** Bond, Command Range, Designation Range implemented as separate checks
+- **Longbow:** Designate, **Scout Report** (ability bar), Signal Arrow
+- **Battle Banner:** Plant Banner, Rally Cry, Hold the Line; 0.5s inactive relocation
+- Architecture leaves hooks for future **Presence** system (no implementation)
+- Setup screen expanded with instrument choice + decision-loop tooltips
 
-**Playtest question:** Does each instrument make you ask a different question every 10–20 seconds? Does the commander feel like a leader, not a fighter with a different animation?
+**Playtest question:** Does Scout Report make you make better decisions? Does banner relocation feel like a tradeoff, not a punishment? Does long-range command still leave bond tension intact?
 
 ### M5: Swarm Master + Domination
 - Second commander selectable at run start
@@ -827,15 +950,20 @@ When commander and companion are within bond radius, both gain:
 | **Command instruments** | Active battlefield decisions every 10–20s; not DPS or animation swaps | Leadership interactions, not weapons |
 | **Instrument debut scope** | 2 instruments (Longbow, Battle Banner) after M4 | Polished decision loops over shallow variety |
 | **Battle Banner combat** | Commander cannot attack; influence zone is the instrument | Presence-based leadership, not flag melee |
+| **Scout Report input** | Ability bar (CP or cooldown), not held Tab | Unified commander interface; mobile/controller ready |
+| **Scout Report output** | Actionable battlefield intelligence, not map reveal | Supports assess → decide loop |
+| **Banner relocation** | 0.5s setup; zone inactive; commander fully responsive | Tactical tradeoff, not punishment |
+| **Range systems** | Bond, Command, and Designation are separate | Long command never bypasses bond tension |
+| **Presence system** | Documented for future; architecture stays modular | Fourth influence layer without refactor |
 
 ## Open Design Questions
 
 Questions to resolve before implementing Command Instruments (M4.5):
 
-1. **Survey input** — Dedicated key (`Tab`) vs. held modifier vs. cooldown ability? Recommend cooldown ability on instrument bar for mobile parity.
-2. **Influence zone relocation** — Should moving the banner have a brief "tearing down / planting" vulnerability window? Recommend 0.5s plant animation (matches cohesion resync timing).
-3. **Longbow + cohesion** — Does rear-echelon designation reduce desync tension too much? May need "command chain" range separate from bond range.
-4. **Instrument ability bar** — Replace Q/E per instrument, or add instrument-specific keys (F for banner)? Recommend Q/E remap per instrument + one instrument key (F).
+1. **Scout Report cost** — 1 CP, 0 CP with cooldown, or free with long cooldown? Recommend 1 CP to fit assess → commit cadence.
+2. **Command Range default** — Equal to Bond Range for base commander, or slightly larger? Recommend equal until instruments modify it.
+3. **Instrument ability bar layout** — Q/E remap per instrument + F for banner plant; confirm controller mapping.
+4. **Presence implementation milestone** — Defer to M7+; validate range architecture during M4.5 instrument implementation.
 
 Questions to resolve during M2–M3 playtesting:
 
