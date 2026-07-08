@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
+import { SetupScene } from './scenes/SetupScene';
 import { UIScene } from './scenes/UIScene';
 import { GAME_HEIGHT, GAME_WIDTH } from './config';
 
@@ -16,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, GameScene, UIScene],
+  scene: [BootScene, SetupScene, GameScene, UIScene],
 };
 
 export function startGame(): Phaser.Game {

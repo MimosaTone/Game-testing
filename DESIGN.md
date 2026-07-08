@@ -1,4 +1,6 @@
-# Army Commander — Design Document
+# Army Commander — Game Design Document
+
+**Version 1.0** — Locked design decisions. M2 implements the command layer per the milestone roadmap below. Features not listed in a milestone are out of scope until that milestone ships.
 
 ## Core Pillars
 
@@ -524,7 +526,7 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 **Playtest question:** Does commanding feel better than fighting directly?
 
-### M2: Command Layer + Doctrine
+### M2: Command Layer + Doctrine ✅
 - **Tier 1 orders:** Hold, Attack, Defend, Rally Point, Focus Target (cooldown-gated, no CP cost)
 - **Tier 2 abilities:** War Cry, Tactical Rally (CP + cooldown); Emergency Retreat, Inspire (post-M2 polish)
 - **Bond & Cohesion:** Desynced companion becomes uncoordinated (obedience delay, defensive drift) — not just stat penalty

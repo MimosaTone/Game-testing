@@ -7,8 +7,9 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.generateTextures();
-    this.scene.start('GameScene');
+    this.scene.start('SetupScene');
     this.scene.launch('UIScene');
+    this.scene.sleep('UIScene');
   }
 
   private generateTextures(): void {
@@ -17,16 +18,6 @@ export class BootScene extends Phaser.Scene {
     gfx.fillStyle(0xffffff);
     gfx.fillCircle(16, 16, 16);
     gfx.generateTexture('circle', 32, 32);
-    gfx.clear();
-
-    gfx.lineStyle(2, 0xffffff, 0.4);
-    gfx.strokeCircle(16, 16, 16);
-    gfx.generateTexture('bond-ring', 32, 32);
-    gfx.clear();
-
-    gfx.fillStyle(0xffffff);
-    gfx.fillRect(0, 0, 8, 8);
-    gfx.generateTexture('particle', 8, 8);
     gfx.destroy();
   }
 }

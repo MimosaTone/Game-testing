@@ -39,6 +39,38 @@ export const SYNERGY = {
   damageReduction: 0.1,
 };
 
+export const COHESION = {
+  obedienceDelayMs: 1750,
+  resyncDurationMs: 500,
+  desyncedPursuitRangeMultiplier: 1.5,
+};
+
+export const COMMAND = {
+  orderCooldowns: {
+    hold: 1500,
+    attack: 1500,
+    defend: 2000,
+    rallyPoint: 2000,
+    focusTarget: 2000,
+  } as const,
+  cpMax: 3,
+  cpRegenMs: 20_000,
+  abilities: {
+    warCry: { cpCost: 2, durationMs: 6000, damageBonus: 0.25 },
+    tacticalRally: { cpCost: 1, cooldownMs: 20_000, durationMs: 4000, damageReduction: 0.25 },
+  },
+  shockAssault: {
+    focusFireDurationMs: 5000,
+    focusFireSpeedBonus: 0.5,
+    focusFireCooldownMs: 3000,
+    defendEffectiveness: 0.7,
+  },
+  ironWall: {
+    holdDamageReduction: 0.2,
+    movementSpeedMultiplier: 0.8,
+  },
+};
+
 export const SURVIVAL_DURATION_MS = 90_000;
 
 export const WAVE_CONFIG = {

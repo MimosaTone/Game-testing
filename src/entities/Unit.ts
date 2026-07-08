@@ -1,17 +1,8 @@
 import Phaser from 'phaser';
 import { COMMANDER, COMPANION, ENEMY, GAME_HEIGHT, GAME_WIDTH } from '../config';
+import type { CohesionState } from '../cohesion/CohesionSystem';
 
-export interface CombatEntity {
-  sprite: Phaser.GameObjects.Arc;
-  body: Phaser.Physics.Arcade.Body;
-  maxHealth: number;
-  health: number;
-  attackDamage: number;
-  attackRange: number;
-  attackCooldown: number;
-  lastAttackTime: number;
-  isAlive: boolean;
-}
+let nextEnemyId = 0;
 
 export abstract class Unit {
   readonly sprite: Phaser.GameObjects.Arc;
@@ -23,8 +14,12 @@ export abstract class Unit {
   attackCooldown: number;
   lastAttackTime = 0;
   isAlive = true;
-  damageMultiplier = 1;
-  damageReduction = 0;
+  synergyDamageBonus = 0;
+  synergyDamageReduction = 0;
+  abilityDamageMultiplier = 1;
+  abilityDamageReduction = 0;
+  bonusDamageReduction = 0;
+  attackCooldownMultiplier = 1;
 
   constructor(
     scene: Phaser.Scene,
@@ -60,7 +55,19 @@ export abstract class Unit {
   }
 
   get effectiveDamage(): number {
-    return this.attackDamage * this.damageMultiplier;
+    return this.attackDamage * (1 + this.synergyDamageBonus) * this.abilityDamageMultiplier;
+  }
+
+  get damageReduction(): number {
+    return Math.min(0.75, this.synergyDamageReduction + this.abilityDamageReduction + this.bonusDamageReduction);
+  }
+
+  set damageReduction(_value: number) {
+    // Use bonusDamageReduction for temporary hold bonuses.
+  }
+
+  get effectiveAttackCooldown(): number {
+    return this.attackCooldown * this.attackCooldownMultiplier;
   }
 
   takeDamage(amount: number): void {
@@ -92,7 +99,7 @@ export abstract class Unit {
   }
 
   canAttack(now: number): boolean {
-    return now - this.lastAttackTime >= this.attackCooldown;
+    return now - this.lastAttackTime >= this.effectiveAttackCooldown;
   }
 
   tryAttack(target: Unit, now: number): boolean {
@@ -105,17 +112,21 @@ export abstract class Unit {
     return true;
   }
 
+  stop(): void {
+    this.body.setVelocity(0, 0);
+  }
+
   destroy(): void {
     this.sprite.destroy();
   }
 }
 
 export class Commander extends Unit {
-  private readonly speed: number;
+  private readonly baseSpeed: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, COMMANDER.radius, COMMANDER.color, COMMANDER);
-    this.speed = COMMANDER.speed;
+    this.baseSpeed = COMMANDER.speed;
   }
 
   protected getColor(): number {
@@ -124,55 +135,67 @@ export class Commander extends Unit {
 
   move(velocity: Phaser.Math.Vector2): void {
     if (!this.isAlive) return;
-    velocity.normalize().scale(this.speed);
+    velocity.normalize().scale(this.baseSpeed);
     this.body.setVelocity(velocity.x, velocity.y);
-  }
-
-  stop(): void {
-    this.body.setVelocity(0, 0);
   }
 }
 
 export class Companion extends Unit {
-  private readonly speed: number;
-  private readonly followDistance: number;
+  private readonly baseSpeed: number;
   bondActive = false;
+  cohesionState: CohesionState = 'bonded';
+  speedMultiplier = 1;
+  ironWallHolding = false;
+  tacticalRallyActive = false;
+  isResyncing = false;
   private bondRing?: Phaser.GameObjects.Arc;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, COMPANION.radius, COMPANION.color, COMPANION);
-    this.speed = COMPANION.speed;
-    this.followDistance = COMPANION.followDistance;
+    this.baseSpeed = COMPANION.speed;
     this.bondRing = scene.add.circle(x, y, 8, 0xffd166, 0);
     this.bondRing.setStrokeStyle(2, 0xffd166, 0);
     this.bondRing.setDepth(-1);
+  }
+
+  get effectiveSpeed(): number {
+    let speed = this.baseSpeed * this.speedMultiplier;
+    if (this.tacticalRallyActive) speed *= 1.35;
+    return speed;
   }
 
   protected getColor(): number {
     return COMPANION.color;
   }
 
-  updateFollow(commander: Commander, delta: number): void {
-    if (!this.isAlive) return;
+  beginResync(commander: Commander): void {
+    this.isResyncing = true;
+    this.stop();
+    void commander;
+  }
 
-    const dist = Phaser.Math.Distance.Between(this.x, this.y, commander.x, commander.y);
-    if (dist > this.followDistance) {
-      const angle = Phaser.Math.Angle.Between(this.x, this.y, commander.x, commander.y);
-      const speed = Math.min(this.speed, (dist - this.followDistance) * 3);
-      this.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-    } else if (dist < this.followDistance * 0.5) {
-      this.body.setVelocity(0, 0);
-    } else {
-      this.body.setVelocity(this.body.velocity.x * 0.9, this.body.velocity.y * 0.9);
-    }
+  updateResync(commander: Commander): void {
+    if (!this.isResyncing) return;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, commander.x, commander.y);
+    this.sprite.setRotation(angle);
+    this.updateBondRing();
+  }
 
-    if (this.bondRing) {
-      this.bondRing.setPosition(this.x, this.y);
-      const alpha = this.bondActive ? 0.35 : 0;
-      this.bondRing.setStrokeStyle(2, 0xffd166, alpha);
-    }
+  finishResync(): void {
+    this.isResyncing = false;
+    this.sprite.setRotation(0);
+  }
 
-    void delta;
+  updateBondRing(): void {
+    if (!this.bondRing) return;
+    this.bondRing.setPosition(this.x, this.y);
+    const alpha =
+      this.cohesionState === 'bonded' ? 0.35 :
+      this.cohesionState === 'resyncing' ? 0.5 : 0.1;
+    const color =
+      this.cohesionState === 'bonded' ? 0xffd166 :
+      this.cohesionState === 'resyncing' ? 0x88ff88 : 0xff6666;
+    this.bondRing.setStrokeStyle(2, color, alpha);
   }
 
   destroy(): void {
@@ -182,10 +205,12 @@ export class Companion extends Unit {
 }
 
 export class Enemy extends Unit {
+  readonly id: string;
   private readonly speed: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, ENEMY.radius, ENEMY.color, ENEMY);
+    this.id = `enemy-${nextEnemyId++}`;
     this.speed = ENEMY.speed;
   }
 
@@ -198,15 +223,12 @@ export class Enemy extends Unit {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
     this.body.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
   }
-
-  stop(): void {
-    this.body.setVelocity(0, 0);
-  }
 }
 
 export function clampToArena(unit: Unit): void {
-  unit.sprite.x = Phaser.Math.Clamp(unit.sprite.x, unit.sprite.radius, GAME_WIDTH - unit.sprite.radius);
-  unit.sprite.y = Phaser.Math.Clamp(unit.sprite.y, unit.sprite.radius, GAME_HEIGHT - unit.sprite.radius);
+  const radius = (unit.sprite as Phaser.GameObjects.Arc).radius;
+  unit.sprite.x = Phaser.Math.Clamp(unit.sprite.x, radius, GAME_WIDTH - radius);
+  unit.sprite.y = Phaser.Math.Clamp(unit.sprite.y, radius, GAME_HEIGHT - radius);
 }
 
 export function getNearestEnemy(enemies: Enemy[], from: Unit): Enemy | null {
@@ -215,6 +237,43 @@ export function getNearestEnemy(enemies: Enemy[], from: Unit): Enemy | null {
   for (const enemy of enemies) {
     if (!enemy.isAlive) continue;
     const dist = Phaser.Math.Distance.Between(from.x, from.y, enemy.x, enemy.y);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = enemy;
+    }
+  }
+  return nearest;
+}
+
+export function getNearestEnemyToPoint(
+  enemies: Enemy[],
+  x: number,
+  y: number,
+): Enemy | null {
+  let nearest: Enemy | null = null;
+  let minDist = Infinity;
+  for (const enemy of enemies) {
+    if (!enemy.isAlive) continue;
+    const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = enemy;
+    }
+  }
+  return nearest;
+}
+
+export function getEnemyAtPoint(
+  enemies: Enemy[],
+  x: number,
+  y: number,
+  maxDist = 24,
+): Enemy | null {
+  let nearest: Enemy | null = null;
+  let minDist = maxDist;
+  for (const enemy of enemies) {
+    if (!enemy.isAlive) continue;
+    const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
     if (dist < minDist) {
       minDist = dist;
       nearest = enemy;
