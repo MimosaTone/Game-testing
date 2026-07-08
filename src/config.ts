@@ -45,6 +45,14 @@ export const COHESION = {
   desyncedPursuitRangeMultiplier: 1.5,
 };
 
+/** Protected combat exchange — commit blocks positioning overrides */
+export const COMBAT = {
+  commitRecoveryMs: 450,
+  commitApproachSpeedMult: 1.1,
+  commitApproachRangeMult: 1.3,
+  shellCommitMs: 2400,
+};
+
 /** Oathbound partner behavior — initiative without new orders */
 export const PARTNER = {
   screenOffset: 48,

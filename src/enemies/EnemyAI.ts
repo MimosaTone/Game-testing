@@ -1,5 +1,13 @@
 import Phaser from 'phaser';
 import type { Commander, Companion, Unit } from '../entities/Unit';
+import { COMBAT } from '../config';
+import {
+  beginExchangeCommit,
+  extendExchangeCommit,
+  isCommittedToTarget,
+  runCommittedExchange,
+  runCommittedRangedExchange,
+} from '../combat/combatCommit';
 import { ENEMY_AI } from './definitions';
 import type { EnemyUnit } from './EnemyUnit';
 import {
@@ -17,7 +25,6 @@ import {
   paceWhileWaiting,
   showHealPulse,
   showShellImpact,
-  tryCombatWithPace,
 } from './behaviorHelpers';
 
 export interface EnemyAIContext {
@@ -111,7 +118,13 @@ function applyKnockback(target: Unit, fromX: number, fromY: number, force: numbe
 function updateScout(enemy: EnemyUnit, ctx: EnemyAIContext): void {
   const { commander, companion, enemies, now } = ctx;
   if (!commander.isAlive) return;
-  if (ensureContestPressure(enemy, ctx)) return;
+
+  if (isCommittedToTarget(enemy, commander, now)) {
+    runCommittedExchange(enemy, commander, now);
+    return;
+  }
+
+  if (ensureContestPressure(enemy, ctx, now)) return;
 
   const alliesNearby = countAlliesNear(enemy, enemies, ENEMY_AI.scoutIsolationRadius);
   if (alliesNearby < ENEMY_AI.scoutAllyCountToHold) {
@@ -127,7 +140,10 @@ function updateScout(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     return;
   }
 
-  if (companion.isAlive) {
+  const distToCommander = Phaser.Math.Distance.Between(enemy.x, enemy.y, commander.x, commander.y);
+  const inAttackRange = distToCommander <= enemy.attackRange;
+
+  if (companion.isAlive && !inAttackRange) {
     const companionDist = Phaser.Math.Distance.Between(enemy.x, enemy.y, companion.x, companion.y);
     if (companionDist < ENEMY_AI.scoutEvasiveRange) {
       fleeFrom(enemy, companion.x, companion.y, 1.2);
@@ -135,19 +151,12 @@ function updateScout(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     }
   }
 
-  const flankPoint = getFlankPoint(commander, companion);
-  const distToCommander = Phaser.Math.Distance.Between(enemy.x, enemy.y, commander.x, commander.y);
-
-  if (distToCommander <= enemy.attackRange) {
-    if (enemy.canAttack(now)) {
-      enemy.stop();
-      enemy.tryAttack(commander, now);
-    } else {
-      paceWhileWaiting(enemy, commander, now, 'strafe');
-    }
+  if (inAttackRange || distToCommander <= enemy.attackRange * 2.5) {
+    runCommittedExchange(enemy, commander, now);
     return;
   }
 
+  const flankPoint = getFlankPoint(commander, companion);
   moveToward(enemy, flankPoint.x, flankPoint.y, 1.05);
 }
 
@@ -161,10 +170,14 @@ function getFlankPoint(commander: Commander, companion: Companion): { x: number;
 }
 
 function updateArcher(enemy: EnemyUnit, ctx: EnemyAIContext): void {
-  if (ensureContestPressure(enemy, ctx)) return;
-
   const cluster = pickClusterTarget(ctx);
   if (!cluster) return;
+
+  if (runCommittedRangedExchange(enemy, cluster, ctx.now, ENEMY_AI.archerPreferredMaxRange)) {
+    return;
+  }
+
+  if (ensureContestPressure(enemy, ctx, ctx.now)) return;
 
   const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, cluster.x, cluster.y);
   const nearestThreat = getNearestPlayerUnit(enemy, ctx);
@@ -189,17 +202,22 @@ function updateArcher(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     return;
   }
 
-  enemy.faceToward(cluster.x, cluster.y);
-  if (enemy.canAttack(ctx.now)) {
-    enemy.stop();
-    enemy.tryAttack(cluster, ctx.now);
-  } else {
-    paceWhileWaiting(enemy, cluster, ctx.now, 'strafe');
-  }
+  beginExchangeCommit(enemy, cluster, ctx.now);
+  moveToward(enemy, cluster.x, cluster.y, COMBAT.commitApproachSpeedMult);
 }
 
 function updateBruiser(enemy: EnemyUnit, ctx: EnemyAIContext): void {
-  if (ensureContestPressure(enemy, ctx)) return;
+  const target = pickTarget(enemy, ctx);
+  const onHit = target
+    ? () => applyKnockback(target, enemy.x, enemy.y, ENEMY_AI.bruiserKnockbackForce)
+    : undefined;
+
+  if (target && isCommittedToTarget(enemy, target, ctx.now)) {
+    runCommittedExchange(enemy, target, ctx.now, onHit);
+    return;
+  }
+
+  if (ensureContestPressure(enemy, ctx, ctx.now)) return;
 
   const guardPoint = getBruiserGuardPoint(enemy, ctx);
   if (guardPoint) {
@@ -214,11 +232,8 @@ function updateBruiser(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     }
   }
 
-  const target = pickTarget(enemy, ctx);
   if (!target) return;
-  tryCombatWithPace(enemy, target, ctx.now, () => {
-    applyKnockback(target, enemy.x, enemy.y, ENEMY_AI.bruiserKnockbackForce);
-  });
+  runCommittedExchange(enemy, target, ctx.now, onHit);
 }
 
 function getBruiserGuardPoint(
@@ -256,7 +271,7 @@ function getBruiserGuardPoint(
 }
 
 function updateSupport(enemy: EnemyUnit, ctx: EnemyAIContext): void {
-  if (ensureContestPressure(enemy, ctx)) return;
+  if (ensureContestPressure(enemy, ctx, ctx.now)) return;
 
   const threat = getNearestPlayerUnit(enemy, ctx);
   if (threat) {
@@ -322,8 +337,15 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
   if (!commander.isAlive) return;
 
   if (enemy.id === ctx.focusEnemyId && companion.isAlive) {
-    tryCombatWithPace(enemy, companion, now);
+    runCommittedExchange(enemy, companion, now);
     return;
+  }
+
+  if (isCommittedToTarget(enemy, commander, now)) {
+    if (enemy.assassinState === 'telegraphing' || enemy.assassinState === 'dashing') {
+      updateAssassinStrike(enemy, commander, now);
+      return;
+    }
   }
 
   if (enemy.assassinState === 'escaping') {
@@ -334,18 +356,12 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     enemy.assassinState = 'stalking';
   }
 
-  const commanderDist = companion.isAlive
-    ? Phaser.Math.Distance.Between(commander.x, commander.y, companion.x, companion.y)
-    : Infinity;
-
-  const hasOpening =
-    commanderDist >= ENEMY_AI.assassinOpeningCommanderDistance ||
-    !companion.isAlive;
-
   if (enemy.assassinState === 'stalking') {
-    if (hasOpening) {
+    const distToCommander = Phaser.Math.Distance.Between(enemy.x, enemy.y, commander.x, commander.y);
+    if (distToCommander <= ENEMY_AI.assassinStalkRange) {
       enemy.assassinState = 'telegraphing';
       enemy.assassinTelegraphUntil = now + ENEMY_AI.assassinTelegraphMs;
+      beginExchangeCommit(enemy, commander, now);
     } else {
       const orbitAngle = Phaser.Math.Angle.Between(commander.x, commander.y, enemy.x, enemy.y);
       const orbitX = commander.x + Math.cos(orbitAngle) * ENEMY_AI.assassinStalkRange;
@@ -356,6 +372,10 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     }
   }
 
+  updateAssassinStrike(enemy, commander, now);
+}
+
+function updateAssassinStrike(enemy: EnemyUnit, commander: Commander, now: number): void {
   if (enemy.assassinState === 'telegraphing') {
     paceWhileWaiting(enemy, commander, now, 'creep');
     enemy.setTelegraphTarget(commander.x, commander.y, true);
@@ -372,6 +392,7 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
       if (enemy.canAttack(now)) {
         enemy.stop();
         if (enemy.tryAttack(commander, now)) {
+          extendExchangeCommit(enemy, now);
           enemy.assassinState = 'escaping';
           enemy.assassinEscapeUntil = now + ENEMY_AI.assassinEscapeDurationMs;
         }
@@ -385,13 +406,19 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
 }
 
 function updateSiege(enemy: EnemyUnit, ctx: EnemyAIContext): void {
-  if (ensureContestPressure(enemy, ctx)) return;
-
   const targetPoint = pickSiegeTarget(ctx);
+
+  if (enemy.isShellCommitted(ctx.now) && enemy.shellCommitPoint) {
+    runSiegeShellExchange(enemy, enemy.shellCommitPoint, ctx);
+    return;
+  }
+
+  if (ensureContestPressure(enemy, ctx, ctx.now)) return;
+
   const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, targetPoint.x, targetPoint.y);
   const nearestThreat = getNearestPlayerUnit(enemy, ctx);
 
-  if (nearestThreat) {
+  if (nearestThreat && !enemy.isShellCommitted(ctx.now)) {
     const threatDist = Phaser.Math.Distance.Between(enemy.x, enemy.y, nearestThreat.x, nearestThreat.y);
     if (threatDist < 80) {
       fleeFrom(enemy, nearestThreat.x, nearestThreat.y, 0.75);
@@ -411,12 +438,22 @@ function updateSiege(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     return;
   }
 
+  enemy.beginShellCommit(ctx.now, targetPoint, COMBAT.shellCommitMs);
+  runSiegeShellExchange(enemy, targetPoint, ctx);
+}
+
+function runSiegeShellExchange(
+  enemy: EnemyUnit,
+  targetPoint: { x: number; y: number },
+  ctx: EnemyAIContext,
+): void {
   enemy.faceToward(targetPoint.x, targetPoint.y);
   if (enemy.canAttack(ctx.now)) {
     enemy.stop();
     enemy.lastAttackTime = ctx.now;
     shellTargetPoint(enemy, targetPoint, ctx);
     showShellImpact(enemy.sprite.scene, targetPoint.x, targetPoint.y);
+    enemy.beginShellCommit(ctx.now, targetPoint, COMBAT.shellCommitMs);
   } else {
     paceWhileWaiting(enemy, targetPoint, ctx.now, 'orbit');
   }
@@ -461,13 +498,20 @@ function updateBoss(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     onBossSummon(enemy.bossPhase >= 2 ? 'scout' : 'assassin', count);
   }
 
+  const target = pickTarget(enemy, ctx);
+  if (target && isCommittedToTarget(enemy, target, now)) {
+    runCommittedExchange(enemy, target, now);
+    return;
+  }
+
   if (enemy.bossPhase >= 3 && now - enemy.lastBossChargeAt >= ENEMY_AI.bossChargeCooldownMs) {
     enemy.lastBossChargeAt = now;
     if (ctx.commander.isAlive) {
+      beginExchangeCommit(enemy, ctx.commander, now);
       moveToward(enemy, ctx.commander.x, ctx.commander.y, 2.2);
       const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, ctx.commander.x, ctx.commander.y);
       if (dist <= enemy.attackRange) {
-        tryCombatWithPace(enemy, ctx.commander, now);
+        runCommittedExchange(enemy, ctx.commander, now);
       }
       return;
     }
@@ -485,9 +529,8 @@ function updateBoss(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     return;
   }
 
-  const target = pickTarget(enemy, ctx);
   if (!target) return;
-  tryCombatWithPace(enemy, target, now);
+  runCommittedExchange(enemy, target, now);
 }
 
 function pickClusterTarget(ctx: EnemyAIContext): Unit | null {

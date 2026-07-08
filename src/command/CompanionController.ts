@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { COMMAND, COHESION, PARTNER, SYNERGY } from '../config';
+import { COMMAND, COHESION, COMBAT, PARTNER, SYNERGY } from '../config';
+import {
+  isCommittedToTarget,
+  runCompanionExchange,
+} from '../combat/combatCommit';
 import type { ActiveOrder } from './OrderSystem';
 import type { AbilitySystem } from './AbilitySystem';
 import type { CohesionState } from '../cohesion/CohesionSystem';
@@ -207,6 +211,12 @@ export class CompanionController {
       return;
     }
 
+    const strikeTarget = threats.commanderThreat ?? getNearestEnemy(enemies, companion);
+    if (strikeTarget && this.runProtectedExchange(companion, strikeTarget, now)) {
+      this.intent = threats.commanderThreat ? 'screening' : 'guarding';
+      return;
+    }
+
     this.maybeCalloutSupport(companion, now, threats);
 
     const screenThreat = threats.commanderThreat;
@@ -222,13 +232,13 @@ export class CompanionController {
     );
     if (distToScreen > 18) {
       this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.75);
-    } else {
+    } else if (!companion.isCombatCommitted(now)) {
       this.guardPatrol(companion, screenPos.x, screenPos.y, now);
     }
     this.faceToward(companion, screenThreat?.x ?? commander.x, screenThreat?.y ?? commander.y);
 
-    // Attack only what enters range — never chase
-    this.attackInRangeOnly(companion, enemies, now);
+    const nearest = getNearestEnemy(enemies, companion);
+    if (nearest) this.runProtectedExchange(companion, nearest, now);
   }
 
   /** Proactive intercept: Oathbound moves to cut off Assassin without player order */
@@ -259,6 +269,13 @@ export class CompanionController {
     this.intent = 'intercepting';
     const interceptX = (assassin.x + commander.x) / 2;
     const interceptY = (assassin.y + commander.y) / 2;
+    const distToAssassin = Phaser.Math.Distance.Between(companion.x, companion.y, assassin.x, assassin.y);
+
+    if (this.runProtectedExchange(companion, assassin, now)) {
+      this.faceToward(companion, assassin.x, assassin.y);
+      return true;
+    }
+
     this.moveToPosition(
       companion,
       interceptX,
@@ -267,8 +284,8 @@ export class CompanionController {
     );
     this.faceToward(companion, assassin.x, assassin.y);
 
-    if (Phaser.Math.Distance.Between(companion.x, companion.y, assassin.x, assassin.y) <= companion.attackRange) {
-      companion.tryAttack(assassin, now);
+    if (distToAssassin <= companion.attackRange * 1.3) {
+      this.runProtectedExchange(companion, assassin, now);
     }
     return true;
   }
@@ -306,7 +323,8 @@ export class CompanionController {
     threats: ThreatAssessment,
   ): void {
     this.intent = 'fighting_alone';
-    this.attackInRangeOnly(companion, enemies, now);
+    const nearest = getNearestEnemy(enemies, companion);
+    if (nearest) this.runProtectedExchange(companion, nearest, now);
 
     const distToCommander = Phaser.Math.Distance.Between(
       companion.x, companion.y, commander.x, commander.y,
@@ -340,12 +358,13 @@ export class CompanionController {
 
     if (dist > holdRadius) {
       this.moveToPosition(companion, this.holdPosition.x, this.holdPosition.y, companion.effectiveSpeed * 0.8);
-    } else {
+    } else if (!companion.isCombatCommitted(now)) {
       this.guardPatrol(companion, this.holdPosition.x, this.holdPosition.y, now);
     }
 
     companion.bonusDamageReduction = this.ironWallHolding ? COMMAND.ironWall.holdDamageReduction : 0;
-    this.attackInRangeOnly(companion, enemies, now);
+    const nearest = getNearestEnemy(enemies, companion);
+    if (nearest) this.runProtectedExchange(companion, nearest, now);
   }
 
   private executeAttack(
@@ -383,15 +402,17 @@ export class CompanionController {
       const interceptY = (urgent.y + commander.y) / 2;
       const dist = Phaser.Math.Distance.Between(companion.x, companion.y, interceptX, interceptY);
 
+      if (this.runProtectedExchange(companion, urgent, now)) {
+        this.faceToward(companion, urgent.x, urgent.y);
+        return;
+      }
+
       if (dist > 15) {
         this.moveToPosition(companion, interceptX, interceptY, companion.effectiveSpeed * speedMult);
-      } else {
+      } else if (!companion.isCombatCommitted(now)) {
         this.guardPatrol(companion, interceptX, interceptY, now);
       }
 
-      if (Phaser.Math.Distance.Between(companion.x, companion.y, urgent.x, urgent.y) <= companion.attackRange) {
-        companion.tryAttack(urgent, now);
-      }
       this.faceToward(companion, urgent.x, urgent.y);
       return;
     }
@@ -400,10 +421,11 @@ export class CompanionController {
     const distToScreen = Phaser.Math.Distance.Between(companion.x, companion.y, screenPos.x, screenPos.y);
     if (distToScreen > 18) {
       this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.85);
-    } else {
+    } else if (!companion.isCombatCommitted(now)) {
       this.guardPatrol(companion, screenPos.x, screenPos.y, now);
     }
-    this.attackInRangeOnly(companion, enemies, now);
+    const nearest = getNearestEnemy(enemies, companion);
+    if (nearest) this.runProtectedExchange(companion, nearest, now);
 
     if (cohesionState === 'bonded') {
       this.faceToward(companion, commander.x, commander.y);
@@ -431,9 +453,13 @@ export class CompanionController {
         order.rallyPoint.y,
         companion.effectiveSpeed * speedMult,
       );
-    } else {
+    } else if (!companion.isCombatCommitted(now)) {
       this.guardPatrol(companion, order.rallyPoint.x, order.rallyPoint.y, now);
-      this.attackInRangeOnly(companion, enemies, now);
+      const nearest = getNearestEnemy(enemies, companion);
+      if (nearest) this.runProtectedExchange(companion, nearest, now);
+    } else {
+      const nearest = getNearestEnemy(enemies, companion);
+      if (nearest) this.runProtectedExchange(companion, nearest, now);
     }
   }
 
@@ -482,33 +508,51 @@ export class CompanionController {
     maxPursuit: number,
   ): void {
     const dist = Phaser.Math.Distance.Between(companion.x, companion.y, target.x, target.y);
+
+    if (this.runProtectedExchange(companion, target, now)) {
+      this.faceToward(companion, target.x, target.y);
+      return;
+    }
+
     if (dist > companion.attackRange) {
       if (dist <= maxPursuit) {
         this.moveToPosition(companion, target.x, target.y, companion.effectiveSpeed);
       } else {
         companion.stop();
       }
-    } else if (companion.canAttack(now)) {
-      companion.stop();
-      companion.tryAttack(target, now);
-    } else {
-      this.guardPatrol(companion, target.x, target.y, now);
     }
     this.faceToward(companion, target.x, target.y);
   }
 
-  /** Partner rule: never chase during guard/screen — only strike in range */
-  private attackInRangeOnly(companion: Companion, enemies: EnemyUnit[], now: number): void {
-    const target = getNearestEnemy(enemies, companion);
-    if (!target) return;
-    const dist = Phaser.Math.Distance.Between(companion.x, companion.y, target.x, target.y);
-    if (dist <= companion.attackRange) {
-      if (companion.canAttack(now)) {
-        companion.tryAttack(target, now);
-      } else {
-        this.faceToward(companion, target.x, target.y);
+  /**
+   * Protected exchange — commit blocks guard patrol and repositioning until recovery.
+   */
+  private runProtectedExchange(
+    companion: Companion,
+    target: EnemyUnit,
+    now: number,
+  ): boolean {
+    if (!target.isAlive) {
+      if (isCommittedToTarget(companion, target, now)) {
+        companion.clearCombatCommit();
       }
+      return false;
     }
+
+    const dist = Phaser.Math.Distance.Between(companion.x, companion.y, target.x, target.y);
+    const commitRange = companion.attackRange * COMBAT.commitApproachRangeMult;
+
+    if (!isCommittedToTarget(companion, target, now) && dist > commitRange) {
+      return false;
+    }
+
+    return runCompanionExchange(
+      companion,
+      target,
+      now,
+      (x, y, speed) => this.moveToPosition(companion, x, y, speed),
+      companion.effectiveSpeed,
+    );
   }
 
   private guardPatrol(

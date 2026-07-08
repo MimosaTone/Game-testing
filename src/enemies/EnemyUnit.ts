@@ -25,6 +25,9 @@ export class EnemyUnit extends Unit {
   assassinState: 'stalking' | 'telegraphing' | 'dashing' | 'escaping' = 'stalking';
   assassinEscapeUntil = 0;
   assassinTelegraphUntil = 0;
+  /** Siege shelling commit — protected exchange against a point */
+  shellCommitUntil = 0;
+  shellCommitPoint: { x: number; y: number } | null = null;
   private labelText?: Phaser.GameObjects.Text;
   private telegraphGfx?: Phaser.GameObjects.Graphics;
   private roleMarkGfx?: Phaser.GameObjects.Graphics;
@@ -143,6 +146,20 @@ export class EnemyUnit extends Unit {
   faceToward(x: number, y: number): void {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, x, y);
     this.sprite.setRotation(angle);
+  }
+
+  isShellCommitted(now: number): boolean {
+    return now < this.shellCommitUntil && this.shellCommitPoint !== null;
+  }
+
+  beginShellCommit(now: number, point: { x: number; y: number }, durationMs: number): void {
+    this.shellCommitPoint = point;
+    this.shellCommitUntil = now + durationMs;
+  }
+
+  clearShellCommit(): void {
+    this.shellCommitPoint = null;
+    this.shellCommitUntil = 0;
   }
 
   updateBossPhase(): void {

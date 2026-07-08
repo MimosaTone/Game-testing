@@ -20,6 +20,9 @@ export abstract class Unit {
   abilityDamageReduction = 0;
   bonusDamageReduction = 0;
   attackCooldownMultiplier = 1;
+  /** Protected exchange — movement may not cancel until expiry */
+  protected combatCommitUntil = 0;
+  protected combatCommitTarget: Unit | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -141,6 +144,7 @@ export abstract class Unit {
 
   protected die(): void {
     this.isAlive = false;
+    this.clearCombatCommit();
     this.body.setVelocity(0, 0);
     this.sprite.setAlpha(0.3);
     this.sprite.setStrokeStyle(2, 0x666666, 0.5);
@@ -148,6 +152,33 @@ export abstract class Unit {
 
   canAttack(now: number): boolean {
     return now - this.lastAttackTime >= this.effectiveAttackCooldown;
+  }
+
+  isCombatCommitted(now: number): boolean {
+    if (now >= this.combatCommitUntil) return false;
+    if (this.combatCommitTarget && !this.combatCommitTarget.isAlive) {
+      this.clearCombatCommit();
+      return false;
+    }
+    return true;
+  }
+
+  getCombatCommitTarget(now: number): Unit | null {
+    return this.isCombatCommitted(now) ? this.combatCommitTarget : null;
+  }
+
+  beginCombatCommit(now: number, target: Unit, durationMs: number): void {
+    this.combatCommitTarget = target;
+    this.combatCommitUntil = now + durationMs;
+  }
+
+  extendCombatCommit(now: number, durationMs: number): void {
+    this.combatCommitUntil = Math.max(this.combatCommitUntil, now + durationMs);
+  }
+
+  clearCombatCommit(): void {
+    this.combatCommitTarget = null;
+    this.combatCommitUntil = 0;
   }
 
   tryAttack(target: Unit, now: number): boolean {

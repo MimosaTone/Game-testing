@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Commander, Companion, Unit } from '../entities/Unit';
+import type { Commander, Companion } from '../entities/Unit';
 import { ENEMY_AI } from './definitions';
 import type { EnemyUnit } from './EnemyUnit';
 import { getAliveEnemies } from './EnemyUnit';
@@ -78,11 +78,15 @@ export function fleeFrom(
 /**
  * If an enemy is stranded far from the fight, advance with urgency.
  * Returns true when this frame was consumed by re-engagement.
+ * Skipped while in a protected combat exchange.
  */
 export function ensureContestPressure(
   enemy: EnemyUnit,
   ctx: FightContext,
+  now: number,
 ): boolean {
+  if (enemy.isCombatCommitted(now)) return false;
+
   const centroid = getFightCentroid(ctx);
   const dist = distanceBetween(enemy.x, enemy.y, centroid.x, centroid.y);
   if (dist <= ENEMY_AI.maxContestDistance) return false;
@@ -130,24 +134,6 @@ export function paceWhileWaiting(
   enemy.body.setVelocity(Math.cos(perp) * speed, Math.sin(perp) * speed);
 }
 
-export function tryCombatWithPace(
-  enemy: EnemyUnit,
-  target: Unit,
-  now: number,
-  onHit?: () => void,
-): void {
-  const dist = distanceBetween(enemy.x, enemy.y, target.x, target.y);
-  if (dist <= enemy.attackRange) {
-    if (enemy.canAttack(now)) {
-      enemy.stop();
-      if (enemy.tryAttack(target, now) && onHit) onHit();
-    } else {
-      paceWhileWaiting(enemy, target, now, 'strafe');
-    }
-  } else {
-    moveToward(enemy, target.x, target.y);
-  }
-}
 
 export function showHealPulse(scene: Phaser.Scene, x: number, y: number): void {
   const ring = scene.add.circle(x, y, 10, 0x52b788, 0.55).setDepth(6);
