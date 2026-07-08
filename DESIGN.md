@@ -34,10 +34,10 @@ Honest feedback on the vision, with suggested improvements before we build.
 If the commander can't influence the fight directly, players become spectators watching AI fight. That's frustrating, not strategic.
 
 **Refinement:** The commander is the *weakest combatant* but the *most impactful non-combatant*. Direct player actions should be:
-- **Mark priority targets** (enemies focus your army on one threat)
-- **Reposition the formation** (pull back, flank, protect a zone)
-- **Activate commander abilities** (brief buffs, emergency shields, rally)
-- **Issue stance commands** (aggressive / defensive / gather)
+- **Issue battlefield orders** (hold, attack, defend, rally point, focus target — always available)
+- **Activate commander abilities** (war cry, inspire, emergency retreat — CP-gated)
+- **Reposition** to maintain bond cohesion with the companion
+- **Read and respond** to scout reports and event warnings
 
 The fantasy is chess general, not cameraman.
 
@@ -130,17 +130,47 @@ ASSESS → COMMIT → EXECUTE → ADAPT → (repeat)
 | **Execute** | Army carries out orders, commander repositions | Mark targets, activate abilities, manage formation |
 | **Adapt** | Enemy responds, events resolve, casualties mount | Change approach without abandoning doctrine identity |
 
-### Command Resources
+### Command Resources — Hybrid System
 
-To prevent spam and make orders feel weighty, the commander operates on limited **Command Points (CP)** or ability cooldowns:
+**Design principle:** Reward tactical decision-making, not punish players for issuing orders. Basic battlefield communication should always feel available; only high-impact commander interventions carry resource cost.
 
-| Resource | Purpose | Regenerates? |
+Commands split into two tiers:
+
+#### Tier 1: Battlefield Orders (always available)
+
+Limited only by **short cooldowns** (1–3s) or brief **order animation** — never by Command Points.
+
+| Order | Effect | Cooldown |
 |---|---|---|
-| **Command Points** | Stance changes, target marks, formation shifts | Slowly over time; faster near objectives |
-| **Rally / Ability** | Burst commands with long cooldown | On cooldown only |
+| **Hold** | Units stop and defend current position | 1.5s |
+| **Attack** | Units pursue and engage nearest enemy | 1.5s |
+| **Defend** | Units prioritize threats closest to commander | 2s |
+| **Rally Point** | Units move to and hold a marked ground position | 2s |
+| **Focus Target** | Units prioritize the marked enemy | 2s |
+
+Players should be able to re-issue orders freely in response to battlefield changes. Cooldowns prevent visual/audio spam and give orders a moment of weight — not resource anxiety.
+
+#### Tier 2: Commander Abilities (CP or long cooldown)
+
+High-impact interventions that can swing a fight. Each ability costs **1–2 Command Points** *or* has a **meaningful cooldown** (15–45s) — never both unless the ability is intentionally run-defining.
+
+| Ability | Effect | Cost |
+|---|---|---|
+| **War Cry** | Army damage +25% for 6s | 2 CP |
+| **Inspire** | Restore morale; units obey faster and fight more aggressively for 8s | 1 CP |
+| **Emergency Retreat** | All units break combat and sprint to commander | 2 CP, 30s cooldown |
+| **Tactical Rally** | Units regroup at commander with brief damage reduction | 1 CP, 20s cooldown |
+
+**Command Points:** Small pool (max 3–4), regenerate slowly (~1 CP per 20s). Doctrine can modify regeneration rate or ability costs — not basic order availability.
+
+| Resource | Governs | Regenerates? |
+|---|---|---|
+| **Order Cooldowns** | Tier 1 battlefield orders | Per-order, 1–3s |
+| **Command Points** | Tier 2 commander abilities | ~1 CP / 20s; faster near objectives |
+| **Ability Cooldowns** | Emergency Retreat, Tactical Rally (even when CP available) | 15–45s per ability |
 | **Doctrine Slots** | Permanent run modifiers chosen at milestones | Never — commitment is the point |
 
-**Design rule:** The player should average one meaningful command decision every 10–20 seconds. Not constant micromanagement, not idle spectating.
+**Design rule:** The player should average one meaningful *ability* decision every 20–30 seconds, while issuing battlefield orders continuously as the fight demands. Constant micromanagement is encouraged at the order level; ability timing is where mastery lives.
 
 ### What Makes a Decision "Strategic"
 
@@ -163,7 +193,7 @@ Examples:
 
 | Timing | What | Why |
 |---|---|---|
-| **Run Start** | Primary Doctrine (1 of 3–4 available per commander) | Defines the run's identity immediately |
+| **Run Start** | Primary Doctrine (1 of 2 at launch; expand after core loop proves itself) | Defines the run's identity immediately |
 | **Mid-Run (~2 min)** | Doctrine Amendment (pick 1 modifier from a doctrine-specific list) | Deepens commitment without full respec |
 | **Never** | Full doctrine respec | Commitment is the pillar — adapt within your doctrine, don't swap it |
 
@@ -182,12 +212,21 @@ DOCTRINE
 
 ### Launch Doctrines (Commander — Elite Bond)
 
+**M2 ships two polished doctrines.** Wolfpack and Sacred Bond are designed but deferred until the core command loop proves fun. Two deep identities beat four shallow ones.
+
 | Doctrine | Signature Mechanic | Strength | Limitation |
 |---|---|---|---|
-| **Shock Assault** | `Focus Fire` command: all units attack marked target at +50% speed for 5s | Burst elimination of priority targets | Defensive stances are 30% weaker |
-| **Iron Wall** | `Hold Position`: companion cannot be forced to retreat; gains damage reduction while stationary | Objective defense, escort | Movement speed reduced 20%; aggressive stance disabled |
-| **Wolfpack** | `Flank Order`: companion circles to target's rear for bonus damage | Kiting, assassinations, hit-and-run | Direct confrontation penalties; bond range must be maintained |
-| **Sacred Bond** | Bond radius is 2× larger; bond bonuses are doubled | Safe commanding at range | Companion deals 20% less damage when bond is inactive |
+| **Shock Assault** | `Focus Fire` order: companion attacks marked target at +50% speed for 5s (Tier 1, 3s cooldown) | Burst elimination of priority targets | Defend order effectiveness reduced 30% |
+| **Iron Wall** | `Hold Position` order: companion cannot be forced to retreat; gains damage reduction while holding | Objective defense, escort | Attack order disabled; movement speed reduced 20% |
+
+### Future Doctrines (post–core loop)
+
+Designed but not built until Shock Assault and Iron Wall feel distinct and fun in playtesting.
+
+| Doctrine | Signature Mechanic | Strength | Limitation |
+|---|---|---|---|
+| **Wolfpack** | `Flank Order`: companion circles to target's rear for bonus damage | Kiting, assassinations, hit-and-run | Direct confrontation penalties; cohesion critical |
+| **Sacred Bond** | Bond radius 2× larger; synchronization bonuses doubled when bonded | Safe commanding at range; strongest cohesion rewards | Severe desync penalties when separated (see Bond & Cohesion) |
 
 ### Doctrine vs. Evolution vs. Commander
 
@@ -203,10 +242,53 @@ DOCTRINE
 ### Amendment Examples (Mid-Run, Shock Assault)
 
 - **Overwhelming Strike** — Focus Fire cooldown halved, but companion takes 15% more damage during Focus Fire
-- **Shock and Awe** — Focus Fire also stuns target for 1s, but costs 2 Command Points
-- **No Retreat** — Companion speed +30%, but Defensive stance is removed entirely
+- **Shock and Awe** — Focus Fire also stuns target for 1s, but costs 1 Command Point
+- **No Retreat** — Attack order grants +30% speed, but Hold order is disabled entirely
 
 ---
+
+## Bond & Cohesion
+
+The bond between commander and companion is a **cohesion system**, not a stat buff. Separation should feel like losing a partner — not like a damage debuff ticking down.
+
+### Bonded State (within bond radius)
+
+- Companion responds to orders **immediately** (no obedience delay)
+- Companion fights **aggressively** — pursues marked targets, holds formation
+- Synergy bonuses active: +15% damage dealt, +10% damage reduction
+- Visual: bond line glows; companion outline pulses in sync with commander
+
+### Desynced State (bond broken)
+
+When commander and companion separate beyond bond radius, the companion does not simply become weaker — it becomes **uncoordinated**:
+
+| Effect | Behavior | Player Feeling |
+|---|---|---|
+| **Obedience delay** | Orders take 1.5–2s to execute instead of instant | "They're not hearing me" |
+| **Defensive drift** | Companion prioritizes self-preservation over orders; won't pursue distant targets | "They're falling back on their own" |
+| **Formation break** | Companion may stop following rally points to fight nearest threat | "I've lost control of the flank" |
+| **No synergy bonuses** | Damage and DR buffs inactive | Tangible but secondary to behavior change |
+
+**No primary damage penalty.** The companion is still dangerous — just not *yours* until you reunite.
+
+### Resynchronization (re-entering bond radius)
+
+- Brief **resync animation** (~0.5s) — companion turns toward commander
+- Obedience instantly restored; synergy bonuses return
+- Visual/audio cue: bond line reconnects, brief flash
+- Optional: **Inspire** ability accelerates resync or grants temporary immunity to desync
+
+**Design goal:** The player should think *"I need to get back to my partner"* — not *"my DPS dropped 20%."* Sacred Bond doctrine (future) amplifies both bonded rewards and desync penalties, making cohesion the central skill.
+
+### Bond & Orders Interaction
+
+| Order | Bonded Behavior | Desynced Behavior |
+|---|---|---|
+| **Focus Target** | Immediate focus, aggressive pursuit | Delayed; may attack closer threat instead |
+| **Hold** | Holds firmly, gains DR bonus | Holds but won't hold for long; drifts defensive |
+| **Attack** | Full-speed pursuit | Cautious advance, stops at mid-range |
+| **Rally Point** | Moves directly to point | Slow pathing; may stop to fight en route |
+| **Defend** | Intercepts threats to commander | Defends self first, commander second |
 
 ## Dynamic Battlefield Events
 
@@ -300,7 +382,7 @@ OBJECTIVE
 | Aspect | Detail |
 |---|---|
 | **Command Style** | Reactive — respond to waves, manage casualties, conserve resources |
-| **Key Decisions** | When to use Rally, when to retreat vs. hold, bond positioning |
+| **Key Decisions** | When to use abilities, when to Hold vs. Attack, bond positioning |
 | **Army Bias** | Sustain, damage reduction, regeneration |
 | **Doctrine Synergy** | Iron Wall, Sacred Bond |
 | **Failure Mode** | Death by attrition — army slowly ground down |
@@ -360,20 +442,28 @@ OBJECTIVE
 | **Doctrine Synergy** | Shock Assault, Wolfpack |
 | **Failure Mode** | Endless fodder — killed by reinforcements before reaching target |
 
-### Run Structure: Objective Selection
+### Game Modes
 
-At run start, the player chooses (or is assigned) in this order:
+| Mode | Objective Selection | Rewards | When |
+|---|---|---|---|
+| **Standard** | Player chooses commander, doctrine, and objective | Base progression | M2 launch |
+| **Random** | Objective (and later: doctrine, enemy faction) assigned randomly | Bonus progression currency | Post–M3, once 3+ objectives exist |
+| **Challenge** | Random objective + mutators (e.g. halved CP regen, faster events) | Highest progression rewards + cosmetics | Post–M6, once event + enemy systems exist |
+
+Standard Mode is the default training ground. Random and Challenge reward players who can **adapt their command style** to unknown situations — the ultimate expression of the "better commander" pillar.
+
+### Run Structure (Standard Mode)
+
+At run start, the player chooses in this order:
 
 ```
 1. Commander      → Who leads
 2. Doctrine       → How they fight
 3. Objective      → What victory means
-4. Enemy Faction  → Who opposes you (with commander personality)
+4. Enemy Faction  → Who opposes you (assigned or chosen, post-M6)
 ```
 
 This quadruple defines the run identity before a single shot is fired.
-
-**Roguelite variance:** Objective can be random with a "reroll" option (costs a resource), or player-selected with harder objectives granting better rewards.
 
 ### Multiple Answers Principle
 
@@ -435,19 +525,19 @@ Each milestone = playable prototype. Never move forward until the current one is
 **Playtest question:** Does commanding feel better than fighting directly?
 
 ### M2: Command Layer + Doctrine
-- Mark priority target (right-click / key)
-- Stances: Aggressive, Defensive, Follow
-- Commander Rally ability (cooldown-based)
+- **Tier 1 orders:** Hold, Attack, Defend, Rally Point, Focus Target (cooldown-gated, no CP cost)
+- **Tier 2 abilities:** War Cry, Tactical Rally (CP + cooldown); Emergency Retreat, Inspire (post-M2 polish)
+- **Bond & Cohesion:** Desynced companion becomes uncoordinated (obedience delay, defensive drift) — not just stat penalty
 - **Doctrine selection at run start** (2 doctrines: Shock Assault, Iron Wall)
-- Doctrine effects on stances and commands
-- Command Point system (limited stance changes)
-- Survival objective remains, but reframed with doctrine choice
+- Doctrine modifies order effectiveness, not order availability
+- **Standard Mode** run setup: choose doctrine + Survival objective
+- Command Point pool for abilities only (max 3, ~1 CP / 20s regen)
 
-**Playtest question:** Does choosing a doctrine change how you play the same objective?
+**Playtest question:** Does choosing a doctrine change how you issue orders? Does desync feel like losing your partner?
 
 ### M3: First Battlefield Event + Second Objective
 - **1 dynamic event:** Artillery Barrage (telegraphed zones, reposition or endure)
-- **Annihilation objective** selectable at run start
+- **Annihilation objective** selectable in Standard Mode
 - Event warning UI (countdown + map indicator)
 - Doctrine × objective synergy visible in HUD
 
@@ -493,7 +583,8 @@ Each milestone = playable prototype. Never move forward until the current one is
 - Corruptor, Beast Lord factions
 - Assassination objective
 - Equipment system, full event pool
-- All doctrines per commander
+- Wolfpack + Sacred Bond doctrines
+- Random and Challenge game modes
 
 ---
 
@@ -507,22 +598,31 @@ Each milestone = playable prototype. Never move forward until the current one is
 | Companion | Auto-follows, auto-attacks nearest enemy in range |
 | R | Restart after win/loss |
 
-### Synergy: Bond Radius
+### Synergy: Bond Radius (M1 baseline)
 
-When commander and companion are within bond range, both gain:
+When commander and companion are within bond radius, both gain:
 - +15% damage dealt
 - +10% damage reduction
 
-This rewards positioning the commander near the fight without being the fighter.
+**M2 upgrade:** Bond becomes the Bond & Cohesion system (see above). M1's stat bonuses remain as the *bonded* state reward; separation triggers behavioral desync rather than a flat damage penalty.
 
 ---
 
+## Resolved Design Decisions
+
+| Question | Decision | Rationale |
+|---|---|---|
+| **Command Points vs. cooldowns** | Hybrid: orders use short cooldowns; abilities use CP + cooldown | Reward tactical orders without resource anxiety |
+| **Doctrine count at launch** | 2 (Shock Assault, Iron Wall) | Polished identities over shallow variety |
+| **Objective assignment** | Player choice in Standard Mode; Random + Challenge later | Learn command styles deliberately, then adapt under pressure |
+| **Bond separation penalty** | Cohesion desync (obedience delay, defensive drift), not damage reduction | "I've lost my partner" > "my numbers went down" |
+| **Event interruption** | Real-time with generous telegraph windows (15–30s) | Pressure without removing agency |
+
 ## Open Design Questions
 
-Questions to resolve during M2–M3 playtesting:
+Questions to resolve during M2 playtesting:
 
-1. **Command Points vs. cooldowns** — Should stance changes cost CP, or only abilities? CP adds tension but may feel restrictive early.
-2. **Doctrine count at launch** — 2 doctrines (faster to build) or 4 (more replayability)? Recommend 2 for M2, expand to 4 by M5.
-3. **Objective assignment** — Player choice (more control) or random (more roguelite)? Recommend player choice with optional random for bonus rewards.
-4. **Event interruption** — Can the player pause/command during event warnings, or is it real-time pressure only? Recommend real-time with generous telegraph windows.
-5. **Bond synergy under Sacred Bond doctrine** — Does doubling bond range make the commander too safe? May need damage tradeoff (already designed in).
+1. **CP pool size** — 3 CP max feels tense; 4 CP feels comfortable. Playtest both with Shock Assault's War Cry (2 CP).
+2. **Desync obedience delay** — 1.5s may be too punishing for fast fights; 2s may be too forgiving. Tune per enemy wave speed.
+3. **Resync feel** — Should reuniting have a brief vulnerability window (commitment to regrouping) or be purely rewarding?
+4. **Order input scheme** — Hotkeys (1–5) vs. radial menu vs. click-to-order on map. Recommend hotkeys for M2, radial for mobile later.
