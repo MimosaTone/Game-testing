@@ -1,6 +1,6 @@
 # Army Commander — Game Design Document
 
-**Version 1.1** — Locked design decisions. Command Instruments added as the commander's expression layer. M2 implements the command layer per the milestone roadmap below. Features not listed in a milestone are out of scope until that milestone ships.
+**Version 1.2** — Command Instruments reframed around battlefield decisions and active leadership interactions. M2 implements the command layer per the milestone roadmap below. Features not listed in a milestone are out of scope until that milestone ships.
 
 ## Core Pillars
 
@@ -12,9 +12,9 @@ These four pillars define every system we build. If a feature doesn't serve at l
 | **Doctrine Identity** | "I committed to a philosophy of war" | Does this permanently change *how* the army behaves? |
 | **Living Battlefield** | "The fight evolves around me" | Does this force adaptation mid-run? |
 | **Objective-Driven Command** | "My orders depend on the mission" | Does this reward a different style of leadership? |
-| **Instrument of Command** | "My tool shapes how I lead" | Does this change *how* orders feel, not how hard I hit? |
+| **Instrument of Command** | "My tool shapes how I lead" | Does this create a unique decision every few seconds? |
 
-**Anti-pillar:** Surviving escalating waves while auto-attacking is a *vehicle* for testing systems, not the game's identity. Wave survival alone must never be the primary experience. **Command instruments that primarily increase commander damage are also an anti-pillar.**
+**Anti-pillar:** Surviving escalating waves while auto-attacking is a *vehicle* for testing systems, not the game's identity. **Command instruments that primarily increase commander damage, or that only change attack animations, are also anti-pillars.** The player leads an army — they do not swing a different stick.
 
 ---
 
@@ -106,7 +106,7 @@ Random explosions and spawn floods are chaos, not strategy. Events need a **warn
 
 If a Greatsword gives the commander +30% attack damage, it's a disguised stat weapon — the same failure mode as overpowered hero survivor-likes.
 
-**Refinement:** Instruments modify **order expression**, **positioning requirements**, **ability behavior**, and **cohesion dynamics** — not commander DPS. The commander's weak auto-attack stays weak. The instrument answers: *"Through what medium does my leadership reach the army?"*
+**Refinement:** Instruments create **recurring battlefield decisions** and **active leadership interactions** — not commander DPS or alternate attack animations. The instrument must answer: *"What unique decision does this commander make every few seconds?"*
 
 #### 10. Instruments and Doctrines will overlap if poorly scoped
 
@@ -269,61 +269,138 @@ Designed but not built until Shock Assault and Iron Wall feel distinct and fun i
 
 ## Command Instruments
 
-The commander's equipped **command instrument** reflects their leadership philosophy. It is not a damage weapon — it is the **medium through which orders reach the army**.
+The commander's equipped **command instrument** is their tool of leadership — not a weapon. It defines **what the commander actively does on the battlefield** to direct the army.
 
-Every instrument should make the player think differently about positioning, order timing, and risk — not deal damage differently.
+Instruments do not exist to modify damage output. They exist to create **unique, recurring decisions** that make the player feel like a commander issuing intent, reading the field, and shaping the fight — not a hero with a different attack animation.
+
+### The Instrument Design Test
+
+Every instrument must answer:
+
+> **"What unique decisions does this commander make every few seconds?"**
+
+| Pass | Fail |
+|---|---|
+| "Do I reposition my banner before the flank collapses?" | "Do I use the sword attack or bow attack?" |
+| "Which threat do I designate as priority fire?" | "Does my weapon do +15% damage?" |
+| "Do I advance my influence zone or hold this ground?" | "My commander has a longer-range basic attack" |
 
 ### Design Rules
 
-1. **Commander damage stays negligible** — instruments never exist to make the commander a fighter
-2. **Instruments modify orders and abilities** — not raw army stats (army stats come from evolutions)
-3. **Instruments create positioning incentives** — frontline vs rear command, bond range, risk exposure
-4. **Instruments pair with doctrines, not duplicate them** — doctrine is *what* you believe; instrument is *how* you communicate it
-5. **Ship two polished instruments** when the system debuts — same rule as doctrines
+1. **Active battlefield interaction required** — every instrument gives the commander something to *do* beyond moving and auto-attacking
+2. **Commander damage stays negligible** — utility effects only (mark, reveal, taunt, zone creation)
+3. **Decisions, not stats** — instruments create recurring tactical choices every 10–20 seconds
+4. **Army executes; commander directs** — the instrument never replaces unit combat with commander combat
+5. **Instruments pair with doctrines, not duplicate them** — doctrine is *what* you believe; instrument is *how* you read and shape the battlefield
+6. **Ship two polished instruments** at debut — same rule as doctrines
 
 ### Instrument Structure
 
 ```
 INSTRUMENT
-├── Leadership Style       (frontline / defensive / control / support / morale)
-├── Order Modifiers        (how Tier 1 orders execute)
-├── Ability Replacements   (instrument-specific Tier 2 abilities or modifiers)
-├── Positioning Rule       (where the commander should be for full effectiveness)
-├── Cohesion Interaction   (how bond range and desync behave)
-└── Limitation             (what this instrument is bad at)
+├── Core Decision Loop     (what the player evaluates every 10–20s)
+├── Active Interactions    (instrument-specific actions beyond Tier 1 orders)
+├── Battlefield Effect     (how the commander changes the map or unit behavior)
+├── Order Expression       (how standard orders propagate differently)
+├── Positioning Incentive  (where the commander should be to lead effectively)
+└── Limitation             (what this instrument cannot do well)
 ```
 
-### Launch Instruments (post–M3, when command loop is proven)
+---
 
-| Instrument | Leadership Style | How Commands Propagate | Limitation |
+### Longbow — Target Designation & Battlefield Awareness
+
+**Core fantasy:** The commander is the army's eyes. You do not win by shooting — you win by **seeing** and **pointing**.
+
+**Decision loop (every 10–20s):**
+- Which enemy is the greatest threat *right now*?
+- Do I have line of sight to issue clean designations?
+- Should I shift priority as the battlefield changes?
+- Am I positioned to observe without exposing the command chain?
+
+**Active interactions:**
+
+| Action | Input | Effect | Damage |
 |---|---|---|---|
-| **Greatsword** | Aggressive frontline | Orders issued near combat have **instant obedience**; Attack order grants companion a brief surge | Commander must be closer to danger; bond breaks more easily if kiting |
-| **Sword & Shield** | Defensive formations | Hold and Defend orders are **stronger**; companion gains bonus DR while holding near commander | Focus Target range reduced; aggressive pursuit orders weakened |
-| **Longbow** | Target designation | Focus Target and Rally Point work at **extended range**; commander can direct from behind army | Orders issued while commander is in melee range have +1s obedience delay |
-| **Staff** | Companion support | Bond radius **+30%**; cohesion desync penalties softened; Inspire (future) enhanced | Attack order effectiveness reduced; commander avoids frontline |
-| **Battle Banner** | Morale and efficiency | Rally Point affects **wider area**; CP regenerates faster when near companion; War Cry affects obedience speed | Commander must remain visible to army (cannot hide in fog); no bonus to single-target focus |
+| **Designate** | RMB on enemy / Focus order | Priority mark with **threat tier** (skull icon); army obeys Focus with extended range | None |
+| **Survey** | Hold `Tab` or short cooldown key | Reveals enemies in a forward **cone** for 3s (fog, stealth, approaching waves) | None |
+| **Signal Arrow** | Click ground (short CD) | Fires a **non-damaging** marker bolt to a location; pings allies toward that point (soft Rally) | Negligible |
 
-### Instrument × Order Interaction (Examples)
+**Battlefield awareness mechanics:**
+- Threat indicators persist on designated targets until changed
+- Survey reveals off-screen spawns during events (Artillery Barrage zones, reinforcement direction)
+- Commander gains **elevated awareness** at range — HUD shows threat vectors toward companion/objective
+- Designating a target while Survey is active grants **bonus obedience** on Focus (reward for reading the field)
 
-| Order | Greatsword | Sword & Shield | Longbow | Staff | Battle Banner |
-|---|---|---|---|---|---|
-| **Hold** | Standard | +DR aura, immovable | Standard at range | Standard, wider bond | Hold radius +50% |
-| **Attack** | Companion surge on issue | Weakened pursuit | Commander need not be near | Weakened | Standard |
-| **Defend** | Standard | Extended intercept range | Mark threats from afar | Bond extends to intercept | Standard |
-| **Rally Point** | Must be nearer to rally | Standard | Place rally from far away | Standard | Large rally aura |
-| **Focus Target** | Aggressive pursuit boost | Standard | Extended mark range | Standard | Standard |
+**Order expression:**
+- Focus Target and Rally Point issued from **extended range**
+- Commander does **not** need to be in melee for orders to carry full weight
+- Orders issued while commander is surrounded have +1s obedience delay (commander must stay composed)
+
+**Limitation:** No frontline authority. If the army collapses into melee around the commander, designation becomes unreliable.
+
+**What it is NOT:** A ranged DPS weapon. The arrow is a signal, not a bullet.
+
+---
+
+### Battle Banner — Positioning, Morale & Areas of Influence
+
+**Core fantasy:** The commander is a **presence** on the battlefield. You do not strike — you **hold ground** and the army fights harder for it.
+
+**Decision loop (every 10–20s):**
+- Where should my **influence zone** be to support the current objective?
+- Do I move forward to extend morale coverage, or hold position to anchor defense?
+- Is my army fighting inside my banner's influence, or have they outrun my leadership?
+- When do I **relocate** the banner vs. commit to this ground?
+
+**Active interactions:**
+
+| Action | Input | Effect | Damage |
+|---|---|---|---|
+| **Plant Banner** | Key `F` (toggle) | Creates a visible **Influence Zone** (circle) centered on commander; zone moves when commander moves | None |
+| **Rally Cry** | `Q` (replaces War Cry) | Units inside influence zone gain obedience speed + damage for 6s; **requires** units to be in zone | None |
+| **Hold the Line** | `E` (replaces Tactical Rally) | Influence zone becomes a **fortified area** for 4s — units inside resist displacement and gain DR | None |
+
+**Area of influence mechanics:**
+- Influence zone is always visible (colored ground ring, banner sprite above commander)
+- Units inside zone: faster order obedience, small morale regen (future: affects swarm count cap)
+- Units outside zone: normal behavior, no penalty — but **no banner benefit** (incentivizes positioning, not punishment)
+- Commander **cannot attack**. No weapon animation. Leadership is the action.
+- CP regenerates faster while 2+ allied units are inside influence zone
+
+**Order expression:**
+- Rally Point placed **inside** influence zone has 2× effect radius
+- Hold order issued while banner is planted makes zone **sticky** (companion/units resist being pulled out)
+- Attack order has no banner bonus — banner commanders lead by presence, not aggression
+
+**Limitation:** Commander must remain near the fight to maintain influence. Hiding far from the army nullifies the instrument. Vulnerable during relocation.
+
+**What it is NOT:** A melee weapon with a flag attached. The banner is not swung. The commander **plants, holds, and projects authority**.
+
+---
+
+### Future Instruments (designed, deferred)
+
+Each must pass the same decision-loop test before shipping.
+
+| Instrument | Decision every 10–20s | Active interaction (not damage) |
+|---|---|---|
+| **Greatsword** | "Do I step forward to legitimize this push?" | **Challenge** — draw enemy attention to commander, validating companion's aggressive orders |
+| **Sword & Shield** | "Do I anchor here or shift the line?" | **Brace** — create a brief shield-facing that redirects enemy pathing |
+| **Staff** | "Do I channel support now or reposition?" | **Channel** — link to companion, amplifying their next order execution |
+
+---
 
 ### Instrument × Doctrine Synergy (intentional, not mandatory)
 
 | Pairing | Expression |
 |---|---|
-| Shock Assault + Greatsword | Frontline assassin commander — high risk, instant focus fire |
-| Shock Assault + Longbow | Rear-echelon eliminator — safe designation, delayed aggression |
-| Iron Wall + Sword & Shield | Immovable phalanx — maximum defensive layering |
-| Iron Wall + Battle Banner | Zone control commander — hold ground, buff formations |
-| Any + Staff | Companion-centric — cohesion is the game |
+| Shock Assault + Longbow | Designate priority targets from safety; companion executes focus fire on your reads |
+| Shock Assault + Battle Banner | Push influence zone forward with aggressive army; morale fuels the charge |
+| Iron Wall + Battle Banner | Anchor a fortified zone; army holds ground inside influence ring |
+| Iron Wall + Longbow | Designate threats approaching the line; defensive focus fire without leaving position |
 
-**Mismatch is valid.** Iron Wall + Greatsword forces frontline holding without strong Hold bonuses — hard, but possible for skilled players.
+**Mismatch is valid.** Shock Assault + Battle Banner requires pushing your influence zone into danger — high skill, high risk.
 
 ### Instrument vs. Other Layers
 
@@ -331,31 +408,33 @@ INSTRUMENT
 |---|---|---|
 | **Commander** | Who leads the army? | Elite Bond, Swarm Master |
 | **Doctrine** | What philosophy of war? | Shock Assault, Iron Wall |
-| **Command Instrument** | How does leadership reach the army? | Longbow, Battle Banner |
+| **Command Instrument** | How do you read and shape the battlefield? | Longbow, Battle Banner |
 | **Evolution** | What is the army becoming? | Alpha Wolf, Pack Wolves |
 | **Army Equipment** | What gear do units carry? | (Future) Banner of Haste on units |
 
-**Interaction rule:** Doctrine shapes *what orders mean*. Instrument shapes *how orders travel*. Evolution shapes *who executes them*. No two layers should modify the same variable.
+**Interaction rule:** Doctrine shapes *what orders mean*. Instrument shapes *what the commander actively does*. Evolution shapes *who executes*. No layer replaces another.
 
 ### When Instruments Are Chosen
 
 | Timing | What | Why |
 |---|---|---|
-| **Run Start** | Command Instrument (1 of 2 at debut; expand later) | Defines command style alongside doctrine |
-| **Mid-Run** | No instrument swap | Commitment pillar — adapt within your instrument |
-| **Between Runs** | Unlock new instruments | Meta progression adds options, not power |
+| **Run Start** | Command Instrument (1 of 2 at debut) | Defines command style alongside doctrine |
+| **Mid-Run** | No instrument swap | Commitment pillar |
+| **Between Runs** | Unlock new instruments | Options, not power |
 
-### Commander Auto-Attack Policy
+### Commander Combat Policy
 
-All instruments share a baseline: commander auto-attack deals minimal damage. Instruments may add **utility on hit** (mark, slow, taunt) but never scale into a primary damage source.
+The commander's direct combat output is always negligible. Instruments provide **utility interactions** — never a primary attack loop.
 
-| Instrument | Auto-Attack Role |
-|---|---|
-| Greatsword | Weak melee; **taunts** nearby enemy for 1s on hit |
-| Sword & Shield | Weak melee; applies brief **damage reduction** to commander |
-| Longbow | Weak ranged poke at distance; applies **mark** (not focus) on hit |
-| Staff | Weak ranged; **heals companion** for tiny amount on hit |
-| Battle Banner | No direct attack; passive **morale pulse** every 10s near units |
+| Instrument | Direct Combat | Primary Activity |
+|---|---|---|
+| Longbow | Signal Arrow (ping only) | Designate, Survey, direct focus |
+| Battle Banner | None | Plant zone, Rally Cry, anchor ground |
+| Greatsword (future) | Weak melee + taunt | Challenge, frontline legitimization |
+| Sword & Shield (future) | Weak melee + brace | Anchor, redirect |
+| Staff (future) | Weak channel | Companion link, support |
+
+**If the player's fingers are mostly on movement keys, the instrument is working.** If the player's fingers are on an attack key, it is not.
 
 ---
 
@@ -671,11 +750,12 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 ### M4.5: Command Instruments
 - **Instrument selection** at run start (2 instruments: Longbow, Battle Banner)
-- Instruments modify order propagation and positioning — not commander damage
-- Instrument-specific ability modifiers (War Cry / Rally variants)
-- Setup screen expanded with instrument choice
+- **Longbow:** Designate, Survey, Signal Arrow — target awareness, not ranged DPS
+- **Battle Banner:** Plant Banner influence zone, Rally Cry, Hold the Line — no commander attack
+- Instrument-specific abilities replace War Cry / Tactical Rally where noted
+- Setup screen expanded with instrument choice + decision-loop tutorial tooltips
 
-**Playtest question:** Does the same doctrine feel different with a different instrument?
+**Playtest question:** Does each instrument make you ask a different question every 10–20 seconds? Does the commander feel like a leader, not a fighter with a different animation?
 
 ### M5: Swarm Master + Domination
 - Second commander selectable at run start
@@ -744,17 +824,18 @@ When commander and companion are within bond radius, both gain:
 | **Objective assignment** | Player choice in Standard Mode; Random + Challenge later | Learn command styles deliberately, then adapt under pressure |
 | **Bond separation penalty** | Cohesion desync (obedience delay, defensive drift), not damage reduction | "I've lost my partner" > "my numbers went down" |
 | **Event interruption** | Real-time with generous telegraph windows (15–30s) | Pressure without removing agency |
-| **Command instruments** | Modify order propagation and positioning, not commander DPS | Leadership medium, not damage stick |
-| **Instrument debut scope** | 2 instruments (Longbow, Battle Banner) after M4 | Polished identities over shallow variety |
+| **Command instruments** | Active battlefield decisions every 10–20s; not DPS or animation swaps | Leadership interactions, not weapons |
+| **Instrument debut scope** | 2 instruments (Longbow, Battle Banner) after M4 | Polished decision loops over shallow variety |
+| **Battle Banner combat** | Commander cannot attack; influence zone is the instrument | Presence-based leadership, not flag melee |
 
 ## Open Design Questions
 
 Questions to resolve before implementing Command Instruments (M4.5):
 
-1. **Longbow vs Staff overlap** — Both favor rear-echelon command. Differentiate: Longbow = target control; Staff = companion support. May ship only Longbow first.
-2. **Greatsword timing** — Frontline instrument is high-risk; may need bond/cohesion tuning before it feels fair. Defer to M6+.
-3. **Instrument + doctrine UI** — Three run-start choices (commander, doctrine, instrument) may need a stepped setup flow vs. one screen.
-4. **Auto-attack utility** — Should instruments replace commander auto-attack entirely (Banner) or augment it? Recommend augment with weak utility hits.
+1. **Survey input** — Dedicated key (`Tab`) vs. held modifier vs. cooldown ability? Recommend cooldown ability on instrument bar for mobile parity.
+2. **Influence zone relocation** — Should moving the banner have a brief "tearing down / planting" vulnerability window? Recommend 0.5s plant animation (matches cohesion resync timing).
+3. **Longbow + cohesion** — Does rear-echelon designation reduce desync tension too much? May need "command chain" range separate from bond range.
+4. **Instrument ability bar** — Replace Q/E per instrument, or add instrument-specific keys (F for banner)? Recommend Q/E remap per instrument + one instrument key (F).
 
 Questions to resolve during M2–M3 playtesting:
 
