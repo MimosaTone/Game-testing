@@ -316,8 +316,9 @@ export class GameScene extends Phaser.Scene {
       companion: this.companion,
       enemies: this.enemies,
       focusEnemyId,
+      controlPoints: this.companionController.getBattlefieldControlPoints(),
       now,
-      onBossSummon: (role: 'grunt' | 'scout', count: number) => {
+      onBossSummon: (role: 'assassin' | 'scout', count: number) => {
         for (let i = 0; i < count; i++) {
           this.time.delayedCall(i * 400, () => {
             this.encounterManager.spawnEnemy(role);
