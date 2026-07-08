@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
-import { COMMANDER, COMPANION, ENEMY, GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { CohesionState } from '../cohesion/CohesionSystem';
-
-let nextEnemyId = 0;
 
 export abstract class Unit {
   readonly sprite: Phaser.GameObjects.Arc;
@@ -204,80 +202,8 @@ export class Companion extends Unit {
   }
 }
 
-export class Enemy extends Unit {
-  readonly id: string;
-  private readonly speed: number;
-
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, ENEMY.radius, ENEMY.color, ENEMY);
-    this.id = `enemy-${nextEnemyId++}`;
-    this.speed = ENEMY.speed;
-  }
-
-  protected getColor(): number {
-    return ENEMY.color;
-  }
-
-  chaseTarget(target: Unit): void {
-    if (!this.isAlive || !target.isAlive) return;
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-    this.body.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
-  }
-}
-
 export function clampToArena(unit: Unit): void {
   const radius = (unit.sprite as Phaser.GameObjects.Arc).radius;
   unit.sprite.x = Phaser.Math.Clamp(unit.sprite.x, radius, GAME_WIDTH - radius);
   unit.sprite.y = Phaser.Math.Clamp(unit.sprite.y, radius, GAME_HEIGHT - radius);
-}
-
-export function getNearestEnemy(enemies: Enemy[], from: Unit): Enemy | null {
-  let nearest: Enemy | null = null;
-  let minDist = Infinity;
-  for (const enemy of enemies) {
-    if (!enemy.isAlive) continue;
-    const dist = Phaser.Math.Distance.Between(from.x, from.y, enemy.x, enemy.y);
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = enemy;
-    }
-  }
-  return nearest;
-}
-
-export function getNearestEnemyToPoint(
-  enemies: Enemy[],
-  x: number,
-  y: number,
-): Enemy | null {
-  let nearest: Enemy | null = null;
-  let minDist = Infinity;
-  for (const enemy of enemies) {
-    if (!enemy.isAlive) continue;
-    const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = enemy;
-    }
-  }
-  return nearest;
-}
-
-export function getEnemyAtPoint(
-  enemies: Enemy[],
-  x: number,
-  y: number,
-  maxDist = 24,
-): Enemy | null {
-  let nearest: Enemy | null = null;
-  let minDist = maxDist;
-  for (const enemy of enemies) {
-    if (!enemy.isAlive) continue;
-    const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = enemy;
-    }
-  }
-  return nearest;
 }

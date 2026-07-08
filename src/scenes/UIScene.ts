@@ -1,19 +1,20 @@
 import Phaser from 'phaser';
-import { ORDERS, ABILITIES } from '../command/types';
 import { GameStateData } from './GameScene';
 
 export class UIScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
-  private waveText!: Phaser.GameObjects.Text;
+  private phaseText!: Phaser.GameObjects.Text;
   private bondText!: Phaser.GameObjects.Text;
   private commanderBar!: Phaser.GameObjects.Graphics;
   private companionBar!: Phaser.GameObjects.Graphics;
+  private bossBar!: Phaser.GameObjects.Graphics;
   private overlayContainer!: Phaser.GameObjects.Container;
   private killText!: Phaser.GameObjects.Text;
   private doctrineText!: Phaser.GameObjects.Text;
   private orderText!: Phaser.GameObjects.Text;
   private cpText!: Phaser.GameObjects.Text;
   private feedbackText!: Phaser.GameObjects.Text;
+  private announcementText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -26,7 +27,7 @@ export class UIScene extends Phaser.Scene {
       color: '#cccccc',
     };
 
-    this.add.text(16, 12, 'ARMY COMMANDER — M2', {
+    this.add.text(16, 12, 'ARMY COMMANDER — M3', {
       ...style,
       fontSize: '18px',
       color: '#ffffff',
@@ -34,33 +35,37 @@ export class UIScene extends Phaser.Scene {
 
     this.doctrineText = this.add.text(16, 36, '', { ...style, color: '#4a9eff' });
     this.timerText = this.add.text(16, 58, '', style);
-    this.waveText = this.add.text(16, 76, '', style);
+    this.phaseText = this.add.text(16, 76, '', style);
     this.killText = this.add.text(16, 94, '', style);
     this.bondText = this.add.text(16, 112, '', style);
     this.orderText = this.add.text(16, 130, '', style);
     this.cpText = this.add.text(16, 148, '', style);
     this.feedbackText = this.add.text(16, 166, '', { ...style, fontSize: '11px', color: '#ffd166' });
+    this.announcementText = this.add.text(480, 48, '', {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#ff8c42',
+    }).setOrigin(0.5);
 
     this.commanderBar = this.add.graphics();
     this.companionBar = this.add.graphics();
+    this.bossBar = this.add.graphics();
 
     this.add.text(16, 188, 'Commander HP', { ...style, fontSize: '11px', color: '#4a9eff' });
     this.add.text(16, 216, 'Companion HP', { ...style, fontSize: '11px', color: '#ffd166' });
+    this.add.text(16, 244, 'Boss HP', { ...style, fontSize: '11px', color: '#ff6666' });
 
-    const orderLine = ORDERS.map((o) => `${o.hotkey}:${o.label[0]}`).join(' ');
-    const abilityLine = ABILITIES.map((a) => `${a.hotkey}:${a.label.split(' ')[0]}`).join(' ');
-    this.add.text(16, 244, `Orders ${orderLine} | ${abilityLine} | RMB:Focus`, {
-      ...style,
-      fontSize: '10px',
-      color: '#666666',
-    });
+    const orderLine = '1-5 Orders | Q/E Abilities | RMB Focus';
+    this.add.text(16, 272, orderLine, { ...style, fontSize: '10px', color: '#666666' });
 
     this.overlayContainer = this.add.container(0, 0);
     this.overlayContainer.setVisible(false);
 
     const gameScene = this.scene.get('GameScene');
     gameScene.events.on('game-state-update', (data: GameStateData) => this.updateHUD(data));
-    gameScene.events.on('game-over', (state: 'won' | 'lost') => this.showOverlay(state));
+    gameScene.events.on('game-over', (payload: { state: 'won' | 'lost'; reason: string | null }) =>
+      this.showOverlay(payload.state, payload.reason),
+    );
   }
 
   private updateHUD(data: GameStateData): void {
@@ -68,7 +73,7 @@ export class UIScene extends Phaser.Scene {
     const seconds = Math.ceil(remaining / 1000);
     this.doctrineText.setText(`${data.doctrineName} — ${data.objectiveName}`);
     this.timerText.setText(`Survive: ${seconds}s`);
-    this.waveText.setText(`Wave: ${data.wave}`);
+    this.phaseText.setText(`Encounter phase: ${data.phase}`);
     this.killText.setText(`Kills: ${data.enemiesKilled}`);
 
     const cohesionLabel =
@@ -94,8 +99,17 @@ export class UIScene extends Phaser.Scene {
     const feedback = data.abilityFeedback ?? data.orderFeedback;
     this.feedbackText.setText(feedback ?? '');
 
+    this.announcementText.setText(data.phaseAnnouncement ?? '');
+    this.announcementText.setVisible(!!data.phaseAnnouncement);
+
     this.drawHealthBar(this.commanderBar, 16, 202, 160, 8, data.commanderHealth, data.commanderMaxHealth, 0x4a9eff);
     this.drawHealthBar(this.companionBar, 16, 230, 160, 8, data.companionHealth, data.companionMaxHealth, 0xffd166);
+
+    if (data.bossActive) {
+      this.drawHealthBar(this.bossBar, 16, 258, 160, 8, data.bossHealth, data.bossMaxHealth, 0xff4444);
+    } else {
+      this.bossBar.clear();
+    }
   }
 
   private drawHealthBar(
@@ -116,30 +130,30 @@ export class UIScene extends Phaser.Scene {
     gfx.fillRect(x, y, w * pct, h);
   }
 
-  private showOverlay(state: 'won' | 'lost'): void {
+  private showOverlay(state: 'won' | 'lost', reason: string | null): void {
     this.overlayContainer.removeAll(true);
     this.overlayContainer.setVisible(true);
 
     const bg = this.add.rectangle(480, 320, 960, 640, 0x000000, 0.7);
-    const title = this.add.text(480, 250, state === 'won' ? 'VICTORY' : 'DEFEATED', {
+    const title = this.add.text(480, 240, state === 'won' ? 'VICTORY' : 'DEFEATED', {
       fontFamily: 'monospace',
       fontSize: '48px',
       color: state === 'won' ? '#4ade80' : '#e63946',
     }).setOrigin(0.5);
 
-    const subtitle = this.add.text(
-      480,
-      310,
-      state === 'won'
-        ? 'You held the line, Commander.\nYour orders shaped the battle.'
-        : 'Your commander has fallen.\nThe army is leaderless.',
-      {
-        fontFamily: 'monospace',
-        fontSize: '16px',
-        color: '#cccccc',
-        align: 'center',
-      },
-    ).setOrigin(0.5);
+    let subtitleText = 'Your commander has fallen.\nThe army is leaderless.';
+    if (state === 'won' && reason === 'boss_defeated') {
+      subtitleText = 'Field Captain eliminated.\nYour command broke their strategy.';
+    } else if (state === 'won') {
+      subtitleText = 'You held the line, Commander.\nThe encounter is contained.';
+    }
+
+    const subtitle = this.add.text(480, 310, subtitleText, {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#cccccc',
+      align: 'center',
+    }).setOrigin(0.5);
 
     const restart = this.add.text(480, 390, '[ R ] Return to Setup', {
       fontFamily: 'monospace',

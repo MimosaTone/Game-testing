@@ -4,14 +4,12 @@ import type { ActiveOrder } from './OrderSystem';
 import type { AbilitySystem } from './AbilitySystem';
 import type { CohesionState } from '../cohesion/CohesionSystem';
 import type { DoctrineId } from '../doctrine/types';
+import { Commander, Companion, clampToArena } from '../entities/Unit';
 import {
-  Commander,
-  Companion,
-  Enemy,
-  clampToArena,
+  EnemyUnit,
   getNearestEnemy,
   getNearestEnemyToPoint,
-} from '../entities/Unit';
+} from '../enemies/EnemyUnit';
 
 interface PendingOrder {
   order: ActiveOrder;
@@ -61,7 +59,7 @@ export class CompanionController {
   update(
     companion: Companion,
     commander: Commander,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     abilities: AbilitySystem,
     now: number,
     cohesionState: CohesionState,
@@ -156,7 +154,7 @@ export class CompanionController {
     this.showRallyMarker(x, y);
   }
 
-  setFocusMarker(enemy: Enemy): void {
+  setFocusMarker(enemy: EnemyUnit): void {
     this.focusMarker?.destroy();
     this.focusMarker = this.scene.add.graphics();
     this.focusMarker.lineStyle(2, 0xff4444, 0.9);
@@ -178,7 +176,7 @@ export class CompanionController {
   private executeDesyncedIdle(
     companion: Companion,
     commander: Commander,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
   ): void {
     const distToCommander = Phaser.Math.Distance.Between(
@@ -207,7 +205,7 @@ export class CompanionController {
   private executeHold(
     companion: Companion,
     _commander: Commander,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
   ): void {
@@ -238,7 +236,7 @@ export class CompanionController {
 
   private executeAttack(
     companion: Companion,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
   ): void {
@@ -257,7 +255,7 @@ export class CompanionController {
   private executeDefend(
     companion: Companion,
     commander: Commander,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
   ): void {
@@ -289,7 +287,7 @@ export class CompanionController {
   private executeRally(
     companion: Companion,
     order: ActiveOrder,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
   ): void {
@@ -328,11 +326,11 @@ export class CompanionController {
   private executeFocus(
     companion: Companion,
     order: ActiveOrder,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
   ): void {
-    let target: Enemy | null = null;
+    let target: EnemyUnit | null = null;
     if (order.focusEnemyId) {
       target = enemies.find((e) => e.id === order.focusEnemyId && e.isAlive) ?? null;
     }
@@ -365,8 +363,8 @@ export class CompanionController {
 
   private pursueAndAttack(
     companion: Companion,
-    target: Enemy,
-    enemies: Enemy[],
+    target: EnemyUnit,
+    enemies: EnemyUnit[],
     now: number,
     maxPursuit: number,
   ): void {
@@ -386,7 +384,7 @@ export class CompanionController {
 
   private autoAttackNearest(
     companion: Companion,
-    enemies: Enemy[],
+    enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
     inPlaceOnly: boolean,
