@@ -1,6 +1,6 @@
 # Army Commander — Game Design Document
 
-**Version 1.3** — Range systems separated (Bond, Command, Designation). Scout Report locked as Longbow ability. Presence documented for future. M2 implements the command layer per the milestone roadmap below.
+**Version 1.4** — M4.5 instrument tuning locked (Scout Report cooldown, Command Range default, input mapping). M2 implements the command layer per the milestone roadmap below.
 
 ## Core Pillars
 
@@ -323,7 +323,7 @@ INSTRUMENT
 | Action | Input | Effect | Damage |
 |---|---|---|---|
 | **Designate** | RMB on enemy / Focus order | Priority mark with **threat tier**; uses **Designation Range** (not Bond Range) | None |
-| **Scout Report** | Ability bar (CP or cooldown) | Generates **battlefield intelligence** (see below) — not a map reveal | None |
+| **Scout Report** | Ability bar (cooldown-only) | Generates **battlefield intelligence** (see below) — not a map reveal | None |
 | **Signal Arrow** | Click ground (short CD) | **Non-damaging** marker bolt; soft Rally ping toward location | Negligible |
 
 #### Scout Report *(locked name)*
@@ -331,6 +331,8 @@ INSTRUMENT
 Renamed from "Survey." Chosen over Scout / Recon / Battlefield Recon because it matches existing commander language ("scout reports" from enemy commanders) and reinforces the **intelligence officer** fantasy.
 
 **Input:** Commander Ability on the **ability bar** — not a held key (`Tab`). Keeps all commander actions in one interface; supports keyboard, controller, and future mobile; leaves room for upgrades.
+
+**Cost:** **Cooldown-only** at debut (no CP cost). Scouting should not feel expensive early — intelligence gathering is core to the Longbow loop. If Scout Report becomes spammy in playtesting, add 1 CP cost later without changing the ability's function.
 
 **Output:** Battlefield **intelligence**, not fog-of-war removal. Each Scout Report presents 1–3 actionable insights drawn from current battlefield state:
 
@@ -478,11 +480,25 @@ The commander's direct combat output is always negligible. Instruments provide *
 
 **If the player's fingers are mostly on movement keys, the instrument is working.** If the player's fingers are on an attack key, it is not.
 
+### Instrument Input Mapping *(M4.5)*
+
+Keep inputs **simple and remappable**. Controller and mobile layouts derive from the same binding table.
+
+| Slot | Default Key | Behavior |
+|---|---|---|
+| **Ability 1** | `Q` | Instrument-specific (e.g. Rally Cry, Scout Report) |
+| **Ability 2** | `E` | Instrument-specific (e.g. Hold the Line) |
+| **Instrument Action** | `F` | Battle Banner: Plant Banner; unused for Longbow at debut |
+
+- `Q` / `E` **remap per instrument** — War Cry and Tactical Rally are replaced, not added alongside
+- Tier 1 orders remain `1`–`5` + RMB regardless of instrument
+- All bindings stored in a single remappable config for future controller/mobile support
+
 ---
 
 ## Bond & Cohesion
 
-The bond between commander and companion is a **cohesion system**, not a stat buff. Separation should feel like losing a partner — not like a damage debuff ticking down.
+The bond between commander and companion is a **cohesion system** governed by **Bond Range** — separate from Command Range, Designation Range, and future Presence.
 
 ### Bonded State (within bond radius)
 
@@ -570,7 +586,7 @@ Range and influence are **separate systems**. They must remain independently tun
 | Orders execute normally | Orders weakened, delayed, or ignored (tune per order) |
 | Commander leadership reaches the army | Army fights on its own initiative |
 
-**Default (no instrument):** Command Range ≈ Bond Range — commander must stay near companion for orders to carry.
+**Default (no instrument):** Command Range **equals Bond Range** — keeps early game easy to understand. Commander must stay near companion for orders to carry full weight.
 
 **Longbow modifier:** Extends Command Range significantly. Commander can issue orders from rear echelon — but Bond Range is unchanged. Long-range command is an advantage; it does not replace the need to maintain companion synchronization.
 
@@ -950,8 +966,11 @@ When commander and companion are within bond radius, both gain:
 | **Command instruments** | Active battlefield decisions every 10–20s; not DPS or animation swaps | Leadership interactions, not weapons |
 | **Instrument debut scope** | 2 instruments (Longbow, Battle Banner) after M4 | Polished decision loops over shallow variety |
 | **Battle Banner combat** | Commander cannot attack; influence zone is the instrument | Presence-based leadership, not flag melee |
-| **Scout Report input** | Ability bar (CP or cooldown), not held Tab | Unified commander interface; mobile/controller ready |
+| **Scout Report input** | Ability bar, cooldown-only (not held Tab) | Unified interface; cheap scouting early |
+| **Scout Report cost** | Cooldown-only at debut; add 1 CP later if spammy | Intelligence should feel accessible |
 | **Scout Report output** | Actionable battlefield intelligence, not map reveal | Supports assess → decide loop |
+| **Default Command Range** | Equals Bond Range until instruments modify | Early game clarity |
+| **Instrument inputs** | Q/E per instrument; F for banner plant; remappable | Simple now, flexible later |
 | **Banner relocation** | 0.5s setup; zone inactive; commander fully responsive | Tactical tradeoff, not punishment |
 | **Range systems** | Bond, Command, and Designation are separate | Long command never bypasses bond tension |
 | **Presence system** | Documented for future; architecture stays modular | Fourth influence layer without refactor |
@@ -960,10 +979,8 @@ When commander and companion are within bond radius, both gain:
 
 Questions to resolve before implementing Command Instruments (M4.5):
 
-1. **Scout Report cost** — 1 CP, 0 CP with cooldown, or free with long cooldown? Recommend 1 CP to fit assess → commit cadence.
-2. **Command Range default** — Equal to Bond Range for base commander, or slightly larger? Recommend equal until instruments modify it.
-3. **Instrument ability bar layout** — Q/E remap per instrument + F for banner plant; confirm controller mapping.
-4. **Presence implementation milestone** — Defer to M7+; validate range architecture during M4.5 instrument implementation.
+1. **Scout Report cooldown duration** — 15s, 20s, or 25s? Tune during M4.5 playtesting for spam vs. neglect.
+2. **Presence implementation milestone** — Defer to M7+; validate range architecture during M4.5 instrument implementation.
 
 Questions to resolve during M2–M3 playtesting:
 
