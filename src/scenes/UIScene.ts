@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameStateData } from './GameScene';
 import { getWinMessage } from '../presentation/DeathAnalysis';
+import { INTENT_LABELS, type CompanionIntent } from '../command/companionIntent';
 import { GAME_WIDTH } from '../config';
 
 export class UIScene extends Phaser.Scene {
@@ -102,13 +103,11 @@ export class UIScene extends Phaser.Scene {
     const remaining = Math.max(0, data.survivalGoal - data.elapsed);
     this.timerText.setText(`Pressure: ${Math.ceil(remaining / 1000)}s remaining`);
 
-    const companionMood =
-      data.cohesionState === 'bonded' ? 'With you' :
-      data.cohesionState === 'resyncing' ? 'Returning...' : 'Out of sync';
+    const label = INTENT_LABELS[data.companionIntent as CompanionIntent] ?? 'With you';
     const moodColor =
       data.cohesionState === 'bonded' ? '#d4a054' :
       data.cohesionState === 'resyncing' ? '#c9b896' : '#8a8278';
-    this.companionStatus.setText(`Oathbound: ${companionMood}`).setColor(moodColor);
+    this.companionStatus.setText(`Oathbound: ${label}`).setColor(moodColor);
 
     const bondLabel =
       data.cohesionState === 'bonded'

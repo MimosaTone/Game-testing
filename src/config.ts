@@ -45,6 +45,18 @@ export const COHESION = {
   desyncedPursuitRangeMultiplier: 1.5,
 };
 
+/** Oathbound partner behavior — initiative without new orders */
+export const PARTNER = {
+  screenOffset: 48,
+  guardRadius: 90,
+  interceptSpeedMultiplier: 1.65,
+  defendSpeedMultiplier: 1.5,
+  initiativeAssassinRange: 220,
+  initiativeCooldownMs: 6000,
+  calloutDurationMs: 2500,
+  resyncMoveSpeed: 0.85,
+};
+
 export const COMMAND = {
   orderCooldowns: {
     hold: 1500,

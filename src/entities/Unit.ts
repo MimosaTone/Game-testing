@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH, PARTNER } from '../config';
 import type { CohesionState } from '../cohesion/CohesionSystem';
 import { PALETTE } from '../presentation/palette';
 
@@ -235,8 +235,16 @@ export class Companion extends Unit {
 
   updateResync(commander: Commander): void {
     if (!this.isResyncing) return;
+    const dist = Phaser.Math.Distance.Between(this.x, this.y, commander.x, commander.y);
     const angle = Phaser.Math.Angle.Between(this.x, this.y, commander.x, commander.y);
     this.sprite.setRotation(angle);
+
+    if (dist > COMPANION.followDistance * 0.6) {
+      const speed = this.effectiveSpeed * PARTNER.resyncMoveSpeed;
+      this.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    } else {
+      this.stop();
+    }
     this.updateBondRing();
   }
 

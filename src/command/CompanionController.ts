@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COMMAND, COMPANION, COHESION, SYNERGY } from '../config';
+import { COMMAND, COHESION, PARTNER, SYNERGY } from '../config';
 import type { ActiveOrder } from './OrderSystem';
 import type { AbilitySystem } from './AbilitySystem';
 import type { CohesionState } from '../cohesion/CohesionSystem';
@@ -8,8 +8,13 @@ import { Commander, Companion, clampToArena } from '../entities/Unit';
 import {
   EnemyUnit,
   getNearestEnemy,
-  getNearestEnemyToPoint,
 } from '../enemies/EnemyUnit';
+import {
+  assessThreats,
+  computeScreenPosition,
+  type CompanionIntent,
+  type ThreatAssessment,
+} from './companionIntent';
 
 interface PendingOrder {
   order: ActiveOrder;
@@ -23,12 +28,19 @@ export class CompanionController {
   private focusFireEndsAt = 0;
   private focusFireCooldownUntil = 0;
   private rallyMarker?: Phaser.GameObjects.Arc;
-  private focusMarker?: Phaser.GameObjects.Graphics;
+  private lastInitiativeAt = 0;
+  private lastSupportCalloutAt = 0;
+  private intent: CompanionIntent = 'guarding';
+  private proactiveInterceptTarget: EnemyUnit | null = null;
 
   constructor(
     private scene: Phaser.Scene,
     private doctrineId: DoctrineId,
   ) {}
+
+  getIntent(): CompanionIntent {
+    return this.intent;
+  }
 
   syncOrder(
     activeOrder: ActiveOrder | null,
@@ -50,6 +62,7 @@ export class CompanionController {
 
     if (isNew) {
       this.pendingOrder = { order: { ...activeOrder }, executeAt: now + delay };
+      this.proactiveInterceptTarget = null;
       if (activeOrder.type === 'hold') {
         this.holdPosition = null;
       }
@@ -66,7 +79,10 @@ export class CompanionController {
   ): void {
     if (!companion.isAlive) return;
 
+    const threats = assessThreats(commander, companion, enemies);
+
     if (companion.isResyncing) {
+      this.intent = 'returning';
       companion.updateResync(commander);
       clampToArena(companion);
       return;
@@ -78,10 +94,9 @@ export class CompanionController {
 
     if (!order) {
       if (cohesionState === 'desynced') {
-        this.executeDesyncedIdle(companion, commander, enemies, now);
+        this.executeDesyncedIdle(companion, commander, enemies, now, threats);
       } else {
-        this.followCommander(companion, commander);
-        this.autoAttackNearest(companion, enemies, now, cohesionState, false);
+        this.executePartnerIdle(companion, commander, enemies, now, threats);
       }
       clampToArena(companion);
       return;
@@ -89,18 +104,23 @@ export class CompanionController {
 
     switch (order.type) {
       case 'hold':
+        this.intent = 'holding';
         this.executeHold(companion, commander, enemies, now, cohesionState);
         break;
       case 'attack':
+        this.intent = 'pursuing';
         this.executeAttack(companion, enemies, now, cohesionState);
         break;
       case 'defend':
-        this.executeDefend(companion, commander, enemies, now, cohesionState);
+        this.intent = threats.assassinUrgent ? 'intercepting' : 'screening';
+        this.executeDefend(companion, commander, enemies, now, cohesionState, threats);
         break;
       case 'rally_point':
+        this.intent = 'rallying';
         this.executeRally(companion, order, enemies, now, cohesionState);
         break;
       case 'focus_target':
+        this.intent = 'focusing';
         this.executeFocus(companion, order, enemies, now, cohesionState);
         break;
     }
@@ -136,10 +156,8 @@ export class CompanionController {
   }
 
   private applyAbilityBuffs(companion: Companion, abilities: AbilitySystem, now: number): void {
-    const warCry = abilities.getDamageMultiplier(now);
-    const rallyDr = abilities.getDamageReduction(now);
-    companion.abilityDamageMultiplier = warCry;
-    companion.abilityDamageReduction = rallyDr;
+    companion.abilityDamageMultiplier = abilities.getDamageMultiplier(now);
+    companion.abilityDamageReduction = abilities.getDamageReduction(now);
     companion.tacticalRallyActive = abilities.hasBuff('tactical_rally', now);
   }
 
@@ -154,19 +172,9 @@ export class CompanionController {
     this.showRallyMarker(x, y);
   }
 
-  setFocusMarker(enemy: EnemyUnit): void {
-    this.focusMarker?.destroy();
-    this.focusMarker = this.scene.add.graphics();
-    this.focusMarker.lineStyle(2, 0xff4444, 0.9);
-    this.focusMarker.strokeCircle(enemy.x, enemy.y, enemy.sprite.radius + 6);
-    this.focusMarker.setDepth(5);
-  }
-
   clearMarkers(): void {
     this.rallyMarker?.destroy();
-    this.focusMarker?.destroy();
     this.rallyMarker = undefined;
-    this.focusMarker = undefined;
   }
 
   getBattlefieldControlPoints(): { x: number; y: number; kind: 'rally' | 'hold' }[] {
@@ -184,31 +192,124 @@ export class CompanionController {
     this.clearMarkers();
   }
 
+  /**
+   * Bonded idle: partner screens Commander — does NOT chase nearest enemy.
+   * May take limited initiative against urgent threats.
+   */
+  private executePartnerIdle(
+    companion: Companion,
+    commander: Commander,
+    enemies: EnemyUnit[],
+    now: number,
+    threats: ThreatAssessment,
+  ): void {
+    if (this.tryProactiveIntercept(companion, commander, enemies, now, threats)) {
+      return;
+    }
+
+    this.maybeCalloutSupport(companion, now, threats);
+
+    const screenThreat = threats.commanderThreat;
+    const screenPos = computeScreenPosition(
+      commander,
+      screenThreat,
+      PARTNER.screenOffset,
+    );
+
+    this.intent = screenThreat ? 'screening' : 'guarding';
+    this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.75);
+    this.faceToward(companion, screenThreat?.x ?? commander.x, screenThreat?.y ?? commander.y);
+
+    // Attack only what enters range — never chase
+    this.attackInRangeOnly(companion, enemies, now);
+  }
+
+  /** Proactive intercept: Oathbound moves to cut off Assassin without player order */
+  private tryProactiveIntercept(
+    companion: Companion,
+    commander: Commander,
+    _enemies: EnemyUnit[],
+    now: number,
+    threats: ThreatAssessment,
+  ): boolean {
+    const assassin = threats.assassinUrgent;
+    if (!assassin) {
+      this.proactiveInterceptTarget = null;
+      return false;
+    }
+
+    const dist = Phaser.Math.Distance.Between(companion.x, companion.y, assassin.x, assassin.y);
+    if (dist > PARTNER.initiativeAssassinRange) return false;
+    if (now - this.lastInitiativeAt < PARTNER.initiativeCooldownMs && !this.proactiveInterceptTarget) {
+      return false;
+    }
+
+    if (!this.proactiveInterceptTarget) {
+      this.lastInitiativeAt = now;
+      this.proactiveInterceptTarget = assassin;
+    }
+
+    this.intent = 'intercepting';
+    const interceptX = (assassin.x + commander.x) / 2;
+    const interceptY = (assassin.y + commander.y) / 2;
+    this.moveToPosition(
+      companion,
+      interceptX,
+      interceptY,
+      companion.effectiveSpeed * PARTNER.interceptSpeedMultiplier,
+    );
+    this.faceToward(companion, assassin.x, assassin.y);
+
+    if (Phaser.Math.Distance.Between(companion.x, companion.y, assassin.x, assassin.y) <= companion.attackRange) {
+      companion.tryAttack(assassin, now);
+    }
+    return true;
+  }
+
+  /** Brief callout toward Support — communicates "this one matters" without UI lecture */
+  private maybeCalloutSupport(
+    companion: Companion,
+    now: number,
+    threats: ThreatAssessment,
+  ): void {
+    if (!threats.supportActive) return;
+    if (now - this.lastSupportCalloutAt < 12_000) return;
+
+    const dist = Phaser.Math.Distance.Between(
+      companion.x, companion.y,
+      threats.supportActive.x, threats.supportActive.y,
+    );
+    if (dist > companion.attackRange * 2.5) return;
+
+    this.lastSupportCalloutAt = now;
+    this.faceToward(companion, threats.supportActive.x, threats.supportActive.y);
+    companion.sprite.scene.events.emit('companion-callout', {
+      fromX: companion.x,
+      fromY: companion.y,
+      toX: threats.supportActive.x,
+      toY: threats.supportActive.y,
+    });
+  }
+
   private executeDesyncedIdle(
     companion: Companion,
     commander: Commander,
     enemies: EnemyUnit[],
     now: number,
+    threats: ThreatAssessment,
   ): void {
+    this.intent = 'fighting_alone';
+    this.attackInRangeOnly(companion, enemies, now);
+
     const distToCommander = Phaser.Math.Distance.Between(
       companion.x, companion.y, commander.x, commander.y,
     );
 
-    this.autoAttackNearest(companion, enemies, now, 'desynced', true);
-
     if (distToCommander > SYNERGY.bondRadius * 1.25) {
-      this.moveToward(companion, commander.x, commander.y, companion.effectiveSpeed * 0.35);
-    } else {
-      companion.stop();
-    }
-  }
-
-  private followCommander(companion: Companion, commander: Commander): void {
-    const dist = Phaser.Math.Distance.Between(companion.x, companion.y, commander.x, commander.y);
-    const followDistance = COMPANION.followDistance;
-    if (dist > followDistance) {
-      this.moveToward(companion, commander.x, commander.y, companion.effectiveSpeed);
-    } else {
+      this.intent = 'returning';
+      this.moveToPosition(companion, commander.x, commander.y, companion.effectiveSpeed * 0.4);
+    } else if (threats.commanderThreat) {
+      this.faceToward(companion, threats.commanderThreat.x, threats.commanderThreat.y);
       companion.stop();
     }
   }
@@ -218,7 +319,7 @@ export class CompanionController {
     _commander: Commander,
     enemies: EnemyUnit[],
     now: number,
-    cohesionState: CohesionState,
+    _cohesionState: CohesionState,
   ): void {
     if (!this.holdPosition) {
       this.holdPosition = { x: companion.x, y: companion.y };
@@ -231,18 +332,13 @@ export class CompanionController {
     );
 
     if (dist > holdRadius) {
-      this.moveToward(companion, this.holdPosition.x, this.holdPosition.y, companion.effectiveSpeed * 0.8);
+      this.moveToPosition(companion, this.holdPosition.x, this.holdPosition.y, companion.effectiveSpeed * 0.8);
     } else {
       companion.stop();
     }
 
-    if (this.ironWallHolding) {
-      companion.bonusDamageReduction = COMMAND.ironWall.holdDamageReduction;
-    } else {
-      companion.bonusDamageReduction = 0;
-    }
-
-    this.autoAttackNearest(companion, enemies, now, cohesionState, true);
+    companion.bonusDamageReduction = this.ironWallHolding ? COMMAND.ironWall.holdDamageReduction : 0;
+    this.attackInRangeOnly(companion, enemies, now);
   }
 
   private executeAttack(
@@ -259,8 +355,7 @@ export class CompanionController {
 
     const cautious = cohesionState === 'desynced';
     const maxPursuit = companion.attackRange * (cautious ? COHESION.desyncedPursuitRangeMultiplier : 4);
-
-    this.pursueAndAttack(companion, target, enemies, now, maxPursuit);
+    this.pursueAndAttack(companion, target, now, maxPursuit);
   }
 
   private executeDefend(
@@ -269,29 +364,37 @@ export class CompanionController {
     enemies: EnemyUnit[],
     now: number,
     cohesionState: CohesionState,
+    threats: ThreatAssessment,
   ): void {
-    const defendRadius = this.doctrineId === 'shock_assault'
-      ? 90 * COMMAND.shockAssault.defendEffectiveness
-      : 110;
+    const urgent = threats.assassinUrgent ?? threats.flankThreat ?? threats.commanderThreat;
+    const speedMult = threats.assassinUrgent
+      ? PARTNER.defendSpeedMultiplier
+      : 1;
 
-    const distToCommander = Phaser.Math.Distance.Between(
-      companion.x, companion.y, commander.x, commander.y,
-    );
+    if (urgent) {
+      const interceptX = (urgent.x + commander.x) / 2;
+      const interceptY = (urgent.y + commander.y) / 2;
+      const dist = Phaser.Math.Distance.Between(companion.x, companion.y, interceptX, interceptY);
 
-    if (distToCommander > defendRadius) {
-      this.moveToward(companion, commander.x, commander.y, companion.effectiveSpeed);
-    } else {
-      companion.stop();
+      if (dist > 15) {
+        this.moveToPosition(companion, interceptX, interceptY, companion.effectiveSpeed * speedMult);
+      } else {
+        companion.stop();
+      }
+
+      if (Phaser.Math.Distance.Between(companion.x, companion.y, urgent.x, urgent.y) <= companion.attackRange) {
+        companion.tryAttack(urgent, now);
+      }
+      this.faceToward(companion, urgent.x, urgent.y);
+      return;
     }
 
-    const threat = getNearestEnemyToPoint(enemies, commander.x, commander.y);
-    if (threat) {
-      const threatDist = Phaser.Math.Distance.Between(companion.x, companion.y, threat.x, threat.y);
-      if (threatDist <= companion.attackRange) {
-        companion.tryAttack(threat, now);
-      } else if (!cohesionState || cohesionState === 'bonded') {
-        this.moveToward(companion, threat.x, threat.y, companion.effectiveSpeed * 0.7);
-      }
+    const screenPos = computeScreenPosition(commander, threats.commanderThreat, PARTNER.screenOffset);
+    this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.85);
+    this.attackInRangeOnly(companion, enemies, now);
+
+    if (cohesionState === 'bonded') {
+      this.faceToward(companion, commander.x, commander.y);
     }
   }
 
@@ -310,27 +413,15 @@ export class CompanionController {
 
     if (dist > 25) {
       const speedMult = cohesionState === 'desynced' ? 0.6 : 1;
-      this.moveToward(
+      this.moveToPosition(
         companion,
         order.rallyPoint.x,
         order.rallyPoint.y,
         companion.effectiveSpeed * speedMult,
       );
-
-      if (cohesionState === 'desynced') {
-        const nearby = getNearestEnemy(enemies, companion);
-        if (nearby) {
-          const nearbyDist = Phaser.Math.Distance.Between(companion.x, companion.y, nearby.x, nearby.y);
-          if (nearbyDist < companion.attackRange * 1.2) {
-            companion.stop();
-            companion.tryAttack(nearby, now);
-            return;
-          }
-        }
-      }
     } else {
       companion.stop();
-      this.autoAttackNearest(companion, enemies, now, cohesionState, true);
+      this.attackInRangeOnly(companion, enemies, now);
     }
   }
 
@@ -365,54 +456,51 @@ export class CompanionController {
       }
     }
 
-    this.setFocusMarker(target);
+    this.faceToward(companion, target.x, target.y);
     const maxPursuit = cohesionState === 'desynced'
       ? companion.attackRange * COHESION.desyncedPursuitRangeMultiplier
       : companion.attackRange * 5;
-    this.pursueAndAttack(companion, target, enemies, now, maxPursuit);
+    this.pursueAndAttack(companion, target, now, maxPursuit);
   }
 
   private pursueAndAttack(
     companion: Companion,
     target: EnemyUnit,
-    enemies: EnemyUnit[],
     now: number,
     maxPursuit: number,
   ): void {
     const dist = Phaser.Math.Distance.Between(companion.x, companion.y, target.x, target.y);
     if (dist > companion.attackRange) {
       if (dist <= maxPursuit) {
-        this.moveToward(companion, target.x, target.y, companion.effectiveSpeed);
+        this.moveToPosition(companion, target.x, target.y, companion.effectiveSpeed);
       } else {
         companion.stop();
-        this.autoAttackNearest(companion, enemies, now, 'desynced', false);
       }
     } else {
       companion.stop();
       companion.tryAttack(target, now);
     }
+    this.faceToward(companion, target.x, target.y);
   }
 
-  private autoAttackNearest(
-    companion: Companion,
-    enemies: EnemyUnit[],
-    now: number,
-    cohesionState: CohesionState,
-    inPlaceOnly: boolean,
-  ): void {
+  /** Partner rule: never chase during guard/screen — only strike in range */
+  private attackInRangeOnly(companion: Companion, enemies: EnemyUnit[], now: number): void {
     const target = getNearestEnemy(enemies, companion);
     if (!target) return;
     const dist = Phaser.Math.Distance.Between(companion.x, companion.y, target.x, target.y);
     if (dist <= companion.attackRange) {
       companion.tryAttack(target, now);
-    } else if (!inPlaceOnly && cohesionState === 'bonded') {
-      this.moveToward(companion, target.x, target.y, companion.effectiveSpeed * 0.5);
     }
   }
 
-  private moveToward(companion: Companion, x: number, y: number, speed: number): void {
+  private moveToPosition(companion: Companion, x: number, y: number, speed: number): void {
     const angle = Phaser.Math.Angle.Between(companion.x, companion.y, x, y);
     companion.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+  }
+
+  private faceToward(companion: Companion, x: number, y: number): void {
+    const angle = Phaser.Math.Angle.Between(companion.x, companion.y, x, y);
+    companion.sprite.setRotation(angle);
   }
 
   private showRallyMarker(x: number, y: number): void {

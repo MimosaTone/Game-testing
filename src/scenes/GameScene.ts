@@ -11,7 +11,7 @@ import {
   getEnemyAtPoint,
   getNearestEnemy,
 } from '../enemies/EnemyUnit';
-import { COMMAND, COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH, SURVIVAL_DURATION_MS } from '../config';
+import { COMMAND, COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH, PARTNER, SURVIVAL_DURATION_MS } from '../config';
 import { getDoctrine } from '../doctrine/types';
 import { clampToArena, Commander, Companion } from '../entities/Unit';
 import type { RunConfig } from '../types/RunConfig';
@@ -19,6 +19,7 @@ import { Battlefield } from '../presentation/Battlefield';
 import { analyzeDeath, type LeadershipContext } from '../presentation/DeathAnalysis';
 import { FocusVisuals } from '../presentation/FocusVisuals';
 import { OrderFeedback } from '../presentation/OrderFeedback';
+import { CompanionIntentDisplay } from '../presentation/CompanionIntentDisplay';
 
 export type GameState = 'playing' | 'won' | 'lost';
 export type WinReason = 'survival' | 'boss_defeated';
@@ -55,6 +56,7 @@ export interface GameStateData {
   deathHeadline: string | null;
   deathLesson: string | null;
   deathSuggestion: string | null;
+  companionIntent: string;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -83,6 +85,7 @@ export class GameScene extends Phaser.Scene {
   private battlefield!: Battlefield;
   private orderFeedback!: OrderFeedback;
   private focusVisuals!: FocusVisuals;
+  private intentDisplay!: CompanionIntentDisplay;
   private desyncSince = 0;
   private deathHeadline: string | null = null;
   private deathLesson: string | null = null;
@@ -101,6 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.battlefield = new Battlefield(this);
     this.orderFeedback = new OrderFeedback(this);
     this.focusVisuals = new FocusVisuals();
+    this.intentDisplay = new CompanionIntentDisplay(this);
     this.resetRun();
     this.setupInput();
 
@@ -108,6 +112,14 @@ export class GameScene extends Phaser.Scene {
       this.cleanup();
       this.scene.sleep('UIScene');
       this.scene.start('SetupScene');
+    });
+
+    this.events.on('companion-callout', (payload: { fromX: number; fromY: number; toX: number; toY: number }) => {
+      this.intentDisplay.showCallout(
+        payload.fromX, payload.fromY, payload.toX, payload.toY,
+        PARTNER.calloutDurationMs,
+        this.time.now,
+      );
     });
   }
 
@@ -340,6 +352,9 @@ export class GameScene extends Phaser.Scene {
       this.phaseAnnouncement = null;
     }
 
+    const intent = this.companionController.getIntent();
+    this.intentDisplay.update(this.companion.x, this.companion.y, intent, now);
+
     this.events.emit('game-state-update', this.getStateData(now));
   }
 
@@ -465,11 +480,13 @@ export class GameScene extends Phaser.Scene {
       deathHeadline: this.deathHeadline,
       deathLesson: this.deathLesson,
       deathSuggestion: this.deathSuggestion,
+      companionIntent: this.companionController?.getIntent() ?? 'guarding',
     };
   }
 
   private cleanup(): void {
     this.battlefield?.destroy();
+    this.intentDisplay?.destroy();
     this.encounterManager?.destroy();
     this.cohesion?.destroy();
     this.companionController?.destroy();
