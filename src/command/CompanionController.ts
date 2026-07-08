@@ -169,6 +169,17 @@ export class CompanionController {
     this.focusMarker = undefined;
   }
 
+  getBattlefieldControlPoints(): { x: number; y: number; kind: 'rally' | 'hold' }[] {
+    const points: { x: number; y: number; kind: 'rally' | 'hold' }[] = [];
+    if (this.holdPosition) {
+      points.push({ ...this.holdPosition, kind: 'hold' });
+    }
+    if (this.rallyMarker?.active) {
+      points.push({ x: this.rallyMarker.x, y: this.rallyMarker.y, kind: 'rally' });
+    }
+    return points;
+  }
+
   destroy(): void {
     this.clearMarkers();
   }

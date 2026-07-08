@@ -1,4 +1,11 @@
-export type EnemyRole = 'grunt' | 'archer' | 'bruiser' | 'scout' | 'support' | 'boss';
+export type EnemyRole =
+  | 'scout'
+  | 'archer'
+  | 'bruiser'
+  | 'support'
+  | 'assassin'
+  | 'siege'
+  | 'boss';
 
 export interface EnemyRoleDefinition {
   role: EnemyRole;
@@ -25,4 +32,10 @@ export interface EncounterPhase {
   squads: SquadSpawn[];
   spawnBoss?: boolean;
   announcement?: string;
+}
+
+export interface BattlefieldControlPoint {
+  x: number;
+  y: number;
+  kind: 'rally' | 'hold';
 }

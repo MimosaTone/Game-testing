@@ -1,6 +1,6 @@
 # Army Commander — Game Design Document
 
-**Version 1.5** — M3 enemy behavior framework implemented. Command layer stress-test before content expansion.
+**Version 1.6** — M3 enemy roster refined: Assassin + Siege replace Grunt; each role forces a unique command decision.
 
 ## Core Pillars
 
@@ -847,29 +847,36 @@ How the four pillars connect during a run:
 
 ---
 
-## Enemy Behavior Framework
+## Enemy Design Philosophy
 
-Enemies exist to force **tactical decisions**, not to deal damage. Every enemy belongs to a **battlefield role**.
+Every enemy exists to force a **different command decision** from the player.
 
-**Design test:** *"What decision is this enemy forcing me to make?"* — not *"How much health does it have?"*
+**Core rule:** If removing an enemy does not change the player's decision-making, that enemy should not exist.
 
-| Role | Forces | Behavior summary |
+Each enemy has a clear battlefield role, a unique behavior pattern, and a specific tactical question it asks the player.
+
+Difficulty comes from intelligent battlefield pressure — not simply increasing health or damage.
+
+The battlefield should feel like **two armies adapting to one another**, not a collection of enemies independently attacking the player.
+
+| Role | Tactical question | Behavior summary |
 |---|---|---|
-| **Grunt** | Basic positioning | Closes distance; prioritizes Commander if nearby; switches to Companion when Focus-marked |
-| **Archer** | Movement & repositioning | Keeps distance; flees when threatened; targets clustered armies |
-| **Bruiser** | Focus fire & priority | Slow, heavy, knockback; pushes formations apart |
-| **Scout** | Protect the Commander | Fast flanker; ignores frontline; pressures Commander |
-| **Support** | Priority targeting | Buffs allies behind frontline; retreats when threatened |
+| **Scout** | Pull companion back to protect yourself, or keep pressuring? | Fast, evasive flanker; ignores frontline; retreats if isolated |
+| **Archer** | Close distance, reposition, or designate Archer as priority? | Keeps range; repositions behind allies; targets clustered units |
+| **Bruiser** | Focus fire the Bruiser, or ignore it and risk losing formation? | Slow, heavy, knockback; guards ranged allies |
+| **Support** | Eliminate Support immediately, even if it exposes the Commander? | Buffs + heals allies behind frontline; avoids direct combat |
+| **Assassin** | Intercept with companion, reposition, or sacrifice offensive pressure? | Waits for openings; dashes at Commander; escapes after striking |
+| **Siege** | Defend command position, relocate, or eliminate the Siege Unit? | Slow long-range shells on rally/hold positions (Battle Banner placeholder) |
 | **Boss (Field Captain)** | Full command test | Phased encounter; summons adds; exposes command weaknesses |
 
 ### AI Coordination Rules
 
-- Archers remain behind tanks (bruisers/grunts)
-- Scouts attempt flanks
-- Support units retreat behind allies
-- Bruisers protect ranged enemies
-
-The battlefield should feel like **two armies**, not isolated enemies walking toward the player.
+- Archers remain behind bruisers
+- Scouts attempt flanks; retreat when isolated
+- Support retreats behind allies and heals wounded frontliners
+- Bruisers position between threats and ranged allies
+- Assassins circle until Commander is exposed
+- Siege units target battlefield control points (rally/hold markers)
 
 ### Prototype Boss: Field Captain
 
@@ -877,7 +884,7 @@ Not a final boss — a **command system stress test**. Requires positioning, Foc
 
 | Phase | Behavior | Decision forced |
 |---|---|---|
-| **1 (100–70% HP)** | Frontline bruiser; summons grunts | Focus fire vs. survive pressure |
+| **1 (100–70% HP)** | Frontline bruiser; summons assassins | Focus fire vs. survive pressure |
 | **2 (70–40% HP)** | Retreats behind line; summons scouts | Priority targeting support/archers |
 | **3 (<40% HP)** | Charges Commander periodically | Defend, reposition, bond management |
 
@@ -886,6 +893,7 @@ Not a final boss — a **command system stress test**. Requires positioning, Foc
 ### Explicitly NOT in M3
 
 - Enemy factions, adaptive AI, enemy commanders, pressure-axis adaptation, battlefield events
+- Battle Banners (Siege targets rally/hold positions until M5.5 instruments ship)
 
 ---
 
@@ -915,11 +923,12 @@ Each milestone = playable prototype. Never move forward until the current one is
 **Playtest question:** Does choosing a doctrine change how you issue orders? Does desync feel like losing your partner?
 
 ### M3: Enemy Behavior & Prototype Encounter ✅
-- **Five enemy roles:** Grunt, Archer, Bruiser, Scout, Support — each with distinct AI
-- **Coordinated squads:** frontline, ranged, flank, support positioning
+- **Six enemy roles:** Scout, Archer, Bruiser, Support, Assassin, Siege — each forces a distinct command decision
+- **Grunt removed** — overlapped with Bruiser/Scout without a unique tactical question
+- **Coordinated squads:** frontline, ranged, flank, support, siege positioning
 - **Field Captain** prototype boss with phased behaviors
 - **Command Trial** encounter (phased squads, boss at ~40s)
-- Focus Target affects grunt targeting; archers punish clustering
+- Focus Target redirects marked enemies to Companion; archers punish clustering; siege shells rally/hold positions
 
 **Playtest goals:**
 - Do enemies create meaningful decisions?

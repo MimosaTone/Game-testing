@@ -78,6 +78,21 @@ export abstract class Unit {
     }
   }
 
+  heal(amount: number): void {
+    if (!this.isAlive) return;
+    this.health = Math.min(this.maxHealth, this.health + amount);
+    this.flashHeal();
+  }
+
+  protected flashHeal(): void {
+    this.sprite.setFillStyle(0x88ffaa);
+    this.sprite.scene.time.delayedCall(80, () => {
+      if (this.isAlive) {
+        this.sprite.setFillStyle(this.getColor());
+      }
+    });
+  }
+
   protected flashDamage(): void {
     this.sprite.setFillStyle(0xffffff);
     this.sprite.scene.time.delayedCall(80, () => {

@@ -18,9 +18,12 @@ export class EnemyUnit extends Unit {
   isBoss = false;
   /** Boss phase state */
   bossPhase: 1 | 2 | 3 = 1;
-  lastSupportBuffAt = 0;
+  lastSupportActionAt = 0;
   lastBossSummonAt = 0;
   lastBossChargeAt = 0;
+  /** Assassin state machine */
+  assassinState: 'stalking' | 'dashing' | 'escaping' = 'stalking';
+  assassinEscapeUntil = 0;
   private labelText?: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, x: number, y: number, role: EnemyRole) {
@@ -89,8 +92,22 @@ export function getEnemiesByRole(enemies: EnemyUnit[], role: EnemyRole): EnemyUn
 }
 
 export function getFrontlineAnchor(enemies: EnemyUnit[]): { x: number; y: number } | null {
-  const tanks = [...getEnemiesByRole(enemies, 'bruiser'), ...getEnemiesByRole(enemies, 'grunt')];
-  if (tanks.length === 0) return null;
+  const tanks = getEnemiesByRole(enemies, 'bruiser');
+  if (tanks.length === 0) {
+    const ranged = [
+      ...getEnemiesByRole(enemies, 'archer'),
+      ...getEnemiesByRole(enemies, 'support'),
+      ...getEnemiesByRole(enemies, 'siege'),
+    ];
+    if (ranged.length === 0) return null;
+    let x = 0;
+    let y = 0;
+    for (const e of ranged) {
+      x += e.x;
+      y += e.y;
+    }
+    return { x: x / ranged.length, y: y / ranged.length };
+  }
   let x = 0;
   let y = 0;
   for (const e of tanks) {
@@ -98,6 +115,20 @@ export function getFrontlineAnchor(enemies: EnemyUnit[]): { x: number; y: number
     y += e.y;
   }
   return { x: x / tanks.length, y: y / tanks.length };
+}
+
+export function countAlliesNear(
+  enemy: EnemyUnit,
+  enemies: EnemyUnit[],
+  radius: number,
+): number {
+  let count = 0;
+  for (const ally of getAliveEnemies(enemies)) {
+    if (ally.id === enemy.id) continue;
+    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, ally.x, ally.y);
+    if (dist <= radius) count++;
+  }
+  return count;
 }
 
 export function getNearestEnemy(enemies: EnemyUnit[], from: Unit): EnemyUnit | null {
