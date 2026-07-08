@@ -4,27 +4,28 @@ import { CompanionController } from '../command/CompanionController';
 import { OrderSystem } from '../command/OrderSystem';
 import type { OrderType } from '../command/types';
 import { CohesionSystem } from '../cohesion/CohesionSystem';
-import { COMMAND, COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH, SURVIVAL_DURATION_MS } from '../config';
-import { getDoctrine } from '../doctrine/types';
+import { updateEnemyAI } from '../enemies/EnemyAI';
+import { EncounterManager } from '../enemies/EncounterManager';
 import {
-  clampToArena,
-  Commander,
-  Companion,
-  Enemy,
-  Unit,
+  EnemyUnit,
   getEnemyAtPoint,
   getNearestEnemy,
-} from '../entities/Unit';
+} from '../enemies/EnemyUnit';
+import { COMMAND, COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH, SURVIVAL_DURATION_MS } from '../config';
+import { getDoctrine } from '../doctrine/types';
+import { clampToArena, Commander, Companion } from '../entities/Unit';
 import type { RunConfig } from '../types/RunConfig';
-import { WaveManager } from '../systems/WaveManager';
 
 export type GameState = 'playing' | 'won' | 'lost';
+export type WinReason = 'survival' | 'boss_defeated';
 
 export interface GameStateData {
   state: GameState;
+  winReason: WinReason | null;
   elapsed: number;
   survivalGoal: number;
-  wave: number;
+  phase: number;
+  phaseAnnouncement: string | null;
   enemiesKilled: number;
   cohesionState: string;
   bondActive: boolean;
@@ -43,21 +44,25 @@ export interface GameStateData {
   orderFeedback: string | null;
   abilityFeedback: string | null;
   focusFireActive: boolean;
+  bossActive: boolean;
+  bossHealth: number;
+  bossMaxHealth: number;
 }
 
 export class GameScene extends Phaser.Scene {
   private runConfig!: RunConfig;
   private commander!: Commander;
   private companion!: Companion;
-  private enemies: Enemy[] = [];
+  private enemies: EnemyUnit[] = [];
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   private cohesion!: CohesionSystem;
   private orderSystem!: OrderSystem;
   private abilitySystem!: AbilitySystem;
   private companionController!: CompanionController;
-  private waveManager!: WaveManager;
+  private encounterManager!: EncounterManager;
   private gameState: GameState = 'playing';
+  private winReason: WinReason | null = null;
   private elapsed = 0;
   private enemiesKilled = 0;
   private cohesionState = 'bonded';
@@ -65,6 +70,8 @@ export class GameScene extends Phaser.Scene {
   private rallyPlacementMode = false;
   private pendingRallyPoint: { x: number; y: number } | null = null;
   private focusFireEndsAt = 0;
+  private phaseAnnouncement: string | null = null;
+  private announcementUntil = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -105,12 +112,15 @@ export class GameScene extends Phaser.Scene {
 
   private resetRun(): void {
     this.gameState = 'playing';
+    this.winReason = null;
     this.elapsed = 0;
     this.enemiesKilled = 0;
     this.enemies = [];
     this.rallyPlacementMode = false;
     this.pendingRallyPoint = null;
     this.focusFireEndsAt = 0;
+    this.phaseAnnouncement = null;
+    this.announcementUntil = 0;
 
     const startX = GAME_WIDTH / 2;
     const startY = GAME_HEIGHT / 2;
@@ -122,10 +132,21 @@ export class GameScene extends Phaser.Scene {
     this.abilitySystem = new AbilitySystem(this.time.now);
     this.companionController = new CompanionController(this, this.runConfig.doctrineId);
 
-    this.waveManager = new WaveManager(this, this.enemies, (wave) => {
-      this.events.emit('wave-start', wave);
+    this.encounterManager = new EncounterManager(this, this.enemies, {
+      onPhaseStart: (phaseId, announcement) => {
+        this.phaseAnnouncement = announcement ?? `Phase: ${phaseId}`;
+        this.announcementUntil = this.time.now + 4000;
+        this.events.emit('phase-start', phaseId);
+      },
+      onBossSpawned: () => {
+        this.phaseAnnouncement = 'Field Captain — eliminate or endure';
+        this.announcementUntil = this.time.now + 5000;
+      },
+      onBossDefeated: () => {
+        this.endGame('won', 'boss_defeated');
+      },
     });
-    this.waveManager.start();
+    this.encounterManager.start();
   }
 
   private setupInput(): void {
@@ -226,6 +247,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private getFocusEnemyId(): string | null {
+    const order = this.orderSystem.getActiveOrder();
+    return order?.type === 'focus_target' ? order.focusEnemyId ?? null : null;
+  }
+
   update(_time: number, delta: number): void {
     if (this.gameState !== 'playing') return;
 
@@ -234,12 +260,12 @@ export class GameScene extends Phaser.Scene {
     this.abilitySystem.update(now);
 
     if (this.elapsed >= SURVIVAL_DURATION_MS) {
-      this.endGame('won');
+      this.endGame('won', 'survival');
       return;
     }
 
     if (!this.commander.isAlive) {
-      this.endGame('lost');
+      this.endGame('lost', null);
       return;
     }
 
@@ -250,7 +276,6 @@ export class GameScene extends Phaser.Scene {
     this.bondActive = cohesionData.bondActive;
     this.companion.updateBondRing();
 
-    this.orderSystem.getActiveOrder();
     this.companionController.syncOrder(
       this.orderSystem.getActiveOrder(),
       now,
@@ -267,13 +292,44 @@ export class GameScene extends Phaser.Scene {
       cohesionData.state as 'bonded' | 'desynced' | 'resyncing',
     );
 
+    this.processEnemyAI(now);
     this.processCommanderCombat(now);
-    this.processEnemyCombat(now);
+    this.encounterManager.checkBossDefeated();
     this.cleanupDeadEnemies();
 
+    for (const enemy of this.enemies) {
+      if (enemy.isAlive) clampToArena(enemy);
+    }
     clampToArena(this.commander);
 
+    if (this.time.now > this.announcementUntil) {
+      this.phaseAnnouncement = null;
+    }
+
     this.events.emit('game-state-update', this.getStateData(now));
+  }
+
+  private processEnemyAI(now: number): void {
+    const focusEnemyId = this.getFocusEnemyId();
+    const ctx = {
+      commander: this.commander,
+      companion: this.companion,
+      enemies: this.enemies,
+      focusEnemyId,
+      now,
+      onBossSummon: (role: 'grunt' | 'scout', count: number) => {
+        for (let i = 0; i < count; i++) {
+          this.time.delayedCall(i * 400, () => {
+            this.encounterManager.spawnEnemy(role);
+          });
+        }
+      },
+    };
+
+    for (const enemy of this.enemies) {
+      if (!enemy.isAlive) continue;
+      updateEnemyAI(enemy, ctx);
+    }
   }
 
   private handleMovement(): void {
@@ -298,40 +354,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private processEnemyCombat(now: number): void {
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      const target = this.pickEnemyTarget(enemy);
-      if (!target) continue;
-
-      const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
-      if (dist <= enemy.attackRange) {
-        enemy.stop();
-        enemy.tryAttack(target, now);
-      } else {
-        enemy.chaseTarget(target);
-      }
-    }
-  }
-
-  private pickEnemyTarget(enemy: Enemy): Unit | null {
-    const targets: Unit[] = [];
-    if (this.commander.isAlive) targets.push(this.commander);
-    if (this.companion.isAlive) targets.push(this.companion);
-    if (targets.length === 0) return null;
-
-    let nearest: Unit = targets[0];
-    let minDist = Infinity;
-    for (const target of targets) {
-      const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = target;
-      }
-    }
-    return nearest;
-  }
-
   private cleanupDeadEnemies(): void {
     this.enemies = this.enemies.filter((e) => {
       if (!e.isAlive) {
@@ -349,23 +371,27 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private endGame(state: 'won' | 'lost'): void {
+  private endGame(state: 'won' | 'lost', reason: WinReason | null): void {
     this.gameState = state;
+    this.winReason = reason;
     this.commander.stop();
     this.events.emit('game-state-update', this.getStateData(this.time.now));
-    this.events.emit('game-over', state);
+    this.events.emit('game-over', { state, reason });
   }
 
   getStateData(now: number): GameStateData {
     const orderState = this.orderSystem.getState(now);
     const abilityState = this.abilitySystem.getState(now);
     const doctrine = getDoctrine(this.runConfig.doctrineId);
+    const boss = this.enemies.find((e) => e.isBoss && e.isAlive);
 
     return {
       state: this.gameState,
+      winReason: this.winReason,
       elapsed: this.elapsed,
       survivalGoal: SURVIVAL_DURATION_MS,
-      wave: this.waveManager?.currentWave ?? 0,
+      phase: this.encounterManager?.currentPhase ?? 0,
+      phaseAnnouncement: this.phaseAnnouncement,
       enemiesKilled: this.enemiesKilled,
       cohesionState: this.cohesionState,
       bondActive: this.bondActive,
@@ -374,7 +400,7 @@ export class GameScene extends Phaser.Scene {
       companionHealth: Math.max(0, this.companion?.health ?? 0),
       companionMaxHealth: COMPANION.maxHealth,
       doctrineName: doctrine.name,
-      objectiveName: 'Survival',
+      objectiveName: 'Command Trial',
       activeOrder: orderState.activeOrder?.type ?? null,
       commandPoints: abilityState.commandPoints,
       maxCommandPoints: abilityState.maxCommandPoints,
@@ -384,11 +410,14 @@ export class GameScene extends Phaser.Scene {
       orderFeedback: orderState.lastFeedback,
       abilityFeedback: abilityState.lastFeedback,
       focusFireActive: this.focusFireEndsAt > now,
+      bossActive: !!boss,
+      bossHealth: boss?.health ?? 0,
+      bossMaxHealth: boss?.maxHealth ?? 0,
     };
   }
 
   private cleanup(): void {
-    this.waveManager?.destroy();
+    this.encounterManager?.destroy();
     this.cohesion?.destroy();
     this.companionController?.destroy();
     this.commander?.destroy();

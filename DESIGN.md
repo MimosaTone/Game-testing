@@ -1,6 +1,6 @@
 # Army Commander — Game Design Document
 
-**Version 1.4** — M4.5 instrument tuning locked (Scout Report cooldown, Command Range default, input mapping). M2 implements the command layer per the milestone roadmap below.
+**Version 1.5** — M3 enemy behavior framework implemented. Command layer stress-test before content expansion.
 
 ## Core Pillars
 
@@ -845,6 +845,50 @@ How the four pillars connect during a run:
 
 ---
 
+---
+
+## Enemy Behavior Framework
+
+Enemies exist to force **tactical decisions**, not to deal damage. Every enemy belongs to a **battlefield role**.
+
+**Design test:** *"What decision is this enemy forcing me to make?"* — not *"How much health does it have?"*
+
+| Role | Forces | Behavior summary |
+|---|---|---|
+| **Grunt** | Basic positioning | Closes distance; prioritizes Commander if nearby; switches to Companion when Focus-marked |
+| **Archer** | Movement & repositioning | Keeps distance; flees when threatened; targets clustered armies |
+| **Bruiser** | Focus fire & priority | Slow, heavy, knockback; pushes formations apart |
+| **Scout** | Protect the Commander | Fast flanker; ignores frontline; pressures Commander |
+| **Support** | Priority targeting | Buffs allies behind frontline; retreats when threatened |
+| **Boss (Field Captain)** | Full command test | Phased encounter; summons adds; exposes command weaknesses |
+
+### AI Coordination Rules
+
+- Archers remain behind tanks (bruisers/grunts)
+- Scouts attempt flanks
+- Support units retreat behind allies
+- Bruisers protect ranged enemies
+
+The battlefield should feel like **two armies**, not isolated enemies walking toward the player.
+
+### Prototype Boss: Field Captain
+
+Not a final boss — a **command system stress test**. Requires positioning, Focus Target, abilities, doctrine choice, and companion management.
+
+| Phase | Behavior | Decision forced |
+|---|---|---|
+| **1 (100–70% HP)** | Frontline bruiser; summons grunts | Focus fire vs. survive pressure |
+| **2 (70–40% HP)** | Retreats behind line; summons scouts | Priority targeting support/archers |
+| **3 (<40% HP)** | Charges Commander periodically | Defend, reposition, bond management |
+
+**Win condition:** Defeat Field Captain (decisive) or survive 90s (contained).
+
+### Explicitly NOT in M3
+
+- Enemy factions, adaptive AI, enemy commanders, pressure-axis adaptation, battlefield events
+
+---
+
 ## Milestone Roadmap
 
 Each milestone = playable prototype. Never move forward until the current one is fun.
@@ -870,15 +914,29 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 **Playtest question:** Does choosing a doctrine change how you issue orders? Does desync feel like losing your partner?
 
-### M3: First Battlefield Event + Second Objective
+### M3: Enemy Behavior & Prototype Encounter ✅
+- **Five enemy roles:** Grunt, Archer, Bruiser, Scout, Support — each with distinct AI
+- **Coordinated squads:** frontline, ranged, flank, support positioning
+- **Field Captain** prototype boss with phased behaviors
+- **Command Trial** encounter (phased squads, boss at ~40s)
+- Focus Target affects grunt targeting; archers punish clustering
+
+**Playtest goals:**
+- Do enemies create meaningful decisions?
+- Does Focus Target matter?
+- Do doctrines solve different problems?
+- Does Companion positioning matter?
+- Does protecting the Commander matter?
+- Does the battlefield feel alive?
+
+### M4: Battlefield Event + Annihilation Objective
 - **1 dynamic event:** Artillery Barrage (telegraphed zones, reposition or endure)
 - **Annihilation objective** selectable in Standard Mode
 - Event warning UI (countdown + map indicator)
-- Doctrine × objective synergy visible in HUD
 
 **Playtest question:** Do events force meaningful repositioning decisions?
 
-### M4: Evolution System + Amendment
+### M5: Evolution System + Amendment
 - Branching evolution UI (2–3 choices per tier)
 - Evolutions change behavior, not just stats
 - **Doctrine Amendment** at 60s mark
@@ -886,7 +944,7 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 **Playtest question:** Do evolutions + doctrine amendment feel like deepening a commitment?
 
-### M4.5: Command Instruments
+### M5.5: Command Instruments
 - **Instrument selection** at run start (2 instruments: Longbow, Battle Banner)
 - **Range systems:** Bond, Command Range, Designation Range implemented as separate checks
 - **Longbow:** Designate, **Scout Report** (ability bar), Signal Arrow
@@ -896,7 +954,7 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 **Playtest question:** Does Scout Report make you make better decisions? Does banner relocation feel like a tradeoff, not a punishment? Does long-range command still leave bond tension intact?
 
-### M5: Swarm Master + Domination
+### M6: Swarm Master + Domination
 - Second commander selectable at run start
 - Multiple weak units, reproduction over time
 - **Domination objective** (1–2 capture points)
@@ -904,7 +962,7 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 **Playtest question:** Does swarm + domination feel like a different command style than elite bond + survival?
 
-### M6: Enemy Commanders + Pressure Axes
+### M7: Enemy Commanders + Pressure Axes
 - Enemy composition reacts to army signals (unit count, range ratio)
 - Enemy commander "scout report" UI
 - Warlord + Hive Queen factions with signature events
@@ -912,18 +970,18 @@ Each milestone = playable prototype. Never move forward until the current one is
 
 **Playtest question:** Does enemy adaptation feel fair and readable?
 
-### M7: Escort + Extraction Objectives
+### M8: Escort + Extraction Objectives
 - Escort VIP across map
 - Extraction with risk/reward timer
 - Civilian Evacuation event
 - Mercenary Offer event
 
-### M8: Between-Run Meta
+### M9: Between-Run Meta
 - Unlock commanders, doctrines, instruments, evolutions, maps
 - Save system (localStorage)
 - Unlock options, not power
 
-### M9+: Remaining content
+### M10+: Remaining content
 - Conductor formations, Beastmaster creatures
 - Corruptor, Beast Lord factions
 - Assassination objective

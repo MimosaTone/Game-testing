@@ -1,0 +1,136 @@
+import type { EncounterPhase, EnemyRoleDefinition } from './types';
+
+export const ENEMY_ROLES: Record<string, EnemyRoleDefinition> = {
+  grunt: {
+    role: 'grunt',
+    label: 'Grunt',
+    color: 0xe63946,
+    radius: 12,
+    maxHealth: 40,
+    attackDamage: 8,
+    attackRange: 42,
+    attackCooldown: 900,
+    speed: 95,
+    forcesDecision: 'Basic positioning',
+  },
+  archer: {
+    role: 'archer',
+    label: 'Archer',
+    color: 0xff8c42,
+    radius: 10,
+    maxHealth: 28,
+    attackDamage: 10,
+    attackRange: 220,
+    attackCooldown: 1400,
+    speed: 75,
+    forcesDecision: 'Movement and repositioning',
+  },
+  bruiser: {
+    role: 'bruiser',
+    label: 'Bruiser',
+    color: 0x9d0208,
+    radius: 20,
+    maxHealth: 120,
+    attackDamage: 14,
+    attackRange: 48,
+    attackCooldown: 1200,
+    speed: 55,
+    forcesDecision: 'Focus fire and target priority',
+  },
+  scout: {
+    role: 'scout',
+    label: 'Scout',
+    color: 0xc77dff,
+    radius: 9,
+    maxHealth: 24,
+    attackDamage: 6,
+    attackRange: 38,
+    attackCooldown: 700,
+    speed: 140,
+    forcesDecision: 'Protect the Commander',
+  },
+  support: {
+    role: 'support',
+    label: 'Support',
+    color: 0x52b788,
+    radius: 11,
+    maxHealth: 32,
+    attackDamage: 4,
+    attackRange: 160,
+    attackCooldown: 2000,
+    speed: 65,
+    forcesDecision: 'Priority targeting',
+  },
+  boss: {
+    role: 'boss',
+    label: 'Field Captain',
+    color: 0x6a040f,
+    radius: 26,
+    maxHealth: 380,
+    attackDamage: 12,
+    attackRange: 55,
+    attackCooldown: 1500,
+    speed: 50,
+    forcesDecision: 'Full command test',
+  },
+};
+
+export const ENEMY_AI = {
+  gruntCommanderPriorityRange: 100,
+  archerPreferredMinRange: 160,
+  archerPreferredMaxRange: 260,
+  archerFleeRange: 95,
+  supportBuffRadius: 110,
+  supportBuffSpeedMultiplier: 1.3,
+  supportBuffIntervalMs: 2000,
+  supportFleeRange: 115,
+  scoutFlankOffset: 90,
+  bruiserKnockbackForce: 180,
+  bossSummonCooldownMs: 12_000,
+  bossChargeCooldownMs: 10_000,
+};
+
+export const ENCOUNTER_PHASES: EncounterPhase[] = [
+  {
+    id: 'probe',
+    delayMs: 2500,
+    announcement: 'Enemy vanguard approaching',
+    squads: [{ role: 'grunt', count: 4 }],
+  },
+  {
+    id: 'ranged_pressure',
+    delayMs: 14_000,
+    announcement: 'Archers deploying behind line',
+    squads: [
+      { role: 'grunt', count: 2 },
+      { role: 'archer', count: 2 },
+    ],
+  },
+  {
+    id: 'flank_test',
+    delayMs: 26_000,
+    announcement: 'Bruiser advancing — scouts flanking',
+    squads: [
+      { role: 'bruiser', count: 1 },
+      { role: 'grunt', count: 2 },
+      { role: 'scout', count: 1 },
+    ],
+  },
+  {
+    id: 'boss',
+    delayMs: 40_000,
+    announcement: 'Field Captain on the field',
+    spawnBoss: true,
+    squads: [
+      { role: 'support', count: 1 },
+      { role: 'archer', count: 1 },
+      { role: 'grunt', count: 2 },
+    ],
+  },
+];
+
+export const ENCOUNTER_CONFIG = {
+  spawnRadius: 400,
+  maxAlive: 18,
+  staggerSpawnMs: 350,
+};

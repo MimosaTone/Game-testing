@@ -56,7 +56,7 @@ export class SetupScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#888888',
     }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 458, 'Survive 90 seconds', {
+    this.add.text(GAME_WIDTH / 2, 458, 'Survive 90s — defeat the Field Captain to win early', {
       fontFamily: 'monospace',
       fontSize: '11px',
       color: '#666666',
