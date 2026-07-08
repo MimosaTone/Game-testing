@@ -217,7 +217,14 @@ export class CompanionController {
     );
 
     this.intent = screenThreat ? 'screening' : 'guarding';
-    this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.75);
+    const distToScreen = Phaser.Math.Distance.Between(
+      companion.x, companion.y, screenPos.x, screenPos.y,
+    );
+    if (distToScreen > 18) {
+      this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.75);
+    } else {
+      this.guardPatrol(companion, screenPos.x, screenPos.y, now);
+    }
     this.faceToward(companion, screenThreat?.x ?? commander.x, screenThreat?.y ?? commander.y);
 
     // Attack only what enters range — never chase
@@ -334,7 +341,7 @@ export class CompanionController {
     if (dist > holdRadius) {
       this.moveToPosition(companion, this.holdPosition.x, this.holdPosition.y, companion.effectiveSpeed * 0.8);
     } else {
-      companion.stop();
+      this.guardPatrol(companion, this.holdPosition.x, this.holdPosition.y, now);
     }
 
     companion.bonusDamageReduction = this.ironWallHolding ? COMMAND.ironWall.holdDamageReduction : 0;
@@ -379,7 +386,7 @@ export class CompanionController {
       if (dist > 15) {
         this.moveToPosition(companion, interceptX, interceptY, companion.effectiveSpeed * speedMult);
       } else {
-        companion.stop();
+        this.guardPatrol(companion, interceptX, interceptY, now);
       }
 
       if (Phaser.Math.Distance.Between(companion.x, companion.y, urgent.x, urgent.y) <= companion.attackRange) {
@@ -390,7 +397,12 @@ export class CompanionController {
     }
 
     const screenPos = computeScreenPosition(commander, threats.commanderThreat, PARTNER.screenOffset);
-    this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.85);
+    const distToScreen = Phaser.Math.Distance.Between(companion.x, companion.y, screenPos.x, screenPos.y);
+    if (distToScreen > 18) {
+      this.moveToPosition(companion, screenPos.x, screenPos.y, companion.effectiveSpeed * 0.85);
+    } else {
+      this.guardPatrol(companion, screenPos.x, screenPos.y, now);
+    }
     this.attackInRangeOnly(companion, enemies, now);
 
     if (cohesionState === 'bonded') {
@@ -420,7 +432,7 @@ export class CompanionController {
         companion.effectiveSpeed * speedMult,
       );
     } else {
-      companion.stop();
+      this.guardPatrol(companion, order.rallyPoint.x, order.rallyPoint.y, now);
       this.attackInRangeOnly(companion, enemies, now);
     }
   }
@@ -476,9 +488,11 @@ export class CompanionController {
       } else {
         companion.stop();
       }
-    } else {
+    } else if (companion.canAttack(now)) {
       companion.stop();
       companion.tryAttack(target, now);
+    } else {
+      this.guardPatrol(companion, target.x, target.y, now);
     }
     this.faceToward(companion, target.x, target.y);
   }
@@ -489,8 +503,29 @@ export class CompanionController {
     if (!target) return;
     const dist = Phaser.Math.Distance.Between(companion.x, companion.y, target.x, target.y);
     if (dist <= companion.attackRange) {
-      companion.tryAttack(target, now);
+      if (companion.canAttack(now)) {
+        companion.tryAttack(target, now);
+      } else {
+        this.faceToward(companion, target.x, target.y);
+      }
     }
+  }
+
+  private guardPatrol(
+    companion: Companion,
+    centerX: number,
+    centerY: number,
+    now: number,
+  ): void {
+    const phase = now * 0.0018 + companion.x * 0.02;
+    const patrolX = centerX + Math.cos(phase) * PARTNER.guardPatrolRadius;
+    const patrolY = centerY + Math.sin(phase) * PARTNER.guardPatrolRadius;
+    this.moveToPosition(
+      companion,
+      patrolX,
+      patrolY,
+      companion.effectiveSpeed * PARTNER.guardPatrolSpeedMult,
+    );
   }
 
   private moveToPosition(companion: Companion, x: number, y: number, speed: number): void {

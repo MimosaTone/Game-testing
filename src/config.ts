@@ -49,6 +49,8 @@ export const COHESION = {
 export const PARTNER = {
   screenOffset: 48,
   guardRadius: 90,
+  guardPatrolRadius: 22,
+  guardPatrolSpeedMult: 0.38,
   interceptSpeedMultiplier: 1.65,
   defendSpeedMultiplier: 1.5,
   initiativeAssassinRange: 220,

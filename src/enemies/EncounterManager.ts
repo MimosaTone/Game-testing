@@ -15,12 +15,20 @@ export class EncounterManager {
   private timers: Phaser.Time.TimerEvent[] = [];
   private bossSpawned = false;
   private bossDefeated = false;
+  private contestX = GAME_WIDTH / 2;
+  private contestY = GAME_HEIGHT / 2;
 
   constructor(
     private scene: Phaser.Scene,
     private enemies: EnemyUnit[],
     private callbacks: EncounterCallbacks,
   ) {}
+
+  /** Keep spawns oriented toward the live fight, not static arena center. */
+  setContestPoint(x: number, y: number): void {
+    this.contestX = x;
+    this.contestY = y;
+  }
 
   start(): void {
     resetEnemyIdCounter();
@@ -80,16 +88,28 @@ export class EncounterManager {
   }
 
   private getSpawnPosition(role: EnemyRole): { x: number; y: number } {
-    const centerX = GAME_WIDTH / 2;
-    const centerY = GAME_HEIGHT / 2;
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-    const radius = role === 'scout'
-      ? ENCOUNTER_CONFIG.spawnRadius * 0.85
-      : ENCOUNTER_CONFIG.spawnRadius;
-    return {
-      x: Phaser.Math.Clamp(centerX + Math.cos(angle) * radius, 30, GAME_WIDTH - 30),
-      y: Phaser.Math.Clamp(centerY + Math.sin(angle) * radius, 30, GAME_HEIGHT - 30),
-    };
+    const radius = Phaser.Math.FloatBetween(
+      ENCOUNTER_CONFIG.spawnRadiusMin,
+      ENCOUNTER_CONFIG.spawnRadiusMax,
+    ) + (role === 'scout' ? ENCOUNTER_CONFIG.scoutSpawnRadiusBonus : 0);
+
+    const margin = 36;
+    let x = this.contestX + Math.cos(angle) * radius;
+    let y = this.contestY + Math.sin(angle) * radius;
+
+    // Nudge inward if clamping would strand units on the arena lip.
+    x = Phaser.Math.Clamp(x, margin, GAME_WIDTH - margin);
+    y = Phaser.Math.Clamp(y, margin, GAME_HEIGHT - margin);
+
+    const distFromContest = Phaser.Math.Distance.Between(x, y, this.contestX, this.contestY);
+    if (distFromContest > ENCOUNTER_CONFIG.spawnRadiusMax + 40) {
+      const pull = Phaser.Math.Angle.Between(x, y, this.contestX, this.contestY);
+      x += Math.cos(pull) * 30;
+      y += Math.sin(pull) * 30;
+    }
+
+    return { x, y };
   }
 
   get currentPhase(): number {

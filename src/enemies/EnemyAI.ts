@@ -9,6 +9,16 @@ import {
   getFrontlineAnchor,
 } from './EnemyUnit';
 import type { BattlefieldControlPoint } from './types';
+import {
+  ensureContestPressure,
+  fleeFrom,
+  getFightCentroid,
+  moveToward,
+  paceWhileWaiting,
+  showHealPulse,
+  showShellImpact,
+  tryCombatWithPace,
+} from './behaviorHelpers';
 
 export interface EnemyAIContext {
   commander: Commander;
@@ -93,49 +103,28 @@ function pickTarget(enemy: EnemyUnit, ctx: EnemyAIContext): Unit | null {
   return nearest;
 }
 
-function moveToward(enemy: EnemyUnit, x: number, y: number, speedMult = 1): void {
-  const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, x, y);
-  const speed = enemy.effectiveSpeed * speedMult;
-  enemy.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-}
-
-function fleeFrom(enemy: EnemyUnit, x: number, y: number, speedMult = 1.1): void {
-  const angle = Phaser.Math.Angle.Between(x, y, enemy.x, enemy.y);
-  const speed = enemy.effectiveSpeed * speedMult;
-  enemy.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-}
-
-function tryCombat(
-  enemy: EnemyUnit,
-  target: Unit,
-  now: number,
-  onHit?: () => void,
-): void {
-  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
-  if (dist <= enemy.attackRange) {
-    enemy.stop();
-    if (enemy.tryAttack(target, now) && onHit) onHit();
-  } else {
-    moveToward(enemy, target.x, target.y);
-  }
-}
-
 function applyKnockback(target: Unit, fromX: number, fromY: number, force: number): void {
   const angle = Phaser.Math.Angle.Between(fromX, fromY, target.x, target.y);
   target.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
 }
 
 function updateScout(enemy: EnemyUnit, ctx: EnemyAIContext): void {
-  const { commander, companion, enemies } = ctx;
+  const { commander, companion, enemies, now } = ctx;
   if (!commander.isAlive) return;
+  if (ensureContestPressure(enemy, ctx)) return;
 
   const alliesNearby = countAlliesNear(enemy, enemies, ENEMY_AI.scoutIsolationRadius);
   if (alliesNearby < ENEMY_AI.scoutAllyCountToHold) {
     const anchor = getFrontlineAnchor(enemies);
-    if (anchor) {
-      moveToward(enemy, anchor.x, anchor.y, 0.9);
-      return;
+    const fallback = getFightCentroid(ctx);
+    const rally = anchor ?? fallback;
+    const distToRally = Phaser.Math.Distance.Between(enemy.x, enemy.y, rally.x, rally.y);
+    if (distToRally > 50) {
+      moveToward(enemy, rally.x, rally.y, 0.95);
+    } else {
+      paceWhileWaiting(enemy, commander, now, 'creep');
     }
+    return;
   }
 
   if (companion.isAlive) {
@@ -150,8 +139,12 @@ function updateScout(enemy: EnemyUnit, ctx: EnemyAIContext): void {
   const distToCommander = Phaser.Math.Distance.Between(enemy.x, enemy.y, commander.x, commander.y);
 
   if (distToCommander <= enemy.attackRange) {
-    enemy.stop();
-    enemy.tryAttack(commander, ctx.now);
+    if (enemy.canAttack(now)) {
+      enemy.stop();
+      enemy.tryAttack(commander, now);
+    } else {
+      paceWhileWaiting(enemy, commander, now, 'strafe');
+    }
     return;
   }
 
@@ -168,6 +161,8 @@ function getFlankPoint(commander: Commander, companion: Companion): { x: number;
 }
 
 function updateArcher(enemy: EnemyUnit, ctx: EnemyAIContext): void {
+  if (ensureContestPressure(enemy, ctx)) return;
+
   const cluster = pickClusterTarget(ctx);
   if (!cluster) return;
 
@@ -189,16 +184,23 @@ function updateArcher(enemy: EnemyUnit, ctx: EnemyAIContext): void {
 
   if (dist > ENEMY_AI.archerPreferredMaxRange) {
     const anchor = getFrontlineAnchor(ctx.enemies);
-    if (anchor) moveToward(enemy, anchor.x, anchor.y, 0.6);
-    else moveToward(enemy, cluster.x, cluster.y, 0.5);
+    if (anchor) moveToward(enemy, anchor.x, anchor.y, 0.7);
+    else moveToward(enemy, cluster.x, cluster.y, 0.65);
     return;
   }
 
-  enemy.stop();
-  enemy.tryAttack(cluster, ctx.now);
+  enemy.faceToward(cluster.x, cluster.y);
+  if (enemy.canAttack(ctx.now)) {
+    enemy.stop();
+    enemy.tryAttack(cluster, ctx.now);
+  } else {
+    paceWhileWaiting(enemy, cluster, ctx.now, 'strafe');
+  }
 }
 
 function updateBruiser(enemy: EnemyUnit, ctx: EnemyAIContext): void {
+  if (ensureContestPressure(enemy, ctx)) return;
+
   const guardPoint = getBruiserGuardPoint(enemy, ctx);
   if (guardPoint) {
     const distToGuard = Phaser.Math.Distance.Between(enemy.x, enemy.y, guardPoint.x, guardPoint.y);
@@ -206,13 +208,15 @@ function updateBruiser(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     if (threat && distToGuard > 35) {
       const midX = (threat.x + guardPoint.x) / 2;
       const midY = (threat.y + guardPoint.y) / 2;
-      moveToward(enemy, midX, midY, 0.85);
+      moveToward(enemy, midX, midY, 0.9);
+    } else if (threat) {
+      paceWhileWaiting(enemy, threat, ctx.now, 'creep');
     }
   }
 
   const target = pickTarget(enemy, ctx);
   if (!target) return;
-  tryCombat(enemy, target, ctx.now, () => {
+  tryCombatWithPace(enemy, target, ctx.now, () => {
     applyKnockback(target, enemy.x, enemy.y, ENEMY_AI.bruiserKnockbackForce);
   });
 }
@@ -252,6 +256,8 @@ function getBruiserGuardPoint(
 }
 
 function updateSupport(enemy: EnemyUnit, ctx: EnemyAIContext): void {
+  if (ensureContestPressure(enemy, ctx)) return;
+
   const threat = getNearestPlayerUnit(enemy, ctx);
   if (threat) {
     const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, threat.x, threat.y);
@@ -261,15 +267,14 @@ function updateSupport(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     }
   }
 
-  const anchor = getFrontlineAnchor(ctx.enemies);
-  if (anchor) {
-    const behind = getBehindPoint(anchor, ctx.commander.x, ctx.commander.y, 70);
-    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, behind.x, behind.y);
-    if (dist > 25) {
-      moveToward(enemy, behind.x, behind.y, 0.7);
-    } else {
-      enemy.stop();
-    }
+  const anchor = getFrontlineAnchor(ctx.enemies) ?? getFightCentroid(ctx);
+  const behind = getBehindPoint(anchor, ctx.commander.x, ctx.commander.y, 70);
+  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, behind.x, behind.y);
+
+  if (dist > 25) {
+    moveToward(enemy, behind.x, behind.y, 0.75);
+  } else {
+    paceWhileWaiting(enemy, anchor, ctx.now, 'orbit');
   }
 
   if (ctx.now - enemy.lastSupportActionAt >= ENEMY_AI.supportHealIntervalMs) {
@@ -277,6 +282,7 @@ function updateSupport(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     if (wounded) {
       wounded.heal(ENEMY_AI.supportHealAmount);
       enemy.lastSupportActionAt = ctx.now;
+      showHealPulse(enemy.sprite.scene, wounded.x, wounded.y);
     }
   }
 }
@@ -316,7 +322,7 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
   if (!commander.isAlive) return;
 
   if (enemy.id === ctx.focusEnemyId && companion.isAlive) {
-    tryCombat(enemy, companion, now);
+    tryCombatWithPace(enemy, companion, now);
     return;
   }
 
@@ -340,19 +346,18 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
     if (hasOpening) {
       enemy.assassinState = 'telegraphing';
       enemy.assassinTelegraphUntil = now + ENEMY_AI.assassinTelegraphMs;
-      enemy.stop();
+    } else {
+      const orbitAngle = Phaser.Math.Angle.Between(commander.x, commander.y, enemy.x, enemy.y);
+      const orbitX = commander.x + Math.cos(orbitAngle) * ENEMY_AI.assassinStalkRange;
+      const orbitY = commander.y + Math.sin(orbitAngle) * ENEMY_AI.assassinStalkRange;
+      moveToward(enemy, orbitX, orbitY, 0.8);
+      enemy.setTelegraphTarget(commander.x, commander.y, false);
       return;
     }
-    const orbitAngle = Phaser.Math.Angle.Between(commander.x, commander.y, enemy.x, enemy.y);
-    const orbitX = commander.x + Math.cos(orbitAngle) * ENEMY_AI.assassinStalkRange;
-    const orbitY = commander.y + Math.sin(orbitAngle) * ENEMY_AI.assassinStalkRange;
-    moveToward(enemy, orbitX, orbitY, 0.75);
-    enemy.setTelegraphTarget(commander.x, commander.y, false);
-    return;
   }
 
   if (enemy.assassinState === 'telegraphing') {
-    enemy.stop();
+    paceWhileWaiting(enemy, commander, now, 'creep');
     enemy.setTelegraphTarget(commander.x, commander.y, true);
     if (now >= enemy.assassinTelegraphUntil) {
       enemy.assassinState = 'dashing';
@@ -364,10 +369,14 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
   if (enemy.assassinState === 'dashing') {
     const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, commander.x, commander.y);
     if (dist <= enemy.attackRange) {
-      enemy.stop();
-      if (enemy.tryAttack(commander, now)) {
-        enemy.assassinState = 'escaping';
-        enemy.assassinEscapeUntil = now + ENEMY_AI.assassinEscapeDurationMs;
+      if (enemy.canAttack(now)) {
+        enemy.stop();
+        if (enemy.tryAttack(commander, now)) {
+          enemy.assassinState = 'escaping';
+          enemy.assassinEscapeUntil = now + ENEMY_AI.assassinEscapeDurationMs;
+        }
+      } else {
+        paceWhileWaiting(enemy, commander, now, 'creep');
       }
       return;
     }
@@ -376,43 +385,44 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
 }
 
 function updateSiege(enemy: EnemyUnit, ctx: EnemyAIContext): void {
-  const targetPoint = pickSiegeTarget(ctx);
-  if (!targetPoint) {
-    const fallback = pickClusterTarget(ctx);
-    if (!fallback) return;
-    tryCombat(enemy, fallback, ctx.now);
-    return;
-  }
+  if (ensureContestPressure(enemy, ctx)) return;
 
+  const targetPoint = pickSiegeTarget(ctx);
   const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, targetPoint.x, targetPoint.y);
   const nearestThreat = getNearestPlayerUnit(enemy, ctx);
+
   if (nearestThreat) {
     const threatDist = Phaser.Math.Distance.Between(enemy.x, enemy.y, nearestThreat.x, nearestThreat.y);
     if (threatDist < 80) {
-      fleeFrom(enemy, nearestThreat.x, nearestThreat.y, 0.7);
+      fleeFrom(enemy, nearestThreat.x, nearestThreat.y, 0.75);
       return;
     }
   }
 
   if (dist > ENEMY_AI.siegePreferredRange) {
     const anchor = getFrontlineAnchor(ctx.enemies);
-    if (anchor) moveToward(enemy, anchor.x, anchor.y, 0.5);
+    if (anchor) moveToward(enemy, anchor.x, anchor.y, 0.6);
+    else moveToward(enemy, targetPoint.x, targetPoint.y, 0.55);
     return;
   }
 
   if (dist < ENEMY_AI.siegePreferredRange - 40) {
-    fleeFrom(enemy, targetPoint.x, targetPoint.y, 0.6);
+    fleeFrom(enemy, targetPoint.x, targetPoint.y, 0.65);
     return;
   }
 
-  enemy.stop();
+  enemy.faceToward(targetPoint.x, targetPoint.y);
   if (enemy.canAttack(ctx.now)) {
+    enemy.stop();
     enemy.lastAttackTime = ctx.now;
     shellTargetPoint(enemy, targetPoint, ctx);
+    showShellImpact(enemy.sprite.scene, targetPoint.x, targetPoint.y);
+  } else {
+    paceWhileWaiting(enemy, targetPoint, ctx.now, 'orbit');
   }
 }
 
-function pickSiegeTarget(ctx: EnemyAIContext): { x: number; y: number } | null {
+function pickSiegeTarget(ctx: EnemyAIContext): { x: number; y: number } {
   if (ctx.controlPoints.length > 0) {
     return ctx.controlPoints[0];
   }
@@ -422,7 +432,7 @@ function pickSiegeTarget(ctx: EnemyAIContext): { x: number; y: number } | null {
     return { x: companion.x, y: companion.y };
   }
 
-  return null;
+  return getFightCentroid(ctx);
 }
 
 function shellTargetPoint(
@@ -457,30 +467,27 @@ function updateBoss(enemy: EnemyUnit, ctx: EnemyAIContext): void {
       moveToward(enemy, ctx.commander.x, ctx.commander.y, 2.2);
       const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, ctx.commander.x, ctx.commander.y);
       if (dist <= enemy.attackRange) {
-        enemy.stop();
-        enemy.tryAttack(ctx.commander, now);
+        tryCombatWithPace(enemy, ctx.commander, now);
       }
       return;
     }
   }
 
   if (enemy.bossPhase === 2) {
-    const anchor = getFrontlineAnchor(ctx.enemies);
-    if (anchor) {
-      const behind = getBehindPoint(anchor, ctx.commander.x, ctx.commander.y, 50);
-      const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, behind.x, behind.y);
-      if (dist > 40) {
-        moveToward(enemy, behind.x, behind.y, 0.5);
-        return;
-      }
-      enemy.stop();
+    const anchor = getFrontlineAnchor(ctx.enemies) ?? getFightCentroid(ctx);
+    const behind = getBehindPoint(anchor, ctx.commander.x, ctx.commander.y, 50);
+    const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, behind.x, behind.y);
+    if (dist > 40) {
+      moveToward(enemy, behind.x, behind.y, 0.55);
       return;
     }
+    paceWhileWaiting(enemy, anchor, now, 'orbit');
+    return;
   }
 
   const target = pickTarget(enemy, ctx);
   if (!target) return;
-  tryCombat(enemy, target, now);
+  tryCombatWithPace(enemy, target, now);
 }
 
 function pickClusterTarget(ctx: EnemyAIContext): Unit | null {

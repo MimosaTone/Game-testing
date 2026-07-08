@@ -88,6 +88,11 @@ export const ENEMY_ROLES: Record<string, EnemyRoleDefinition> = {
 };
 
 export const ENEMY_AI = {
+  maxContestDistance: 300,
+  contestAdvanceSpeedMult: 1.15,
+  paceStrafeSpeedMult: 0.5,
+  paceOrbitSpeedMult: 0.42,
+  paceCreepSpeedMult: 0.28,
   archerPreferredMinRange: 160,
   archerPreferredMaxRange: 260,
   archerFleeRange: 95,
@@ -164,7 +169,9 @@ export const ENCOUNTER_PHASES: EncounterPhase[] = [
 ];
 
 export const ENCOUNTER_CONFIG = {
-  spawnRadius: 400,
+  spawnRadiusMin: 200,
+  spawnRadiusMax: 285,
+  scoutSpawnRadiusBonus: 35,
   maxAlive: 18,
   staggerSpawnMs: 350,
 };

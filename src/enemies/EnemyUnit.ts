@@ -140,6 +140,11 @@ export class EnemyUnit extends Unit {
     this.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
   }
 
+  faceToward(x: number, y: number): void {
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, x, y);
+    this.sprite.setRotation(angle);
+  }
+
   updateBossPhase(): void {
     if (!this.isBoss) return;
     const pct = this.health / this.maxHealth;

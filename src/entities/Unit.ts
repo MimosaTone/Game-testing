@@ -99,10 +99,21 @@ export abstract class Unit {
 
   protected flashDamage(): void {
     this.sprite.setFillStyle(0xffffff);
-    this.sprite.scene.time.delayedCall(80, () => {
+    this.sprite.setScale(1.12);
+    this.sprite.scene.time.delayedCall(90, () => {
       if (this.isAlive) {
         this.sprite.setFillStyle(this.getColor());
+        this.sprite.setScale(1);
       }
+    });
+  }
+
+  applyHitImpact(fromX: number, fromY: number, knockback = 50): void {
+    if (!this.isAlive) return;
+    const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.y);
+    this.body.setVelocity(Math.cos(angle) * knockback, Math.sin(angle) * knockback);
+    this.sprite.scene.time.delayedCall(110, () => {
+      if (this.isAlive) this.body.setVelocity(0, 0);
     });
   }
 
@@ -145,8 +156,19 @@ export abstract class Unit {
     if (dist > this.attackRange) return false;
     if (!this.canAttack(now)) return false;
     this.lastAttackTime = now;
+    this.performAttackLunge(target);
     target.takeDamage(this.effectiveDamage);
     return true;
+  }
+
+  protected performAttackLunge(target: Unit): void {
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+    const lungeForce = this.attackRange > 100 ? 70 : 130;
+    this.body.setVelocity(Math.cos(angle) * lungeForce, Math.sin(angle) * lungeForce);
+    this.sprite.scene.time.delayedCall(70, () => {
+      if (this.isAlive) this.stop();
+    });
+    target.applyHitImpact(this.x, this.y, lungeForce > 100 ? 55 : 35);
   }
 
   stop(): void {

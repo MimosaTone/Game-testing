@@ -360,6 +360,7 @@ export class GameScene extends Phaser.Scene {
 
   private processEnemyAI(now: number): void {
     const focusEnemyId = this.getFocusEnemyId();
+    this.encounterManager.setContestPoint(this.commander.x, this.commander.y);
     const ctx = {
       commander: this.commander,
       companion: this.companion,
