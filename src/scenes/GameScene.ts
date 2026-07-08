@@ -15,6 +15,10 @@ import { COMMAND, COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH, SURVIVAL_DURATI
 import { getDoctrine } from '../doctrine/types';
 import { clampToArena, Commander, Companion } from '../entities/Unit';
 import type { RunConfig } from '../types/RunConfig';
+import { Battlefield } from '../presentation/Battlefield';
+import { analyzeDeath, type LeadershipContext } from '../presentation/DeathAnalysis';
+import { FocusVisuals } from '../presentation/FocusVisuals';
+import { OrderFeedback } from '../presentation/OrderFeedback';
 
 export type GameState = 'playing' | 'won' | 'lost';
 export type WinReason = 'survival' | 'boss_defeated';
@@ -47,6 +51,10 @@ export interface GameStateData {
   bossActive: boolean;
   bossHealth: number;
   bossMaxHealth: number;
+  bondTension: number;
+  deathHeadline: string | null;
+  deathLesson: string | null;
+  deathSuggestion: string | null;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -72,6 +80,14 @@ export class GameScene extends Phaser.Scene {
   private focusFireEndsAt = 0;
   private phaseAnnouncement: string | null = null;
   private announcementUntil = 0;
+  private battlefield!: Battlefield;
+  private orderFeedback!: OrderFeedback;
+  private focusVisuals!: FocusVisuals;
+  private desyncSince = 0;
+  private deathHeadline: string | null = null;
+  private deathLesson: string | null = null;
+  private deathSuggestion: string | null = null;
+  private bondTension = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -82,7 +98,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.drawArena();
+    this.battlefield = new Battlefield(this);
+    this.orderFeedback = new OrderFeedback(this);
+    this.focusVisuals = new FocusVisuals();
     this.resetRun();
     this.setupInput();
 
@@ -93,23 +111,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private drawArena(): void {
-    const gfx = this.add.graphics();
-    gfx.lineStyle(2, 0x2a2a3a, 1);
-    gfx.strokeRect(1, 1, GAME_WIDTH - 2, GAME_HEIGHT - 2);
-
-    gfx.fillStyle(0x1e1e2a, 0.5);
-    for (let i = 0; i < 8; i++) {
-      gfx.fillRect(
-        Phaser.Math.Between(50, GAME_WIDTH - 50),
-        Phaser.Math.Between(50, GAME_HEIGHT - 50),
-        Phaser.Math.Between(30, 80),
-        Phaser.Math.Between(30, 80),
-      );
-    }
-    gfx.setDepth(-3);
-  }
-
   private resetRun(): void {
     this.gameState = 'playing';
     this.winReason = null;
@@ -118,9 +119,13 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.rallyPlacementMode = false;
     this.pendingRallyPoint = null;
+    this.deathHeadline = null;
+    this.deathLesson = null;
+    this.deathSuggestion = null;
+    this.desyncSince = 0;
     this.focusFireEndsAt = 0;
     this.phaseAnnouncement = null;
-    this.announcementUntil = 0;
+    this.focusVisuals?.clearAll();
 
     const startX = GAME_WIDTH / 2;
     const startY = GAME_HEIGHT / 2;
@@ -182,7 +187,7 @@ export class GameScene extends Phaser.Scene {
         const enemy = getEnemyAtPoint(this.enemies, pointer.worldX, pointer.worldY);
         if (enemy) {
           this.issueOrder('focus_target', { focusEnemyId: enemy.id });
-          this.companionController.setFocusMarker(enemy);
+          this.focusVisuals.setMark(enemy);
         }
         return;
       }
@@ -221,14 +226,34 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       options = { focusEnemyId: nearest.id };
-      this.companionController.setFocusMarker(nearest);
+      this.focusVisuals.setMark(nearest);
     }
+
+    const issued = this.orderSystem.issue(type, now, options);
+    if (!issued) return;
+
+    this.orderFeedback.showCommandIssued(
+      type,
+      this.commander.x,
+      this.commander.y,
+      this.companion.x,
+      this.companion.y,
+      this.cohesionState,
+    );
+
+    const ackDelay =
+      this.cohesionState === 'bonded' ? 180 :
+      this.cohesionState === 'resyncing' ? 500 : 1750;
+    this.time.delayedCall(ackDelay, () => {
+      if (this.companion.isAlive) {
+        this.orderFeedback.showCompanionAck(this.companion.x, this.companion.y, type);
+      }
+    });
 
     if (type === 'rally_point' && options?.rallyPoint) {
       this.companionController.setRallyPoint(options.rallyPoint.x, options.rallyPoint.y);
     }
 
-    const issued = this.orderSystem.issue(type, now, options);
     if (issued && type === 'focus_target') {
       this.companionController.onFocusTargetIssued(now);
       if (this.runConfig.doctrineId === 'shock_assault') {
@@ -265,15 +290,25 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (!this.commander.isAlive) {
+      this.recordDeath();
       this.endGame('lost', null);
       return;
     }
 
+    this.battlefield.update(delta);
     this.handleMovement();
 
-    const cohesionData = this.cohesion.update(this.commander, this.companion, now);
+    const cohesionData = this.cohesion.update(this.commander, this.companion, now, delta);
     this.cohesionState = cohesionData.state;
     this.bondActive = cohesionData.bondActive;
+    this.bondTension = cohesionData.bondTension;
+
+    if (cohesionData.state === 'desynced') {
+      if (this.desyncSince === 0) this.desyncSince = now;
+    } else {
+      this.desyncSince = 0;
+    }
+
     this.companion.updateBondRing();
 
     this.companionController.syncOrder(
@@ -293,8 +328,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.processEnemyAI(now);
-    this.processCommanderCombat(now);
-    this.encounterManager.checkBossDefeated();
+    this.focusVisuals.update(this.enemies);
     this.cleanupDeadEnemies();
 
     for (const enemy of this.enemies) {
@@ -347,18 +381,31 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private processCommanderCombat(now: number): void {
-    this.commander.abilityDamageMultiplier = this.abilitySystem.getDamageMultiplier(now);
-    const target = getNearestEnemy(this.enemies, this.commander);
-    if (target) {
-      this.commander.tryAttack(target, now);
-    }
+  private recordDeath(): void {
+    const assassin = this.enemies.find((e) => e.role === 'assassin' && e.isAlive);
+    const ctx: LeadershipContext = {
+      cohesionState: this.cohesionState as LeadershipContext['cohesionState'],
+      activeOrder: (this.orderSystem.getActiveOrder()?.type as LeadershipContext['activeOrder']) ?? null,
+      bondActive: this.bondActive,
+      assassinActive: !!assassin,
+      assassinDashing: assassin?.assassinState === 'dashing' || assassin?.assassinState === 'telegraphing',
+      supportAlive: this.enemies.some((e) => e.role === 'support' && e.isAlive),
+      desyncDurationMs: this.desyncSince > 0 ? this.time.now - this.desyncSince : 0,
+    };
+    const msg = analyzeDeath(ctx);
+    this.deathHeadline = msg.headline;
+    this.deathLesson = msg.lesson;
+    this.deathSuggestion = msg.suggestion;
   }
 
   private cleanupDeadEnemies(): void {
+    const focusId = this.getFocusEnemyId();
     this.enemies = this.enemies.filter((e) => {
       if (!e.isAlive) {
         this.enemiesKilled++;
+        if (focusId && e.id === focusId) {
+          this.focusVisuals.showKillConfirm(e.x, e.y, this);
+        }
         this.tweens.add({
           targets: e.sprite,
           alpha: 0,
@@ -414,10 +461,15 @@ export class GameScene extends Phaser.Scene {
       bossActive: !!boss,
       bossHealth: boss?.health ?? 0,
       bossMaxHealth: boss?.maxHealth ?? 0,
+      bondTension: this.bondTension,
+      deathHeadline: this.deathHeadline,
+      deathLesson: this.deathLesson,
+      deathSuggestion: this.deathSuggestion,
     };
   }
 
   private cleanup(): void {
+    this.battlefield?.destroy();
     this.encounterManager?.destroy();
     this.cohesion?.destroy();
     this.companionController?.destroy();

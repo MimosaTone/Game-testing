@@ -417,8 +417,8 @@ export class CompanionController {
 
   private showRallyMarker(x: number, y: number): void {
     this.rallyMarker?.destroy();
-    this.rallyMarker = this.scene.add.circle(x, y, 12, 0x44ff88, 0.15);
-    this.rallyMarker.setStrokeStyle(2, 0x44ff88, 0.6);
+    this.rallyMarker = this.scene.add.circle(x, y, 14, 0xd4a054, 0.12);
+    this.rallyMarker.setStrokeStyle(2, 0xd4a054, 0.55);
     this.rallyMarker.setDepth(1);
   }
 }

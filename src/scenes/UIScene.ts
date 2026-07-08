@@ -1,62 +1,92 @@
 import Phaser from 'phaser';
 import { GameStateData } from './GameScene';
+import { getWinMessage } from '../presentation/DeathAnalysis';
+import { GAME_WIDTH } from '../config';
 
 export class UIScene extends Phaser.Scene {
+  private companionStatus!: Phaser.GameObjects.Text;
+  private bondStatus!: Phaser.GameObjects.Text;
+  private orderStatus!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
-  private phaseText!: Phaser.GameObjects.Text;
-  private bondText!: Phaser.GameObjects.Text;
+  private announcementText!: Phaser.GameObjects.Text;
+  private feedbackText!: Phaser.GameObjects.Text;
   private commanderBar!: Phaser.GameObjects.Graphics;
   private companionBar!: Phaser.GameObjects.Graphics;
   private bossBar!: Phaser.GameObjects.Graphics;
   private overlayContainer!: Phaser.GameObjects.Container;
-  private killText!: Phaser.GameObjects.Text;
-  private doctrineText!: Phaser.GameObjects.Text;
-  private orderText!: Phaser.GameObjects.Text;
-  private cpText!: Phaser.GameObjects.Text;
-  private feedbackText!: Phaser.GameObjects.Text;
-  private announcementText!: Phaser.GameObjects.Text;
+  private orderSlots: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: 'UIScene' });
   }
 
   create(): void {
-    const style: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#cccccc',
+    const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontFamily: 'serif',
+      fontSize: '11px',
+      color: '#8a8278',
     };
 
-    this.add.text(16, 12, 'ARMY COMMANDER — M3', {
-      ...style,
-      fontSize: '18px',
-      color: '#ffffff',
+    this.add.text(16, 12, 'ARMY COMMANDER', {
+      fontFamily: 'serif',
+      fontSize: '20px',
+      color: '#e8dcc8',
     });
 
-    this.doctrineText = this.add.text(16, 36, '', { ...style, color: '#4a9eff' });
-    this.timerText = this.add.text(16, 58, '', style);
-    this.phaseText = this.add.text(16, 76, '', style);
-    this.killText = this.add.text(16, 94, '', style);
-    this.bondText = this.add.text(16, 112, '', style);
-    this.orderText = this.add.text(16, 130, '', style);
-    this.cpText = this.add.text(16, 148, '', style);
-    this.feedbackText = this.add.text(16, 166, '', { ...style, fontSize: '11px', color: '#ffd166' });
-    this.announcementText = this.add.text(480, 48, '', {
-      fontFamily: 'monospace',
-      fontSize: '16px',
-      color: '#ff8c42',
-    }).setOrigin(0.5);
+    this.add.text(16, 36, 'Elite Bond — Command Trial', {
+      fontFamily: 'serif',
+      fontSize: '12px',
+      color: '#d4a054',
+    });
+
+    this.companionStatus = this.add.text(16, 64, '', {
+      fontFamily: 'serif',
+      fontSize: '14px',
+      color: '#d4a054',
+    });
+
+    this.bondStatus = this.add.text(16, 86, '', {
+      fontFamily: 'serif',
+      fontSize: '12px',
+      color: '#c9b896',
+    });
+
+    this.orderStatus = this.add.text(16, 108, '', labelStyle);
+    this.timerText = this.add.text(16, 130, '', labelStyle);
+    this.feedbackText = this.add.text(16, 152, '', {
+      fontFamily: 'serif',
+      fontSize: '11px',
+      color: '#d4a054',
+    });
 
     this.commanderBar = this.add.graphics();
     this.companionBar = this.add.graphics();
     this.bossBar = this.add.graphics();
 
-    this.add.text(16, 188, 'Commander HP', { ...style, fontSize: '11px', color: '#4a9eff' });
-    this.add.text(16, 216, 'Companion HP', { ...style, fontSize: '11px', color: '#ffd166' });
-    this.add.text(16, 244, 'Boss HP', { ...style, fontSize: '11px', color: '#ff6666' });
+    this.add.text(16, 178, 'Commander', labelStyle);
+    this.add.text(16, 206, 'Oathbound', { ...labelStyle, color: '#d4a054' });
 
-    const orderLine = '1-5 Orders | Q/E Abilities | RMB Focus';
-    this.add.text(16, 272, orderLine, { ...style, fontSize: '10px', color: '#666666' });
+    const orders = ['1 Hold', '2 Attack', '3 Defend', '4 Rally', '5 Focus'];
+    orders.forEach((label, i) => {
+      const slot = this.add.text(GAME_WIDTH - 16, 520 + i * 22, label, {
+        fontFamily: 'serif',
+        fontSize: '11px',
+        color: '#6b6560',
+      }).setOrigin(1, 0);
+      this.orderSlots.push(slot);
+    });
+
+    this.add.text(GAME_WIDTH - 16, 640 - 24, 'RMB Focus · Q War Cry · E Rally', {
+      fontFamily: 'serif',
+      fontSize: '9px',
+      color: '#5a554d',
+    }).setOrigin(1, 1);
+
+    this.announcementText = this.add.text(GAME_WIDTH / 2, 56, '', {
+      fontFamily: 'serif',
+      fontSize: '18px',
+      color: '#e8dcc8',
+    }).setOrigin(0.5);
 
     this.overlayContainer = this.add.container(0, 0);
     this.overlayContainer.setVisible(false);
@@ -70,46 +100,45 @@ export class UIScene extends Phaser.Scene {
 
   private updateHUD(data: GameStateData): void {
     const remaining = Math.max(0, data.survivalGoal - data.elapsed);
-    const seconds = Math.ceil(remaining / 1000);
-    this.doctrineText.setText(`${data.doctrineName} — ${data.objectiveName}`);
-    this.timerText.setText(`Survive: ${seconds}s`);
-    this.phaseText.setText(`Encounter phase: ${data.phase}`);
-    this.killText.setText(`Kills: ${data.enemiesKilled}`);
+    this.timerText.setText(`Pressure: ${Math.ceil(remaining / 1000)}s remaining`);
 
-    const cohesionLabel =
-      data.cohesionState === 'bonded' ? 'BONDED' :
-      data.cohesionState === 'resyncing' ? 'RESYNCING...' : 'DESYNCED';
-    const cohesionColor =
-      data.cohesionState === 'bonded' ? '#ffd166' :
-      data.cohesionState === 'resyncing' ? '#88ff88' : '#ff6666';
-    const bonus = data.bondActive ? ' (+15% dmg, +10% DR)' : ' — orders delayed';
-    this.bondText.setText(`Cohesion: ${cohesionLabel}${bonus}`).setColor(cohesionColor);
+    const companionMood =
+      data.cohesionState === 'bonded' ? 'With you' :
+      data.cohesionState === 'resyncing' ? 'Returning...' : 'Out of sync';
+    const moodColor =
+      data.cohesionState === 'bonded' ? '#d4a054' :
+      data.cohesionState === 'resyncing' ? '#c9b896' : '#8a8278';
+    this.companionStatus.setText(`Oathbound: ${companionMood}`).setColor(moodColor);
 
-    const orderLabel = data.activeOrder ? data.activeOrder.replace('_', ' ').toUpperCase() : 'FOLLOW';
-    const focusNote = data.focusFireActive ? ' [FOCUS FIRE]' : '';
-    this.orderText.setText(`Order: ${orderLabel}${focusNote}`).setColor('#ffffff');
+    const bondLabel =
+      data.cohesionState === 'bonded'
+        ? data.bondTension > 0.5 ? 'Bond fraying' : 'Bond held'
+        : data.cohesionState === 'resyncing' ? 'Reconnecting' : 'Cannot reach you';
+    this.bondStatus.setText(bondLabel).setColor(moodColor);
 
-    const cpDots = '●'.repeat(data.commandPoints) + '○'.repeat(data.maxCommandPoints - data.commandPoints);
-    const buffs = [
-      data.warCryActive ? 'WAR CRY' : '',
-      data.tacticalRallyActive ? 'RALLY' : '',
-    ].filter(Boolean).join(' + ');
-    this.cpText.setText(`CP: ${cpDots}${buffs ? ` | ${buffs}` : ''}`);
+    const orderLabel = data.activeOrder
+      ? data.activeOrder.replace('_', ' ').toUpperCase()
+      : 'Following';
+    const focusNote = data.focusFireActive ? ' · FOCUS FIRE' : '';
+    this.orderStatus.setText(`Order: ${orderLabel}${focusNote}`);
 
-    const feedback = data.abilityFeedback ?? data.orderFeedback;
-    this.feedbackText.setText(feedback ?? '');
-
+    this.feedbackText.setText(data.abilityFeedback ?? data.orderFeedback ?? '');
     this.announcementText.setText(data.phaseAnnouncement ?? '');
     this.announcementText.setVisible(!!data.phaseAnnouncement);
 
-    this.drawHealthBar(this.commanderBar, 16, 202, 160, 8, data.commanderHealth, data.commanderMaxHealth, 0x4a9eff);
-    this.drawHealthBar(this.companionBar, 16, 230, 160, 8, data.companionHealth, data.companionMaxHealth, 0xffd166);
+    this.drawHealthBar(this.commanderBar, 16, 192, 140, 6, data.commanderHealth, data.commanderMaxHealth, 0x5a6b7a);
+    this.drawHealthBar(this.companionBar, 16, 220, 140, 6, data.companionHealth, data.companionMaxHealth, 0x8b6914);
 
     if (data.bossActive) {
-      this.drawHealthBar(this.bossBar, 16, 258, 160, 8, data.bossHealth, data.bossMaxHealth, 0xff4444);
+      this.drawHealthBar(this.bossBar, 16, 248, 140, 6, data.bossHealth, data.bossMaxHealth, 0x6a040f);
     } else {
       this.bossBar.clear();
     }
+
+    const orderTypes = ['hold', 'attack', 'defend', 'rally_point', 'focus_target'];
+    this.orderSlots.forEach((slot, i) => {
+      slot.setColor(data.activeOrder === orderTypes[i] ? '#d4a054' : '#6b6560');
+    });
   }
 
   private drawHealthBar(
@@ -123,7 +152,7 @@ export class UIScene extends Phaser.Scene {
     color: number,
   ): void {
     gfx.clear();
-    gfx.fillStyle(0x333344, 1);
+    gfx.fillStyle(0x2a2620, 1);
     gfx.fillRect(x, y, w, h);
     const pct = Phaser.Math.Clamp(current / max, 0, 1);
     gfx.fillStyle(color, 1);
@@ -134,37 +163,63 @@ export class UIScene extends Phaser.Scene {
     this.overlayContainer.removeAll(true);
     this.overlayContainer.setVisible(true);
 
-    const bg = this.add.rectangle(480, 320, 960, 640, 0x000000, 0.7);
-    const title = this.add.text(480, 240, state === 'won' ? 'VICTORY' : 'DEFEATED', {
-      fontFamily: 'monospace',
-      fontSize: '48px',
-      color: state === 'won' ? '#4ade80' : '#e63946',
-    }).setOrigin(0.5);
+    const gameData = (this.scene.get('GameScene') as Phaser.Scene & {
+      getStateData: (n: number) => GameStateData;
+    }).getStateData(0);
 
-    let subtitleText = 'Your commander has fallen.\nThe army is leaderless.';
-    if (state === 'won' && reason === 'boss_defeated') {
-      subtitleText = 'Field Captain eliminated.\nYour command broke their strategy.';
-    } else if (state === 'won') {
-      subtitleText = 'You held the line, Commander.\nThe encounter is contained.';
+    const bg = this.add.rectangle(480, 320, 960, 640, 0x1a1814, 0.85);
+
+    let headline: string;
+    let lesson: string;
+    let suggestion = '';
+
+    if (state === 'won' && reason) {
+      const win = getWinMessage(reason as 'boss_defeated' | 'survival');
+      headline = win.headline;
+      lesson = win.lesson;
+    } else if (state === 'lost') {
+      headline = gameData.deathHeadline ?? 'Command lost';
+      lesson = gameData.deathLesson ?? 'Leadership failed under pressure.';
+      suggestion = gameData.deathSuggestion ?? '';
+    } else {
+      headline = 'Command lost';
+      lesson = 'Leadership failed under pressure.';
     }
 
-    const subtitle = this.add.text(480, 310, subtitleText, {
-      fontFamily: 'monospace',
-      fontSize: '16px',
-      color: '#cccccc',
+    const title = this.add.text(480, 220, headline, {
+      fontFamily: 'serif',
+      fontSize: '36px',
+      color: state === 'won' ? '#d4a054' : '#8a8278',
+    }).setOrigin(0.5);
+
+    const subtitle = this.add.text(480, 300, lesson, {
+      fontFamily: 'serif',
+      fontSize: '15px',
+      color: '#c9b896',
       align: 'center',
     }).setOrigin(0.5);
 
-    const restart = this.add.text(480, 390, '[ R ] Return to Setup', {
-      fontFamily: 'monospace',
-      fontSize: '20px',
-      color: '#ffffff',
+    const suggest = suggestion
+      ? this.add.text(480, 360, suggestion, {
+          fontFamily: 'serif',
+          fontSize: '13px',
+          color: '#8a8278',
+          align: 'center',
+        }).setOrigin(0.5)
+      : null;
+
+    const restart = this.add.text(480, 420, '[ R ] Try Again', {
+      fontFamily: 'serif',
+      fontSize: '18px',
+      color: '#d4a054',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     restart.on('pointerdown', () => this.restart());
     this.input.keyboard?.once('keydown-R', () => this.restart());
 
-    this.overlayContainer.add([bg, title, subtitle, restart]);
+    const items = [bg, title, subtitle, restart];
+    if (suggest) items.push(suggest);
+    this.overlayContainer.add(items);
   }
 
   private restart(): void {

@@ -1,6 +1,30 @@
 # Army Commander — Game Design Document
 
-**Version 1.6** — M3 enemy roster refined: Assassin + Siege replace Grunt; each role forces a unique command decision.
+**Version 1.7** — Production: First Playable vertical slice. Design locked; polish over expansion.
+
+## Version 1 — First Playable (LOCKED SCOPE)
+
+**Validation question:** Does Elite Bond make the player feel like they are leading a trusted companion under pressure?
+
+### In scope
+- Elite Bond commander + Oathbound companion
+- Bond & cohesion system
+- Orders (Hold, Attack, Defend, Rally, Focus)
+- Shock Assault & Iron Wall doctrines
+- Current enemy roster + Field Captain
+- One battlefield (First March)
+- One objective (Command Trial)
+- Game feel polish: tether, order feedback, focus marks, Assassin telegraph, leadership death messages
+
+### Out of scope (V1)
+- Additional commanders, factions, objectives, meta, unlocks
+- Command instruments
+- New mechanics unless playtest proves leadership fantasy fails
+
+### Success metrics
+- First-time player describes experience in **leadership terms**
+- Bond, Order, Focus, Desync, Assassin moments readable without tooltips
+- Responsibility felt before power
 
 ## Core Pillars
 

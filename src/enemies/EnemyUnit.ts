@@ -22,9 +22,12 @@ export class EnemyUnit extends Unit {
   lastBossSummonAt = 0;
   lastBossChargeAt = 0;
   /** Assassin state machine */
-  assassinState: 'stalking' | 'dashing' | 'escaping' = 'stalking';
+  assassinState: 'stalking' | 'telegraphing' | 'dashing' | 'escaping' = 'stalking';
   assassinEscapeUntil = 0;
+  assassinTelegraphUntil = 0;
   private labelText?: Phaser.GameObjects.Text;
+  private telegraphGfx?: Phaser.GameObjects.Graphics;
+  private roleMarkGfx?: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, x: number, y: number, role: EnemyRole) {
     const def = ENEMY_ROLES[role];
@@ -38,12 +41,22 @@ export class EnemyUnit extends Unit {
     if (role === 'boss') {
       this.sprite.setStrokeStyle(3, 0xffffff, 0.8);
     }
+    if (role === 'assassin') {
+      this.sprite.setStrokeStyle(2, 0x5c3a6e, 0.9);
+    }
+
+    this.roleMarkGfx = scene.add.graphics().setDepth(5);
+    this.drawRoleMark();
+
+    if (role === 'assassin') {
+      this.showAssassinEntrance();
+    }
 
     this.labelText = scene.add.text(x, y - def.radius - 10, def.label, {
-      fontFamily: 'monospace',
-      fontSize: role === 'boss' ? '11px' : '8px',
-      color: '#cccccc',
-    }).setOrigin(0.5).setDepth(10);
+      fontFamily: 'serif',
+      fontSize: role === 'boss' ? '10px' : '7px',
+      color: role === 'assassin' ? '#9d7bb8' : '#8a8278',
+    }).setOrigin(0.5).setDepth(10).setAlpha(0.85);
   }
 
   get effectiveSpeed(): number {
@@ -58,10 +71,68 @@ export class EnemyUnit extends Unit {
     return ENEMY_ROLES[this.role].color;
   }
 
+  protected redrawSigil(): void {
+    // Enemy identity uses roleMarkGfx in updateLabelPosition
+  }
+
   updateLabelPosition(): void {
     if (this.labelText && this.isAlive) {
       this.labelText.setPosition(this.x, this.y - this.sprite.radius - 10);
     }
+    this.drawRoleMark();
+    this.updateTelegraph();
+  }
+
+  setTelegraphTarget(x: number, y: number, active: boolean): void {
+    if (!this.telegraphGfx) {
+      this.telegraphGfx = this.sprite.scene.add.graphics().setDepth(3);
+    }
+    this.telegraphGfx.clear();
+    if (!active || !this.isAlive) return;
+    this.telegraphGfx.lineStyle(2, 0x9d4edd, 0.7);
+    this.telegraphGfx.beginPath();
+    this.telegraphGfx.moveTo(this.x, this.y);
+    this.telegraphGfx.lineTo(x, y);
+    this.telegraphGfx.strokePath();
+    this.telegraphGfx.fillStyle(0x9d4edd, 0.25);
+    this.telegraphGfx.fillCircle(x, y, 14);
+  }
+
+  private updateTelegraph(): void {
+    if (this.telegraphGfx) {
+      this.telegraphGfx.setPosition(0, 0);
+    }
+  }
+
+  private drawRoleMark(): void {
+    if (!this.roleMarkGfx) return;
+    this.roleMarkGfx.clear();
+    this.roleMarkGfx.setPosition(this.x, this.y);
+    // Broken circle faction mark
+    this.roleMarkGfx.lineStyle(1, 0x6b6560, 0.6);
+    this.roleMarkGfx.beginPath();
+    this.roleMarkGfx.arc(0, -this.sprite.radius * 0.5, 4, 0.3, 5.5);
+    this.roleMarkGfx.strokePath();
+    if (this.role === 'assassin') {
+      this.roleMarkGfx.lineStyle(1, 0x5c3a6e, 0.9);
+      this.roleMarkGfx.beginPath();
+      this.roleMarkGfx.moveTo(-3, 2);
+      this.roleMarkGfx.lineTo(3, -2);
+      this.roleMarkGfx.strokePath();
+    }
+  }
+
+  private showAssassinEntrance(): void {
+    const scene = this.sprite.scene;
+    const sweep = scene.add.graphics().setDepth(1);
+    sweep.lineStyle(3, 0x5c3a6e, 0.5);
+    sweep.strokeCircle(this.x, this.y, 60);
+    scene.tweens.add({
+      targets: sweep,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => sweep.destroy(),
+    });
   }
 
   applyKnockback(fromX: number, fromY: number, force: number): void {
@@ -79,6 +150,8 @@ export class EnemyUnit extends Unit {
 
   destroy(): void {
     this.labelText?.destroy();
+    this.telegraphGfx?.destroy();
+    this.roleMarkGfx?.destroy();
     super.destroy();
   }
 }

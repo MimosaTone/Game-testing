@@ -338,14 +338,27 @@ function updateAssassin(enemy: EnemyUnit, ctx: EnemyAIContext): void {
 
   if (enemy.assassinState === 'stalking') {
     if (hasOpening) {
-      enemy.assassinState = 'dashing';
-    } else {
-      const orbitAngle = Phaser.Math.Angle.Between(commander.x, commander.y, enemy.x, enemy.y);
-      const orbitX = commander.x + Math.cos(orbitAngle) * ENEMY_AI.assassinStalkRange;
-      const orbitY = commander.y + Math.sin(orbitAngle) * ENEMY_AI.assassinStalkRange;
-      moveToward(enemy, orbitX, orbitY, 0.75);
+      enemy.assassinState = 'telegraphing';
+      enemy.assassinTelegraphUntil = now + ENEMY_AI.assassinTelegraphMs;
+      enemy.stop();
       return;
     }
+    const orbitAngle = Phaser.Math.Angle.Between(commander.x, commander.y, enemy.x, enemy.y);
+    const orbitX = commander.x + Math.cos(orbitAngle) * ENEMY_AI.assassinStalkRange;
+    const orbitY = commander.y + Math.sin(orbitAngle) * ENEMY_AI.assassinStalkRange;
+    moveToward(enemy, orbitX, orbitY, 0.75);
+    enemy.setTelegraphTarget(commander.x, commander.y, false);
+    return;
+  }
+
+  if (enemy.assassinState === 'telegraphing') {
+    enemy.stop();
+    enemy.setTelegraphTarget(commander.x, commander.y, true);
+    if (now >= enemy.assassinTelegraphUntil) {
+      enemy.assassinState = 'dashing';
+      enemy.setTelegraphTarget(commander.x, commander.y, false);
+    }
+    return;
   }
 
   if (enemy.assassinState === 'dashing') {

@@ -10,8 +10,8 @@ export interface ObjectiveDefinition {
 export const OBJECTIVES: ObjectiveDefinition[] = [
   {
     id: 'survival',
-    name: 'Survival',
-    tagline: 'Hold the line until relief arrives',
+    name: 'Command Trial',
+    tagline: 'Lead your Oathbound under pressure',
     durationMs: 90_000,
   },
 ];

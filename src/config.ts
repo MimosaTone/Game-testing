@@ -4,18 +4,18 @@ export const GAME_HEIGHT = 640;
 export const COMMANDER = {
   speed: 180,
   maxHealth: 80,
-  radius: 14,
-  color: 0x4a9eff,
-  attackDamage: 4,
-  attackRange: 50,
-  attackCooldown: 800,
+  radius: 12,
+  color: 0x5a6b7a,
+  attackDamage: 1,
+  attackRange: 40,
+  attackCooldown: 1200,
 };
 
 export const COMPANION = {
   speed: 200,
   maxHealth: 150,
-  radius: 18,
-  color: 0xffd166,
+  radius: 17,
+  color: 0x8b6914,
   attackDamage: 18,
   attackRange: 70,
   attackCooldown: 600,

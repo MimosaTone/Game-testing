@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import { COMMANDER, COMPANION, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { CohesionState } from '../cohesion/CohesionSystem';
+import { PALETTE } from '../presentation/palette';
 
 export abstract class Unit {
   readonly sprite: Phaser.GameObjects.Arc;
   readonly body: Phaser.Physics.Arcade.Body;
+  protected sigilGfx: Phaser.GameObjects.Graphics;
   maxHealth: number;
   health: number;
   attackDamage: number;
@@ -33,10 +35,12 @@ export abstract class Unit {
     },
   ) {
     this.sprite = scene.add.circle(x, y, radius, color);
-    this.sprite.setStrokeStyle(2, 0xffffff, 0.3);
+    this.sprite.setStrokeStyle(2, 0xffffff, 0.25);
     scene.physics.add.existing(this.sprite);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
     this.body.setCircle(radius);
+    this.sigilGfx = scene.add.graphics().setDepth(4);
+    this.redrawSigil();
     this.maxHealth = stats.maxHealth;
     this.health = stats.maxHealth;
     this.attackDamage = stats.attackDamage;
@@ -104,6 +108,26 @@ export abstract class Unit {
 
   protected abstract getColor(): number;
 
+  protected abstract redrawSigil(): void;
+
+  setBondVisual(_bonded: boolean, state: CohesionState, _tension: number): void {
+    if (!this.isAlive) return;
+    const alpha = state === 'desynced' ? 0.45 : 1;
+    this.sprite.setAlpha(alpha);
+    if (state === 'desynced') {
+      this.sprite.setStrokeStyle(2, PALETTE.bondBroken, 0.4);
+    } else if (state === 'resyncing') {
+      this.sprite.setStrokeStyle(2, PALETTE.bondAmber, 0.8);
+    } else {
+      this.sprite.setStrokeStyle(2, PALETTE.bondAmber, 0.35);
+    }
+    this.redrawSigil();
+  }
+
+  protected syncSigilPosition(): void {
+    this.sigilGfx.setPosition(this.x, this.y);
+  }
+
   protected die(): void {
     this.isAlive = false;
     this.body.setVelocity(0, 0);
@@ -130,6 +154,7 @@ export abstract class Unit {
   }
 
   destroy(): void {
+    this.sigilGfx.destroy();
     this.sprite.destroy();
   }
 }
@@ -146,10 +171,21 @@ export class Commander extends Unit {
     return COMMANDER.color;
   }
 
+  protected redrawSigil(): void {
+    this.syncSigilPosition();
+    this.sigilGfx.clear();
+    // The Needle — split-circle crest
+    this.sigilGfx.lineStyle(2, PALETTE.commanderCrest, 0.9);
+    this.sigilGfx.strokeCircle(0, -2, 5);
+    this.sigilGfx.fillStyle(PALETTE.commanderCrest, 0.5);
+    this.sigilGfx.fillCircle(-2, -2, 2);
+  }
+
   move(velocity: Phaser.Math.Vector2): void {
     if (!this.isAlive) return;
     velocity.normalize().scale(this.baseSpeed);
     this.body.setVelocity(velocity.x, velocity.y);
+    this.redrawSigil();
   }
 }
 
@@ -166,8 +202,8 @@ export class Companion extends Unit {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, COMPANION.radius, COMPANION.color, COMPANION);
     this.baseSpeed = COMPANION.speed;
-    this.bondRing = scene.add.circle(x, y, 8, 0xffd166, 0);
-    this.bondRing.setStrokeStyle(2, 0xffd166, 0);
+    this.bondRing = scene.add.circle(x, y, 8, 0xd4a054, 0);
+    this.bondRing.setStrokeStyle(2, 0xd4a054, 0);
     this.bondRing.setDepth(-1);
   }
 
@@ -179,6 +215,16 @@ export class Companion extends Unit {
 
   protected getColor(): number {
     return COMPANION.color;
+  }
+
+  protected redrawSigil(): void {
+    this.syncSigilPosition();
+    this.sigilGfx.clear();
+    // The Anvil — filled half of binding seal
+    this.sigilGfx.lineStyle(2, PALETTE.oathboundCrest, 0.9);
+    this.sigilGfx.strokeCircle(0, 0, 7);
+    this.sigilGfx.fillStyle(PALETTE.oathboundCrest, 0.6);
+    this.sigilGfx.fillCircle(2, 0, 3);
   }
 
   beginResync(commander: Commander): void {
@@ -202,12 +248,13 @@ export class Companion extends Unit {
   updateBondRing(): void {
     if (!this.bondRing) return;
     this.bondRing.setPosition(this.x, this.y);
+    this.redrawSigil();
     const alpha =
       this.cohesionState === 'bonded' ? 0.35 :
       this.cohesionState === 'resyncing' ? 0.5 : 0.1;
     const color =
-      this.cohesionState === 'bonded' ? 0xffd166 :
-      this.cohesionState === 'resyncing' ? 0x88ff88 : 0xff6666;
+      this.cohesionState === 'bonded' ? PALETTE.bondAmber :
+      this.cohesionState === 'resyncing' ? PALETTE.bondAmber : PALETTE.bondBroken;
     this.bondRing.setStrokeStyle(2, color, alpha);
   }
 

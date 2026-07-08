@@ -105,6 +105,7 @@ export const ENEMY_AI = {
   bruiserGuardRadius: 200,
   assassinStalkRange: 200,
   assassinOpeningCommanderDistance: 110,
+  assassinTelegraphMs: 650,
   assassinDashSpeedMultiplier: 2.8,
   assassinEscapeDurationMs: 2200,
   assassinEscapeSpeedMultiplier: 1.6,

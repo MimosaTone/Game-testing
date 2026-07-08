@@ -13,63 +13,64 @@ export class SetupScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x12121a);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x2a2620);
 
-    this.add.text(GAME_WIDTH / 2, 48, 'ARMY COMMANDER', {
-      fontFamily: 'monospace',
-      fontSize: '28px',
-      color: '#ffffff',
+    this.add.text(GAME_WIDTH / 2, 44, 'ARMY COMMANDER', {
+      fontFamily: 'serif',
+      fontSize: '32px',
+      color: '#e8dcc8',
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 80, 'Standard Mode — Configure Your Run', {
-      fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#888888',
+    this.add.text(GAME_WIDTH / 2, 78, 'First Playable — Version 1', {
+      fontFamily: 'serif',
+      fontSize: '13px',
+      color: '#8a8278',
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 120, 'Commander: Elite Bond', {
-      fontFamily: 'monospace',
+    this.add.text(GAME_WIDTH / 2, 118, 'Commander: Elite Bond', {
+      fontFamily: 'serif',
       fontSize: '16px',
-      color: '#4a9eff',
+      color: '#d4a054',
     }).setOrigin(0.5);
 
-    this.add.text(120, 155, 'Choose Doctrine', {
-      fontFamily: 'monospace',
+    this.add.text(GAME_WIDTH / 2, 140, 'Companion: The Oathbound', {
+      fontFamily: 'serif',
+      fontSize: '12px',
+      color: '#8a8278',
+    }).setOrigin(0.5);
+
+    this.add.text(120, 168, 'Choose Doctrine', {
+      fontFamily: 'serif',
       fontSize: '14px',
-      color: '#cccccc',
+      color: '#c9b896',
     });
 
     DOCTRINES.forEach((doctrine, index) => {
-      const card = this.createDoctrineCard(doctrine, 120 + index * 380, 180);
+      const card = this.createDoctrineCard(doctrine, 120 + index * 380, 195);
       this.doctrineCards.push(card);
     });
 
-    const survival = OBJECTIVES[0];
-    this.add.rectangle(GAME_WIDTH / 2, 430, 520, 90, 0x1e1e2a).setStrokeStyle(2, 0x4a9eff, 0.5);
-    this.add.text(GAME_WIDTH / 2, 405, `Objective: ${survival.name}`, {
-      fontFamily: 'monospace',
+    const objective = OBJECTIVES[0];
+    this.add.rectangle(GAME_WIDTH / 2, 430, 520, 80, 0x3d3830).setStrokeStyle(1, 0x8b6914, 0.6);
+    this.add.text(GAME_WIDTH / 2, 408, `Objective: ${objective.name}`, {
+      fontFamily: 'serif',
       fontSize: '16px',
-      color: '#ffffff',
+      color: '#e8dcc8',
     }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 435, survival.tagline, {
-      fontFamily: 'monospace',
+    this.add.text(GAME_WIDTH / 2, 438, objective.tagline, {
+      fontFamily: 'serif',
       fontSize: '12px',
-      color: '#888888',
-    }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 458, 'Survive 90s — defeat the Field Captain to win early', {
-      fontFamily: 'monospace',
-      fontSize: '11px',
-      color: '#666666',
+      color: '#8a8278',
     }).setOrigin(0.5);
 
-    const startBtn = this.add.text(GAME_WIDTH / 2, 530, '[ ENTER ] Begin Battle', {
-      fontFamily: 'monospace',
-      fontSize: '22px',
-      color: '#4ade80',
+    const startBtn = this.add.text(GAME_WIDTH / 2, 520, '[ ENTER ] Begin Command Trial', {
+      fontFamily: 'serif',
+      fontSize: '20px',
+      color: '#d4a054',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    startBtn.on('pointerover', () => startBtn.setColor('#86efac'));
-    startBtn.on('pointerout', () => startBtn.setColor('#4ade80'));
+    startBtn.on('pointerover', () => startBtn.setColor('#f0d080'));
+    startBtn.on('pointerout', () => startBtn.setColor('#d4a054'));
     startBtn.on('pointerdown', () => this.startBattle());
 
     this.input.keyboard?.once('keydown-ENTER', () => this.startBattle());
@@ -82,33 +83,33 @@ export class SetupScene extends Phaser.Scene {
     y: number,
   ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
-    const bg = this.add.rectangle(0, 0, 340, 200, 0x1e1e2a);
-    bg.setStrokeStyle(2, 0x444444, 1);
+    const bg = this.add.rectangle(0, 0, 340, 190, 0x3d3830);
+    bg.setStrokeStyle(1, 0x6b6560, 1);
     bg.setInteractive({ useHandCursor: true });
 
-    const title = this.add.text(0, -70, doctrine.name, {
-      fontFamily: 'monospace',
+    const title = this.add.text(0, -65, doctrine.name, {
+      fontFamily: 'serif',
       fontSize: '18px',
-      color: '#ffffff',
+      color: '#e8dcc8',
     }).setOrigin(0.5);
 
-    const tagline = this.add.text(0, -42, doctrine.tagline, {
-      fontFamily: 'monospace',
+    const tagline = this.add.text(0, -38, doctrine.tagline, {
+      fontFamily: 'serif',
       fontSize: '11px',
-      color: '#888888',
+      color: '#8a8278',
     }).setOrigin(0.5);
 
-    const strength = this.add.text(-150, -10, `+ ${doctrine.strength}`, {
-      fontFamily: 'monospace',
+    const strength = this.add.text(-150, -5, `+ ${doctrine.strength}`, {
+      fontFamily: 'serif',
       fontSize: '10px',
-      color: '#4ade80',
+      color: '#d4a054',
       wordWrap: { width: 300 },
     });
 
-    const limitation = this.add.text(-150, 40, `− ${doctrine.limitation}`, {
-      fontFamily: 'monospace',
+    const limitation = this.add.text(-150, 45, `− ${doctrine.limitation}`, {
+      fontFamily: 'serif',
       fontSize: '10px',
-      color: '#f87171',
+      color: '#8a8278',
       wordWrap: { width: 300 },
     });
 
@@ -128,8 +129,8 @@ export class SetupScene extends Phaser.Scene {
       const id = card.getData('doctrineId') as DoctrineId;
       const bg = card.getData('bg') as Phaser.GameObjects.Rectangle;
       const selected = id === this.selectedDoctrine;
-      bg.setStrokeStyle(2, selected ? 0x4a9eff : 0x444444, selected ? 1 : 0.6);
-      bg.setFillStyle(selected ? 0x252538 : 0x1e1e2a);
+      bg.setStrokeStyle(1, selected ? 0xd4a054 : 0x6b6560, selected ? 1 : 0.6);
+      bg.setFillStyle(selected ? 0x4a4540 : 0x3d3830);
     }
   }
 
