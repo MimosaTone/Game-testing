@@ -40,7 +40,6 @@ export const ENEMY_TYPES = {
     size: 21,
   },
 
-  /** Late-game armored invader — rewards armor-piercing upgrades. */
   ward: {
     id: 'ward',
     name: 'Ward',
@@ -52,7 +51,6 @@ export const ENEMY_TYPES = {
     innateArmor: 0.2,
   },
 
-  /** Late-game regenerator — rewards burst damage and focus fire. */
   rime: {
     id: 'rime',
     name: 'Rime',
@@ -63,4 +61,48 @@ export const ENEMY_TYPES = {
     size: 16,
     innateRegen: 3,
   },
+
+  /** Boss — armored colossus that spawns minions as health drops. */
+  boss_briar: {
+    id: 'boss_briar',
+    name: 'Briar Colossus',
+    color: '#2e7d32',
+    baseHealth: 900,
+    speed: 0.45,
+    goldReward: 220,
+    size: 30,
+    isBoss: true,
+    innateArmor: 0.2,
+    bossAbility: 'spawn_minions',
+  },
+
+  /** Boss — swift sovereign with periodic speed surges. */
+  boss_gale: {
+    id: 'boss_gale',
+    name: 'Gale Sovereign',
+    color: '#00838f',
+    baseHealth: 650,
+    speed: 0.9,
+    goldReward: 260,
+    size: 28,
+    isBoss: true,
+    bossAbility: 'speed_surge',
+  },
+
+  /** Boss — ancient mire with powerful regeneration and shields. */
+  boss_mire: {
+    id: 'boss_mire',
+    name: 'Mire Ancient',
+    color: '#4e342e',
+    baseHealth: 1100,
+    speed: 0.4,
+    goldReward: 320,
+    size: 32,
+    isBoss: true,
+    innateRegen: 6,
+    bossAbility: 'damage_shield',
+  },
 };
+
+/** Boss types cycle every 15 waves. */
+export const BOSS_ROTATION = ['boss_briar', 'boss_gale', 'boss_mire'];

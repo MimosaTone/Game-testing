@@ -1,8 +1,34 @@
+import { BOSS_ROTATION } from './enemyTypes.js';
+
+/** Boss waves occur every 15 rounds. */
+export function isBossWave(waveNumber) {
+  return waveNumber > 0 && waveNumber % 15 === 0;
+}
+
+/**
+ * Boss wave composition — one unique boss plus supporting minions.
+ */
+export function generateBossWave(waveNumber) {
+  const cycle = Math.floor(waveNumber / 15) - 1;
+  const bossType = BOSS_ROTATION[cycle % BOSS_ROTATION.length];
+  const escort = 3 + Math.floor(waveNumber / 15) * 2;
+
+  return [
+    { type: bossType, count: 1, spawnDelayMs: 0, isBoss: true },
+    { type: 'drift', count: escort, spawnDelayMs: 700 },
+    { type: 'husk', count: Math.floor(escort / 2), spawnDelayMs: 1100 },
+  ];
+}
+
 /**
  * Wave composition generator.
  * Early waves stay gentle; late waves demand upgraded towers and strong economy.
  */
 export function generateWave(waveNumber) {
+  if (isBossWave(waveNumber)) {
+    return generateBossWave(waveNumber);
+  }
+
   const waves = [];
 
   if (waveNumber === 1) {
@@ -53,10 +79,7 @@ export function generateWave(waveNumber) {
   return waves.filter((g) => g.count > 0);
 }
 
-/**
- * Scaling curve: approachable waves 1–5, steep ramp after wave 10.
- * Late waves add armor and regeneration to force smart builds.
- */
+/** Scaling curve: approachable waves 1–5, steep ramp after wave 10. */
 export function getWaveScaling(waveNumber) {
   let healthMultiplier;
   let speedMultiplier;
@@ -75,6 +98,8 @@ export function getWaveScaling(waveNumber) {
     speedMultiplier = 1 + 4 * 0.018 + 5 * 0.03 + 5 * 0.04 + (waveNumber - 15) * 0.045;
   }
 
+  const bossHealthMult = isBossWave(waveNumber) ? 1 + (waveNumber / 15) * 0.35 : 1;
+
   const armor =
     waveNumber >= 18 ? 0.22 :
     waveNumber >= 14 ? 0.15 :
@@ -88,10 +113,11 @@ export function getWaveScaling(waveNumber) {
     waveNumber >= 9 ? 0.8 : 0;
 
   return {
-    healthMultiplier,
+    healthMultiplier: healthMultiplier * bossHealthMult,
     speedMultiplier,
     goldMultiplier: 1 + (waveNumber - 1) * 0.075,
     armor,
     regenPerSec,
+    isBossWave: isBossWave(waveNumber),
   };
 }

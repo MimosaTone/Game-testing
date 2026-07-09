@@ -116,10 +116,86 @@ export const TOWER_UPGRADE_PATHS = {
       effects: { damageMult: 1.9, chainCount: 4, chainDamageMult: 0.7, chainRange: 110 },
     },
   ],
+
+  gust: [
+    {
+      id: 'breeze',
+      name: 'Strong Breeze',
+      cost: 48,
+      description: '+30% slow aura strength',
+      effects: { auraSlowMult: 1.3 },
+    },
+    {
+      id: 'shear',
+      name: 'Wind Shear',
+      cost: 72,
+      description: '+50% damage',
+      effects: { damageMult: 1.5 },
+    },
+    {
+      id: 'pulse',
+      name: 'Gale Pulse',
+      cost: 115,
+      description: 'Knockback pulse every 3s in range',
+      effects: { knockbackPulse: 55, knockbackInterval: 3 },
+    },
+    {
+      id: 'cyclone',
+      name: 'Cyclone',
+      cost: 175,
+      description: '+40% range & +35% slow',
+      effects: { rangeMult: 1.4, auraSlowMult: 1.35 },
+    },
+    {
+      id: 'tempest',
+      name: 'Tempest',
+      cost: 265,
+      description: 'Capstone: strong knockback & 50% slow',
+      effects: { auraSlowAdd: 0.25, knockbackPulse: 90, knockbackInterval: 2.5 },
+    },
+  ],
+
+  ember: [
+    {
+      id: 'coals',
+      name: 'Hot Coals',
+      cost: 50,
+      description: '+90% burn damage',
+      effects: { burnDPSMult: 1.9 },
+    },
+    {
+      id: 'kindle',
+      name: 'Kindling',
+      cost: 78,
+      description: '+55% direct damage',
+      effects: { damageMult: 1.55 },
+    },
+    {
+      id: 'longburn',
+      name: 'Long Burn',
+      cost: 120,
+      description: 'Burn lasts 5 seconds',
+      effects: { burnDuration: 5 },
+    },
+    {
+      id: 'wildfire',
+      name: 'Wildfire',
+      cost: 185,
+      description: 'Burn spreads to nearby foes',
+      effects: { burnSpread: 70, burnSpreadCount: 2 },
+    },
+    {
+      id: 'inferno',
+      name: 'Inferno',
+      cost: 280,
+      description: 'Capstone: burn ignores 50% armor',
+      effects: { burnDPSMult: 1.5, burnIgnoresArmor: 0.5 },
+    },
+  ],
 };
 
 /** Merge all purchased tier effects into combat stats. */
-export function computeTowerStats(towerDef, upgradeTier, path) {
+export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = null) {
   const base = towerDef.baseStats;
   let damage = base.damage;
   let range = base.range;
@@ -139,6 +215,15 @@ export function computeTowerStats(towerDef, upgradeTier, path) {
     slowPercent: 0,
     slowDuration: 0,
     splashFalloff: 0.5,
+    auraSlow: base.auraSlow || 0,
+    burnDPS: base.burnDPS || 0,
+    burnDuration: base.burnDuration || 0,
+    burnSpread: 0,
+    burnSpreadCount: 0,
+    burnIgnoresArmor: 0,
+    knockbackPulse: 0,
+    knockbackInterval: 0,
+    isAuraTower: towerDef.isAuraTower || false,
   };
 
   for (let i = 0; i < upgradeTier; i++) {
@@ -158,12 +243,27 @@ export function computeTowerStats(towerDef, upgradeTier, path) {
     if (fx.slowPercent) combat.slowPercent = Math.max(combat.slowPercent, fx.slowPercent);
     if (fx.slowDuration) combat.slowDuration = Math.max(combat.slowDuration, fx.slowDuration);
     if (fx.splashFalloff !== undefined) combat.splashFalloff = fx.splashFalloff;
+    if (fx.auraSlowMult) combat.auraSlow *= fx.auraSlowMult;
+    if (fx.auraSlowAdd) combat.auraSlow += fx.auraSlowAdd;
+    if (fx.burnDPSMult) combat.burnDPS *= fx.burnDPSMult;
+    if (fx.burnDuration) combat.burnDuration = fx.burnDuration;
+    if (fx.burnSpread) combat.burnSpread = fx.burnSpread;
+    if (fx.burnSpreadCount) combat.burnSpreadCount = fx.burnSpreadCount;
+    if (fx.burnIgnoresArmor) combat.burnIgnoresArmor = fx.burnIgnoresArmor;
+    if (fx.knockbackPulse) combat.knockbackPulse = fx.knockbackPulse;
+    if (fx.knockbackInterval) combat.knockbackInterval = fx.knockbackInterval;
+  }
+
+  if (prestigeMods?.towerDamageMult) {
+    combat.damage *= prestigeMods.towerDamageMult;
   }
 
   combat.damage = Math.round(combat.damage);
   combat.range = Math.round(combat.range * 10) / 10;
   combat.attackSpeed = Math.round(combat.attackSpeed * 100) / 100;
   combat.splashRadius = Math.round(combat.splashRadius * 10) / 10;
+  combat.burnDPS = Math.round(combat.burnDPS * 10) / 10;
+  combat.auraSlow = Math.min(0.65, Math.round(combat.auraSlow * 100) / 100);
 
   return combat;
 }
@@ -176,5 +276,10 @@ export function getTowerAbilityLabels(stats) {
   if (stats.chainCount > 0) labels.push(`Chain ×${stats.chainCount}`);
   if (stats.splashRadius > 0) labels.push(`Splash ${stats.splashRadius.toFixed(1)}`);
   if (stats.slowPercent > 0) labels.push(`Slow ${Math.round(stats.slowPercent * 100)}%`);
+  if (stats.auraSlow > 0) labels.push(`Aura slow ${Math.round(stats.auraSlow * 100)}%`);
+  if (stats.burnDPS > 0) labels.push(`Burn ${stats.burnDPS}/s`);
+  if (stats.knockbackPulse > 0) labels.push('Knockback pulse');
+  if (stats.burnIgnoresArmor > 0) labels.push('Burn pierces armor');
+  if (stats.burnSpread > 0) labels.push('Burn spreads');
   return labels;
 }

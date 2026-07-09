@@ -40,9 +40,10 @@ Open http://localhost:8080
 
 All mechanics, visuals, towers, enemies, and UI are original meadow-themed designs:
 
-- **Towers:** Needle Post, Boulder Pit, Prism Spire
+- **Towers:** Needle Post, Boulder Pit, Prism Spire, Gust Totem, Ember Hearth
 - **Economy:** Sunpatch (passive harvest)
-- **Invaders:** Mote, Drift, Husk, Titan
+- **Invaders:** Mote, Drift, Husk, Titan, Ward, Rime
+- **Bosses:** Briar Colossus, Gale Sovereign, Mire Ancient (every 15 waves)
 
 ## Tower Upgrade Paths
 
@@ -53,11 +54,25 @@ Each tower has a **5-tier sequential upgrade path** with unique power spikes:
 | **Needle Post** | Damage → Speed → Twin shot → Pierce → Needle Storm |
 | **Boulder Pit** | Damage → Splash radius → Shrapnel → Slow → Avalanche |
 | **Prism Spire** | Range/damage → Speed → Slow → Chain → Prism Cascade |
+| **Gust Totem** | Slow aura → Damage → Knockback pulse → Range → Tempest |
+| **Ember Hearth** | Burn DPS → Damage → Long burn → Spread → Inferno |
+
+## Prestige (Wave 50+)
+
+Reset your run to earn **Bloom Shards** for permanent upgrades: Sunpatch income, starting gold/lives, tower damage, and wave bonuses. Progress persists in localStorage.
+
+## Boss Waves
+
+Every 15th wave features a unique boss with special abilities and a large gold reward.
+
+## Options
+
+- **Auto-start waves** — toggle to automatically begin the next wave after a short delay
+- **52 build spots** — expanded map for more strategic layouts
 
 Late waves (10+) introduce **Ward** (armored) and **Rime** (regenerating) invaders, plus scaling armor and regen on all foes. Smart Sunpatch investment and tower upgrades are both required to survive.
 
-
-```
+## Architecture
 js/
   config/     — Balance data (towers, enemies, waves, economy)
   core/       — Game loop, economy, wave manager, event bus

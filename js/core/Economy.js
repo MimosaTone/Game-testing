@@ -11,8 +11,9 @@ import {
  * Manages gold, passive income, and transactions.
  */
 export class Economy {
-  constructor(eventBus) {
+  constructor(eventBus, prestigeManager) {
     this.eventBus = eventBus;
+    this.prestigeManager = prestigeManager;
     this.gold = GAME_CONFIG.startingGold;
     this.incomePerWave = 0;
     this.waveNumber = 0;
@@ -41,7 +42,8 @@ export class Economy {
 
   /** Recalculate total farm income including network and wave scaling bonuses. */
   recalculateIncome(farms) {
-    this.incomePerWave = calculateFarmIncome(farms, this.waveNumber);
+    const mods = this.prestigeManager.getModifiers();
+    this.incomePerWave = calculateFarmIncome(farms, this.waveNumber, mods);
     this.eventBus.emit(Events.INCOME_CHANGED, {
       total: this.incomePerWave,
       farmCount: farms.length,
@@ -52,7 +54,8 @@ export class Economy {
   /** Award farm income and wave-clear bonus at end of wave. */
   collectWaveIncome() {
     const farmIncome = this.incomePerWave;
-    const waveBonus = ECONOMY_CONFIG.waveClearBonus(this.waveNumber);
+    const mods = this.prestigeManager.getModifiers();
+    const waveBonus = Math.round(ECONOMY_CONFIG.waveClearBonus(this.waveNumber) * mods.waveBonusMult);
 
     if (farmIncome > 0) this.earn(farmIncome);
     this.earn(waveBonus);

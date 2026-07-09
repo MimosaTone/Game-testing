@@ -28,14 +28,15 @@ export const ECONOMY_CONFIG = {
 };
 
 /** Calculate total farm income with network and wave scaling bonuses. */
-export function calculateFarmIncome(farms, waveNumber) {
+export function calculateFarmIncome(farms, waveNumber, prestigeMods = null) {
   if (farms.length === 0) return 0;
 
   const base = farms.reduce((sum, farm) => sum + farm.getBaseIncome(), 0);
   const networkMult = 1 + ECONOMY_CONFIG.farmNetworkBonus * (farms.length - 1);
   const waveMult = 1 + waveNumber * ECONOMY_CONFIG.incomeWaveScaling;
+  const prestigeMult = prestigeMods?.farmIncomeMult ?? 1;
 
-  return Math.round(base * networkMult * waveMult);
+  return Math.round(base * networkMult * waveMult * prestigeMult);
 }
 
 /** Estimate how many waves until an investment pays for itself. */

@@ -1,5 +1,5 @@
 import { Enemy } from '../entities/Enemy.js';
-import { generateWave, getWaveScaling } from '../config/waveConfig.js';
+import { generateWave, getWaveScaling, isBossWave } from '../config/waveConfig.js';
 import { Events } from './EventBus.js';
 
 /**
@@ -15,6 +15,10 @@ export class WaveManager {
     this.waveElapsedMs = 0;
     this.active = false;
     this.scaling = getWaveScaling(1);
+
+    this.eventBus.on(Events.BOSS_SPAWN_MINIONS, (data) => {
+      this._spawnBossMinions(data);
+    });
   }
 
   get isWaveComplete() {
@@ -38,10 +42,13 @@ export class WaveManager {
       }
     }
 
-    this.waveElapsedMs = 0;
     this.active = true;
     this.eventBus.emit(Events.WAVE_CHANGED, this.waveNumber);
     this.eventBus.emit(Events.WAVE_STARTED, this.waveNumber);
+
+    if (isBossWave(this.waveNumber)) {
+      this.eventBus.emit(Events.BOSS_WAVE, this.waveNumber);
+    }
   }
 
   update(dt) {
@@ -50,7 +57,7 @@ export class WaveManager {
     this.waveElapsedMs += dt * 1000;
     while (this.spawnQueue.length > 0 && this.spawnQueue[0].spawnAt <= this.waveElapsedMs) {
       const next = this.spawnQueue.shift();
-      this.enemies.push(new Enemy(next.type, this.path, this.scaling));
+      this.enemies.push(new Enemy(next.type, this.path, this.scaling, this.eventBus));
     }
 
     const escaped = [];
@@ -69,6 +76,21 @@ export class WaveManager {
 
     for (const enemy of escaped) {
       this.eventBus.emit(Events.ENEMY_ESCAPED, enemy);
+    }
+  }
+
+  _spawnBossMinions({ boss, count, type }) {
+    if (!this.active || !boss.alive) return;
+
+    for (let i = 0; i < count; i++) {
+      const minion = new Enemy(type, this.path, this.scaling, this.eventBus);
+      minion.distance = Math.max(0, boss.distance - 20 - i * 15);
+      const pos = this.path.getPositionAt(minion.distance);
+      minion.x = pos.x;
+      minion.y = pos.y;
+      minion.maxHealth = Math.round(minion.maxHealth * 0.5);
+      minion.health = minion.maxHealth;
+      this.enemies.push(minion);
     }
   }
 

@@ -26,10 +26,17 @@ export class Tower {
     this.cooldown = 0;
     this.target = null;
     this.angle = 0;
+    this.prestigeMods = null;
+    this.knockbackCooldown = 0;
   }
 
   getStats() {
-    return computeTowerStats(this.definition, this.upgradeTier, this.upgradePath);
+    return computeTowerStats(
+      this.definition,
+      this.upgradeTier,
+      this.upgradePath,
+      this.prestigeMods
+    );
   }
 
   getAbilityLabels() {

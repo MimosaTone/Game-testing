@@ -7,6 +7,8 @@ import {
   estimatePaybackWaves,
   ECONOMY_CONFIG,
 } from '../config/economyConfig.js';
+import { PRESTIGE_UPGRADES, PRESTIGE_CONFIG } from '../config/prestigeConfig.js';
+import { isBossWave } from '../config/waveConfig.js';
 
 /**
  * HUD and build panel UI controller.
@@ -27,12 +29,21 @@ export class HUD {
       upgradeStats: document.getElementById('upgrade-stats'),
       upgradeButtons: document.getElementById('upgrade-buttons'),
       waveSummary: document.getElementById('wave-summary'),
+      shards: document.getElementById('shards-value'),
+      prestigeCount: document.getElementById('prestige-count'),
+      prestigeHint: document.getElementById('prestige-hint'),
+      prestigeBtn: document.getElementById('prestige-btn'),
+      prestigeUpgrades: document.getElementById('prestige-upgrades'),
+      autoStartToggle: document.getElementById('auto-start-toggle'),
     };
 
     this._bindEvents();
     this._subscribe();
     this._renderBuildPanel();
+    this._renderPrestigeUpgrades();
     this._updateStartButton();
+    this._updatePrestigeUI();
+    this.elements.autoStartToggle.checked = this.game.autoStartWaves;
   }
 
   _bindEvents() {
@@ -61,6 +72,28 @@ export class HUD {
       this._updateBuildSelection();
       this._hideUpgradePanel();
     });
+
+    this.elements.autoStartToggle.addEventListener('change', (e) => {
+      this.game.autoStartWaves = e.target.checked;
+    });
+
+    this.elements.prestigeBtn.addEventListener('click', () => {
+      if (this.game.phase === Phase.WAVE) return;
+      const wave = this.game.waveManager.waveNumber;
+      if (wave < PRESTIGE_CONFIG.unlockWave) return;
+      const shards = this.game.prestigeManager.calculateShardsForWave(wave);
+      const confirmed = confirm(
+        `Prestige at Wave ${wave}?\n\nReset your run and earn ${shards} Bloom Shards for permanent upgrades.`
+      );
+      if (confirmed) {
+        this.game.prestige();
+        this._updatePrestigeUI();
+        this._renderPrestigeUpgrades();
+        this._updateStartButton();
+        this._hideWaveSummary();
+        this._hideUpgradePanel();
+      }
+    });
   }
 
   _subscribe() {
@@ -78,6 +111,7 @@ export class HUD {
 
     bus.on(Events.WAVE_CHANGED, (wave) => {
       this.elements.wave.textContent = wave;
+      this._updatePrestigeUI();
     });
 
     bus.on(Events.INCOME_CHANGED, (data) => {
@@ -109,6 +143,33 @@ export class HUD {
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
       this._refreshBuildPanelHints();
+      this._updatePrestigeUI();
+    });
+
+    bus.on(Events.GAME_OVER, () => {
+      this._updateStartButton();
+      this._updatePrestigeUI();
+    });
+
+    bus.on(Events.PRESTIGE_CHANGED, () => {
+      this._updatePrestigeUI();
+      this._renderPrestigeUpgrades();
+    });
+
+    bus.on(Events.PRESTIGE_COMPLETED, ({ earned }) => {
+      alert(`Prestige complete! You earned ${earned} Bloom Shards.`);
+    });
+
+    bus.on(Events.AUTO_WAVE_STARTED, () => {
+      this._updateStartButton();
+    });
+
+    bus.on(Events.BOSS_WAVE, (wave) => {
+      this.elements.waveSummary.classList.remove('hidden');
+      this.elements.waveSummary.innerHTML = `
+        <div class="summary-title boss-alert">⚠ Boss Wave ${wave}</div>
+        <p class="boss-alert-text">A powerful invader approaches. Prepare your defenses!</p>
+      `;
     });
 
     bus.on(Events.WAVE_SUMMARY, (summary) => {
@@ -132,7 +193,8 @@ export class HUD {
     const wave = this.game.waveManager.waveNumber;
     const fakeNew = { getBaseIncome: () => FARM_CONFIG.incomePerLevel[0] };
     const farms = [...this.game.placementSystem.farms, fakeNew];
-    return calculateFarmIncome(farms, wave);
+    const mods = this.game.prestigeManager.getModifiers();
+    return calculateFarmIncome(farms, wave, mods);
   }
 
   _renderBuildPanel() {
@@ -203,15 +265,92 @@ export class HUD {
     const btn = this.elements.startWave;
     if (this.game.phase === Phase.PLANNING) {
       btn.disabled = false;
+      const next = this.game.waveManager.waveNumber + 1;
+      const bossTag = isBossWave(next) ? ' ★BOSS' : '';
       btn.textContent = this.game.waveManager.waveNumber === 0
         ? 'Start Wave 1'
-        : `Start Wave ${this.game.waveManager.waveNumber + 1}`;
+        : `Start Wave ${next}${bossTag}`;
+      if (this.game.autoStartWaves && this.game.waveManager.waveNumber > 0) {
+        btn.textContent += ' (auto)';
+      }
     } else if (this.game.phase === Phase.WAVE) {
       btn.disabled = true;
       btn.textContent = 'Wave in progress...';
     } else {
       btn.disabled = true;
-      btn.textContent = 'Game Over';
+      btn.textContent = 'Game Over — click map to restart';
+    }
+  }
+
+  _updatePrestigeUI() {
+    const pm = this.game.prestigeManager;
+    const wave = this.game.waveManager.waveNumber;
+    this.elements.shards.textContent = pm.shards;
+    this.elements.prestigeCount.textContent = `Prestige ×${pm.totalPrestiges} · Best W${pm.bestWave}`;
+
+    const canPrestige = this.game.canPrestige();
+    const btn = this.elements.prestigeBtn;
+    btn.classList.toggle('hidden', !canPrestige && pm.totalPrestiges === 0 && wave < PRESTIGE_CONFIG.unlockWave - 5);
+
+    if (canPrestige) {
+      const shards = pm.calculateShardsForWave(wave);
+      btn.disabled = this.game.phase === Phase.WAVE;
+      btn.textContent = `Prestige (+${shards} Shards)`;
+      this.elements.prestigeHint.textContent = `Wave ${wave} — reset run for permanent bonuses`;
+    } else if (this.game.phase === Phase.GAME_OVER && wave >= PRESTIGE_CONFIG.unlockWave) {
+      btn.disabled = false;
+      const shards = pm.calculateShardsForWave(wave);
+      btn.textContent = `Prestige (+${shards} Shards)`;
+      this.elements.prestigeHint.textContent = `Run ended at Wave ${wave}`;
+    } else {
+      btn.disabled = true;
+      btn.textContent = 'Prestige Run';
+      const remaining = PRESTIGE_CONFIG.unlockWave - wave;
+      this.elements.prestigeHint.textContent = remaining > 0
+        ? `Reach Wave ${PRESTIGE_CONFIG.unlockWave} to unlock (${remaining} to go)`
+        : 'Keep pushing — prestige unlocks at Wave 50';
+    }
+  }
+
+  _renderPrestigeUpgrades() {
+    const container = this.elements.prestigeUpgrades;
+    container.innerHTML = '';
+    const pm = this.game.prestigeManager;
+
+    for (const upgrade of Object.values(PRESTIGE_UPGRADES)) {
+      const level = pm.getUpgradeLevel(upgrade.id);
+      const maxed = level >= upgrade.maxLevel;
+      const row = document.createElement('div');
+      row.className = 'prestige-upgrade-row';
+      row.innerHTML = `
+        <div class="prestige-upgrade-info">
+          <span class="prestige-upgrade-name">${upgrade.name} (${level}/${upgrade.maxLevel})</span>
+          <span class="prestige-upgrade-desc">${upgrade.description}</span>
+        </div>
+      `;
+
+      if (!maxed) {
+        const buyBtn = document.createElement('button');
+        buyBtn.className = 'prestige-upgrade-btn';
+        buyBtn.textContent = `${upgrade.cost} ✿`;
+        buyBtn.disabled = !pm.canPurchaseUpgrade(upgrade.id);
+        buyBtn.addEventListener('click', () => {
+          if (pm.purchaseUpgrade(upgrade.id)) {
+            this.game._applyPrestigeToTowers();
+            this.game._refreshFarmIncome();
+            this._renderPrestigeUpgrades();
+            this._updatePrestigeUI();
+          }
+        });
+        row.appendChild(buyBtn);
+      } else {
+        const maxLabel = document.createElement('span');
+        maxLabel.className = 'prestige-maxed';
+        maxLabel.textContent = 'MAX';
+        row.appendChild(maxLabel);
+      }
+
+      container.appendChild(row);
     }
   }
 
@@ -324,7 +463,8 @@ export class HUD {
               ? { getBaseIncome: () => FARM_CONFIG.incomePerLevel[farm.level] }
               : f
           ),
-          wave
+          wave,
+          this.game.prestigeManager.getModifiers()
         )
       : null;
     const incomeGain = projectedAfterUpgrade !== null

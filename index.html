@@ -26,7 +26,18 @@
         <span class="stat-value income" id="income-value">+0</span>
         <span class="stat-sub" id="income-detail">Invest in Sunpatches</span>
       </div>
-      <button id="start-wave-btn" class="primary-btn">Start Wave 1</button>
+      <div class="stat stat-shards">
+        <span class="stat-label">Bloom Shards</span>
+        <span class="stat-value shards" id="shards-value">0</span>
+        <span class="stat-sub" id="prestige-count">Prestige 0</span>
+      </div>
+      <div class="hud-controls">
+        <label class="toggle-label" title="Automatically start the next wave after a short delay">
+          <input type="checkbox" id="auto-start-toggle">
+          Auto-start waves
+        </label>
+        <button id="start-wave-btn" class="primary-btn">Start Wave 1</button>
+      </div>
     </header>
 
     <main id="game-area">
@@ -45,11 +56,18 @@
         </section>
 
         <section id="wave-summary" class="hidden"></section>
+
+        <section id="prestige-section">
+          <h2>Prestige</h2>
+          <p class="prestige-hint" id="prestige-hint">Reach Wave 50 to unlock Prestige</p>
+          <button id="prestige-btn" class="prestige-btn hidden" disabled>Prestige Run</button>
+          <div id="prestige-upgrades"></div>
+        </section>
       </aside>
     </main>
 
     <footer id="instructions">
-      <p>Balance short-term defense with Sunpatch investments. Between waves, take all the time you need to plan.</p>
+      <p>Balance Sunpatch investments with tower upgrades. Boss waves arrive every 15 rounds. Prestige at Wave 50 for Bloom Shards.</p>
     </footer>
   </div>
 

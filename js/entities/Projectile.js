@@ -20,6 +20,11 @@ export class Projectile {
     this.chainRange = combatStats.chainRange || 80;
     this.slowPercent = combatStats.slowPercent || 0;
     this.slowDuration = combatStats.slowDuration || 0;
+    this.burnDPS = combatStats.burnDPS || 0;
+    this.burnDuration = combatStats.burnDuration || 0;
+    this.burnIgnoresArmor = combatStats.burnIgnoresArmor || 0;
+    this.burnSpread = combatStats.burnSpread || 0;
+    this.burnSpreadCount = combatStats.burnSpreadCount || 0;
     this.hitIds = new Set();
     this.speed = tower.definition.projectileSpeed * 60;
     this.color = tower.definition.projectileColor;
@@ -122,8 +127,19 @@ export class Projectile {
         enemy.applySlow(this.slowPercent, this.slowDuration);
       }
 
+      if (this.burnDPS > 0) {
+        enemy.applyBurn(this.burnDPS, this.burnDuration, this.burnIgnoresArmor);
+      }
+
       if (enemy.alive && enemy.takeDamage(dmg)) {
         killed.push(enemy);
+      }
+    }
+
+    if (this.burnSpread > 0 && this.burnDPS > 0) {
+      const spreadTargets = this._findChainTargets(primaryTarget, enemies, this.burnSpreadCount);
+      for (const enemy of spreadTargets) {
+        enemy.applyBurn(this.burnDPS * 0.7, this.burnDuration, this.burnIgnoresArmor);
       }
     }
 

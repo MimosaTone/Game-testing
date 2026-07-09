@@ -21,17 +21,47 @@ body {
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
   overflow: hidden;
-  max-width: 1200px;
+  max-width: 1280px;
   width: 100%;
 }
 
 #hud {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 16px 24px;
+  gap: 16px;
+  padding: 14px 20px;
   background: #d5dbd8;
   border-bottom: 2px solid #b8c4bf;
+  flex-wrap: wrap;
+}
+
+.hud-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #636e72;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.stat-value.shards { color: #9b59b6; }
+
+.stat-shards {
+  min-width: 100px;
 }
 
 .stat {
@@ -69,9 +99,8 @@ body {
 }
 
 .primary-btn {
-  margin-left: auto;
-  padding: 11px 26px;
-  font-size: 17px;
+  padding: 11px 20px;
+  font-size: 15px;
   font-weight: 600;
   border: none;
   border-radius: 8px;
@@ -79,6 +108,7 @@ body {
   color: #fff;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
+  white-space: nowrap;
 }
 
 .primary-btn:hover:not(:disabled) {
@@ -102,7 +132,7 @@ body {
 }
 
 #sidebar {
-  width: 270px;
+  width: 280px;
   padding: 16px;
   background: #d5dbd8;
   border-left: 2px solid #b8c4bf;
@@ -299,15 +329,29 @@ body {
 }
 
 .upgrade-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
   padding: 9px 13px;
   border: none;
   border-radius: 6px;
   background: #7d6b9e;
   color: #fff;
-  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+}
+
+.upgrade-btn-name {
+  font-size: 15px;
+}
+
+.upgrade-btn-detail {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .upgrade-btn:hover:not(:disabled) {
@@ -326,6 +370,114 @@ body {
   font-size: 15px;
   color: #636e72;
   text-align: center;
+}
+
+#prestige-section {
+  padding-top: 8px;
+  border-top: 2px solid #b8c4bf;
+}
+
+.prestige-hint {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.prestige-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #9b59b6, #7d6b9e);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: opacity 0.2s;
+}
+
+.prestige-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.prestige-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.prestige-btn.hidden {
+  display: none;
+}
+
+.prestige-upgrade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #c8d4cf;
+  font-size: 12px;
+}
+
+.prestige-upgrade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.prestige-upgrade-name {
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.prestige-upgrade-desc {
+  color: #7f8c8d;
+  font-size: 11px;
+}
+
+.prestige-upgrade-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 5px;
+  background: #9b59b6;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.prestige-upgrade-btn:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.prestige-maxed {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b8860b;
+}
+
+.boss-alert {
+  color: #c0392b !important;
+}
+
+.boss-alert-text {
+  font-size: 13px;
+  color: #636e72;
+  margin-top: 4px;
+}
+
+.summary-title.boss-alert {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
 }
 
 @media (max-width: 1100px) {

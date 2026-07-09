@@ -99,6 +99,18 @@ export class Renderer {
       ctx.stroke();
     }
 
+    if (stats.auraSlow > 0) {
+      ctx.beginPath();
+      ctx.arc(x, y, rangePx, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(77, 182, 172, 0.08)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(77, 182, 172, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     ctx.fillStyle = def.color;
     ctx.beginPath();
     ctx.arc(x, y, 14, 0, Math.PI * 2);
@@ -236,6 +248,29 @@ export class Renderer {
       ctx.strokeStyle = 'rgba(79, 195, 247, 0.7)';
       ctx.lineWidth = 2;
       ctx.stroke();
+    }
+
+    if (enemy.isBurning) {
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y - 2, size + 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 112, 67, 0.35)';
+      ctx.fill();
+    }
+
+    if (enemy.isBoss) {
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, size + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(241, 196, 15, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      if (enemy.shieldActive) {
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, size + 10, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(100, 181, 246, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
 
     const barWidth = size * 2;

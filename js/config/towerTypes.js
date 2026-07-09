@@ -48,4 +48,40 @@ export const TOWER_TYPES = {
     projectileColor: '#a29bfe',
     projectileSpeed: 11,
   },
+
+  gust: {
+    id: 'gust',
+    name: 'Gust Totem',
+    description: 'Slows foes in range; upgrades add knockback.',
+    cost: 58,
+    color: '#4db6ac',
+    icon: '◎',
+    baseStats: {
+      damage: 6,
+      range: 3.4,
+      attackSpeed: 0.55,
+      auraSlow: 0.22,
+    },
+    projectileColor: '#80cbc4',
+    projectileSpeed: 10,
+    isAuraTower: true,
+  },
+
+  ember: {
+    id: 'ember',
+    name: 'Ember Hearth',
+    description: 'Burns enemies over time — strong vs armored foes.',
+    cost: 62,
+    color: '#e65100',
+    icon: '✧',
+    baseStats: {
+      damage: 11,
+      range: 3.1,
+      attackSpeed: 0.75,
+      burnDPS: 5,
+      burnDuration: 3,
+    },
+    projectileColor: '#ff7043',
+    projectileSpeed: 10,
+  },
 };

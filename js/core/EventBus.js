@@ -43,4 +43,9 @@ export const Events = {
   GAME_OVER: 'game_over',
   GAME_WON: 'game_won',
   WAVE_SUMMARY: 'wave_summary',
+  PRESTIGE_CHANGED: 'prestige_changed',
+  PRESTIGE_COMPLETED: 'prestige_completed',
+  SETTINGS_CHANGED: 'settings_changed',
+  BOSS_WAVE: 'boss_wave',
+  AUTO_WAVE_STARTED: 'auto_wave_started',
 };
