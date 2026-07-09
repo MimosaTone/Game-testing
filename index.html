@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meadow Defense</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <header id="hud">
+      <div class="stat">
+        <span class="stat-label">Gold</span>
+        <span class="stat-value gold" id="gold-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Lives</span>
+        <span class="stat-value lives" id="lives-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Wave</span>
+        <span class="stat-value wave" id="wave-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Income / Wave</span>
+        <span class="stat-value income" id="income-value">+0</span>
+      </div>
+      <button id="start-wave-btn" class="primary-btn">Start Wave 1</button>
+    </header>
+
+    <main id="game-area">
+      <canvas id="game-canvas"></canvas>
+
+      <aside id="sidebar">
+        <section id="build-section">
+          <h2>Build</h2>
+          <div id="build-panel"></div>
+        </section>
+
+        <section id="upgrade-panel" class="hidden">
+          <h2 id="upgrade-title">Upgrade</h2>
+          <div id="upgrade-stats"></div>
+          <div id="upgrade-buttons"></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer id="instructions">
+      <p>Select a building, click a green tile to place. Click structures to upgrade. Take your time between waves.</p>
+    </footer>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

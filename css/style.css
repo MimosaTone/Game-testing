@@ -1,0 +1,233 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #a8e6cf 0%, #dcedc1 50%, #ffd3b6 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2c3e50;
+}
+
+#game-container {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  max-width: 1200px;
+  width: 100%;
+}
+
+#hud {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7f8c8d;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stat-value.gold { color: #f39c12; }
+.stat-value.lives { color: #e74c3c; }
+.stat-value.wave { color: #3498db; }
+.stat-value.income { color: #27ae60; }
+
+.primary-btn {
+  margin-left: auto;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: #3498db;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: #2980b9;
+  transform: translateY(-1px);
+}
+
+.primary-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+#game-area {
+  display: flex;
+}
+
+#game-canvas {
+  display: block;
+  flex: 1;
+  cursor: crosshair;
+}
+
+#sidebar {
+  width: 220px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-left: 2px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#sidebar h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7f8c8d;
+  margin-bottom: 8px;
+}
+
+#build-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.build-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: left;
+}
+
+.build-btn:hover {
+  border-color: #3498db;
+  background: #ebf5fb;
+}
+
+.build-btn.selected {
+  border-color: #9b59b6;
+  background: #f5eef8;
+}
+
+.build-btn.unaffordable {
+  opacity: 0.5;
+}
+
+.build-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.build-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.build-cost {
+  font-size: 12px;
+  color: #f39c12;
+  font-weight: 600;
+}
+
+#upgrade-section {
+  padding-top: 8px;
+  border-top: 2px solid #e9ecef;
+}
+
+#upgrade-section.hidden {
+  display: none;
+}
+
+#upgrade-stats {
+  font-size: 13px;
+  line-height: 1.8;
+  margin-bottom: 12px;
+}
+
+#upgrade-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.upgrade-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #9b59b6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.upgrade-btn:hover:not(:disabled) {
+  background: #8e44ad;
+}
+
+.upgrade-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+#instructions {
+  padding: 12px 24px;
+  background: #f8f9fa;
+  border-top: 2px solid #e9ecef;
+  font-size: 13px;
+  color: #7f8c8d;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  #game-area {
+    flex-direction: column;
+  }
+
+  #sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 2px solid #e9ecef;
+  }
+
+  #build-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .build-btn {
+    flex: 1 1 45%;
+  }
+}
