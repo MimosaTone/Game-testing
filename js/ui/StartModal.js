@@ -19,7 +19,8 @@ export class StartModal {
       <div class="start-summary-row"><span>Wave</span><strong>${summary.wave}</strong></div>
       <div class="start-summary-row"><span>Gold</span><strong>${summary.gold}g</strong></div>
       <div class="start-summary-row"><span>Lives</span><strong>${summary.lives}</strong></div>
-      <div class="start-summary-row"><span>Structures</span><strong>${summary.towerCount} towers · ${summary.farmCount} farms</strong></div>
+      <div class="start-summary-row"><span>Structures</span><strong>${summary.towerCount} towers · ${summary.farmCount} farms · ${summary.supportCount || 0} support</strong></div>
+      ${summary.crystals ? `<div class="start-summary-row"><span>Crystals</span><strong>${summary.crystals} ◆</strong></div>` : ''}
     `;
     this.overlay.classList.remove('hidden');
   }

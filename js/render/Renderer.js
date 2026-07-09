@@ -143,6 +143,77 @@ export class Renderer {
       ctx.font = 'bold 10px sans-serif';
       ctx.fillText(String(tower.upgradeTier), x + 12, y - 11);
     }
+
+    if (tower.masteryLevel > 0) {
+      ctx.fillStyle = '#5c6bc0';
+      ctx.beginPath();
+      ctx.arc(x - 12, y - 12, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText(`M${tower.masteryLevel}`, x - 12, y - 11);
+    }
+  }
+
+  drawSupports(supports, selectedStructure, supportEffects) {
+    for (const support of supports) {
+      const pos = support.getPixelPosition(this.tileSize);
+      const isSelected = selectedStructure && selectedStructure.id === support.id;
+      this._drawSupport(pos.x, pos.y, support, isSelected, supportEffects);
+    }
+  }
+
+  _drawSupport(x, y, support, isSelected, supportEffects) {
+    const { ctx } = this;
+    const def = support.definition;
+    const pulse = support.pulse;
+
+    if (pulse > 0) {
+      ctx.beginPath();
+      ctx.arc(x, y, 20 + pulse * 15, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(171, 71, 188, ${pulse * 0.3})`;
+      ctx.fill();
+    }
+
+    if (isSelected) {
+      ctx.strokeStyle = '#9b59b6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 18, y - 18, 36, 36);
+
+      if (support.typeId === 'village') {
+        const radius = 2.5 * this.tileSize;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(141, 110, 99, 0.1)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(141, 110, 99, 0.35)';
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    ctx.fillStyle = def.color;
+    ctx.fillRect(x - 15, y - 15, 30, 30);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 15, y - 15, 30, 30);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(def.icon, x, y - 1);
+
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`L${support.level}`, x, y + 12);
+
+    if (support.branch) {
+      ctx.fillStyle = '#636e72';
+      ctx.font = '8px sans-serif';
+      ctx.fillText(support.branch[0].toUpperCase(), x + 14, y - 14);
+    }
   }
 
   drawFarms(farms, selectedStructure) {

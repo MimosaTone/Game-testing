@@ -1,6 +1,9 @@
 import { Events } from '../core/EventBus.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
+import { SUPPORT_TYPES, SUPPORT_BUILD_ORDER } from '../config/supportConfig.js';
+import { RESEARCH_UPGRADES } from '../config/researchConfig.js';
+import { MASTER_UPGRADES } from '../config/towerMasteryConfig.js';
 import { Phase } from '../core/Game.js';
 import {
   calculateFarmIncome,
@@ -24,12 +27,17 @@ export class HUD {
       incomeDetail: document.getElementById('income-detail'),
       startWave: document.getElementById('start-wave-btn'),
       buildPanel: document.getElementById('build-panel'),
+      supportPanel: document.getElementById('support-panel'),
       upgradePanel: document.getElementById('upgrade-panel'),
       upgradeTitle: document.getElementById('upgrade-title'),
       upgradeStats: document.getElementById('upgrade-stats'),
       upgradeButtons: document.getElementById('upgrade-buttons'),
       waveSummary: document.getElementById('wave-summary'),
       shards: document.getElementById('shards-value'),
+      crystals: document.getElementById('crystals-value'),
+      research: document.getElementById('research-value'),
+      researchHint: document.getElementById('research-hint'),
+      researchUpgrades: document.getElementById('research-upgrades'),
       prestigeCount: document.getElementById('prestige-count'),
       prestigeHint: document.getElementById('prestige-hint'),
       prestigeBtn: document.getElementById('prestige-btn'),
@@ -41,6 +49,8 @@ export class HUD {
     this._bindEvents();
     this._subscribe();
     this._renderBuildPanel();
+    this._renderSupportPanel();
+    this._renderResearchUpgrades();
     this._renderPrestigeUpgrades();
     this._updateStartButton();
     this._updatePrestigeUI();
@@ -60,6 +70,24 @@ export class HUD {
     document.getElementById('build-panel').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-build-type]');
       if (!btn || this.game.phase !== Phase.PLANNING) return;
+
+      const type = btn.dataset.buildType;
+      const current = this.game.placementSystem.selectedBuildType;
+
+      if (current === type) {
+        this.game.placementSystem.clearSelection();
+      } else {
+        this.game.placementSystem.setBuildType(type);
+      }
+
+      this._updateBuildSelection();
+      this._hideUpgradePanel();
+    });
+
+    document.getElementById('support-panel').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-build-type]');
+      if (!btn || this.game.phase !== Phase.PLANNING) return;
+      if (btn.classList.contains('locked')) return;
 
       const type = btn.dataset.buildType;
       const current = this.game.placementSystem.selectedBuildType;
@@ -119,6 +147,30 @@ export class HUD {
       this.elements.gold.textContent = gold;
       this._updateBuildAffordability();
       this._updateUpgradeButtons();
+    });
+
+    bus.on(Events.CRYSTALS_CHANGED, (crystals) => {
+      this.elements.crystals.textContent = crystals;
+    });
+
+    bus.on(Events.RESEARCH_CHANGED, (state) => {
+      this.elements.research.textContent = `${state.points} RP`;
+      this._renderResearchUpgrades();
+    });
+
+    bus.on(Events.MASTERY_GAINED, ({ tower, unlockedMaster }) => {
+      if (unlockedMaster && MASTER_UPGRADES[tower.typeId]) {
+        const master = MASTER_UPGRADES[tower.typeId];
+        this.elements.waveSummary.classList.remove('hidden');
+        this.elements.waveSummary.innerHTML = `
+          <div class="summary-title mastery-alert">★ Master Upgrade Unlocked!</div>
+          <p class="mastery-alert-text">${tower.definition.name}: ${master.name} — ${master.description}</p>
+        `;
+      }
+    });
+
+    bus.on(Events.LIVES_REPAIRED, (lives) => {
+      this.elements.lives.textContent = lives;
     });
 
     bus.on(Events.LIVES_CHANGED, (lives) => {
@@ -183,10 +235,14 @@ export class HUD {
     bus.on(Events.SAVE_LOADED, () => {
       this.elements.autoStartToggle.checked = this.game.autoStartWaves;
       this._renderBuildPanel();
+      this._renderSupportPanel();
+      this._renderResearchUpgrades();
       this._renderPrestigeUpgrades();
       this._updatePrestigeUI();
       this._updateStartButton();
       this._updateBuildAffordability();
+      this.elements.crystals.textContent = this.game.economy.crystals;
+      this.elements.research.textContent = `${this.game.researchManager.points} RP`;
     });
 
     bus.on(Events.SAVE_CLEARED, () => {
@@ -216,6 +272,86 @@ export class HUD {
     bus.on(Events.FARM_PLACED, () => {
       this._refreshBuildPanelHints();
     });
+
+    bus.on(Events.SUPPORT_PLACED, () => {
+      this._renderSupportPanel();
+      this._updateBuildSelection();
+    });
+  }
+
+  _renderSupportPanel() {
+    const panel = this.elements.supportPanel;
+    panel.innerHTML = '';
+    const ps = this.game.placementSystem;
+
+    for (const typeId of SUPPORT_BUILD_ORDER) {
+      const def = SUPPORT_TYPES[typeId];
+      const unlocked = ps.isSupportUnlocked(typeId);
+      const btn = document.createElement('button');
+      btn.className = 'build-btn support-btn';
+      btn.dataset.buildType = typeId;
+      if (!unlocked) btn.classList.add('locked');
+
+      const lockHint = def.unlockAfterWave
+        ? `Unlocks after Boss (Wave ${def.unlockAfterWave})`
+        : def.description;
+
+      btn.innerHTML = `
+        <span class="build-icon" style="color:${def.color}">${def.icon}</span>
+        <span class="build-info">
+          <span class="build-name">${def.name}</span>
+          <span class="build-hint">${unlocked ? def.description : lockHint}</span>
+        </span>
+        <span class="build-cost">${unlocked ? `${def.cost}g` : '🔒'}</span>
+      `;
+      panel.appendChild(btn);
+    }
+  }
+
+  _renderResearchUpgrades() {
+    const container = this.elements.researchUpgrades;
+    container.innerHTML = '';
+    const rm = this.game.researchManager;
+    const rp = rm.points;
+
+    this.elements.researchHint.textContent = rp > 0
+      ? 'Spend Research Points on run-wide bonuses'
+      : 'Build Research Labs to earn Research Points';
+
+    for (const upgrade of Object.values(RESEARCH_UPGRADES)) {
+      const level = rm.getUpgradeLevel(upgrade.id);
+      const maxed = level >= upgrade.maxLevel;
+      const row = document.createElement('div');
+      row.className = 'research-upgrade-row';
+      row.innerHTML = `
+        <div class="research-upgrade-info">
+          <span class="research-upgrade-name">${upgrade.name} (${level}/${upgrade.maxLevel})</span>
+          <span class="research-upgrade-desc">${upgrade.description}</span>
+        </div>
+      `;
+
+      if (!maxed) {
+        const buyBtn = document.createElement('button');
+        buyBtn.className = 'research-upgrade-btn';
+        buyBtn.textContent = `${upgrade.cost} RP`;
+        buyBtn.disabled = !rm.canPurchase(upgrade.id) || this.game.phase === Phase.WAVE;
+        buyBtn.addEventListener('click', () => {
+          if (rm.purchase(upgrade.id)) {
+            this.game._refreshSupportEffects();
+            this.game._applyPrestigeToTowers();
+            this._renderResearchUpgrades();
+          }
+        });
+        row.appendChild(buyBtn);
+      } else {
+        const maxLabel = document.createElement('span');
+        maxLabel.className = 'research-maxed';
+        maxLabel.textContent = 'MAX';
+        row.appendChild(maxLabel);
+      }
+
+      container.appendChild(row);
+    }
   }
 
   _projectedIncomeWithNewSunpatch() {
@@ -270,22 +406,33 @@ export class HUD {
 
   _refreshBuildPanelHints() {
     this._renderBuildPanel();
+    this._renderSupportPanel();
     this._updateBuildSelection();
     this._updateBuildAffordability();
   }
 
   _updateBuildSelection() {
     const selected = this.game.placementSystem.selectedBuildType;
-    for (const btn of this.elements.buildPanel.querySelectorAll('.build-btn')) {
+    for (const btn of document.querySelectorAll('#build-panel .build-btn, #support-panel .build-btn')) {
       btn.classList.toggle('selected', btn.dataset.buildType === selected);
     }
   }
 
   _updateBuildAffordability() {
     const gold = this.game.economy.gold;
+    const ps = this.game.placementSystem;
+
     for (const btn of this.elements.buildPanel.querySelectorAll('.build-btn')) {
       const type = btn.dataset.buildType;
       const cost = type === FARM_CONFIG.id ? FARM_CONFIG.cost : TOWER_TYPES[type].cost;
+      const adjusted = type === FARM_CONFIG.id ? cost : ps.getBuildCost(type);
+      btn.classList.toggle('unaffordable', gold < adjusted);
+    }
+
+    for (const btn of this.elements.supportPanel.querySelectorAll('.build-btn')) {
+      const type = btn.dataset.buildType;
+      if (btn.classList.contains('locked')) continue;
+      const cost = SUPPORT_TYPES[type].cost;
       btn.classList.toggle('unaffordable', gold < cost);
     }
   }
@@ -383,7 +530,7 @@ export class HUD {
     }
   }
 
-  _showWaveSummary({ wave, killGold, farmIncome, waveBonus, total }) {
+  _showWaveSummary({ wave, killGold, farmIncome, waveBonus, bankInterest, rpGain, crystalGain, total }) {
     const el = this.elements.waveSummary;
     el.classList.remove('hidden');
     el.innerHTML = `
@@ -392,6 +539,9 @@ export class HUD {
         ${killGold > 0 ? `<div class="summary-row"><span>Defeated foes</span><span class="gold-text">+${killGold}g</span></div>` : ''}
         ${farmIncome > 0 ? `<div class="summary-row"><span>Sunpatch harvest</span><span class="income-text">+${farmIncome}g</span></div>` : ''}
         <div class="summary-row"><span>Wave bonus</span><span class="wave-text">+${waveBonus}g</span></div>
+        ${bankInterest > 0 ? `<div class="summary-row"><span>Bank interest</span><span class="gold-text">+${bankInterest}g</span></div>` : ''}
+        ${rpGain > 0 ? `<div class="summary-row"><span>Research gained</span><span class="research-text">+${rpGain} RP</span></div>` : ''}
+        ${crystalGain > 0 ? `<div class="summary-row"><span>Crystals mined</span><span class="crystal-text">+${crystalGain} ◆</span></div>` : ''}
         <div class="summary-row summary-total"><span>Total earned</span><span>+${total}g</span></div>
       </div>
     `;
@@ -407,6 +557,8 @@ export class HUD {
 
     if (structure.type === 'farm') {
       this._showFarmUpgrades(structure);
+    } else if (structure.type === 'support') {
+      this._showSupportUpgrades(structure);
     } else {
       this._showTowerUpgrades(structure);
     }
@@ -423,9 +575,23 @@ export class HUD {
     const next = tower.getNextUpgrade();
     const maxTier = tower.upgradePath.length;
 
+    const progress = tower.getMasteryProgress();
+    let masteryHtml = '';
+    if (progress.level > 0 || progress.needed > 0) {
+      const pct = Math.round(progress.pct * 100);
+      masteryHtml = `
+        <div class="mastery-bar-wrap">
+          <div class="mastery-label">Mastery Lv${progress.level}/${progress.maxLevel}</div>
+          <div class="mastery-bar"><div class="mastery-fill" style="width:${pct}%"></div></div>
+          ${progress.needed > 0 ? `<div class="mastery-xp">${progress.current}/${progress.needed} XP</div>` : '<div class="mastery-xp">MAX MASTERY</div>'}
+        </div>
+      `;
+    }
+
     this.elements.upgradeTitle.textContent = `${def.name} · Tier ${tower.upgradeTier}/${maxTier}`;
 
     let statsHtml = `
+      ${masteryHtml}
       <div>Damage: <strong>${stats.damage}</strong></div>
       <div>Range: <strong>${stats.range.toFixed(1)}</strong></div>
       <div>Speed: <strong>${stats.attackSpeed.toFixed(2)}/s</strong></div>
@@ -448,7 +614,7 @@ export class HUD {
     this.elements.upgradeButtons.innerHTML = '';
 
     if (next) {
-      const cost = next.cost;
+      const cost = this.game.economy.getUpgradeCost(tower, 'path');
       const btn = document.createElement('button');
       btn.className = 'upgrade-btn';
       btn.innerHTML = `<span class="upgrade-btn-name">↑ ${next.name}</span><span class="upgrade-btn-detail">${next.description} · ${cost}g</span>`;
@@ -518,6 +684,103 @@ export class HUD {
       }
     });
     this.elements.upgradeButtons.appendChild(btn);
+  }
+
+  _showSupportUpgrades(support) {
+    const def = support.definition;
+    const branchLabel = support.branch
+      ? ` · ${def.branches?.[support.branch]?.name || support.branch}`
+      : '';
+
+    this.elements.upgradeTitle.textContent = `${def.name} (Level ${support.level})${branchLabel}`;
+
+    let statsHtml = `<div class="support-desc">${def.description}</div>`;
+
+    if (support.typeId === 'bank') {
+      const bankStats = this.game.supportEffects.getBankStats(support);
+      statsHtml += `
+        <div>Stored: <strong>${support.storedGold}g</strong> / ${bankStats.capacity}g</div>
+        <div>Interest: <strong>${Math.round(bankStats.interestRate * 100)}%</strong> per wave</div>
+      `;
+    } else if (support.typeId === 'marketplace') {
+      const mult = def.perLevel.goldEarnedMult[support.level - 1];
+      statsHtml += `<div>Gold bonus: <strong>+${Math.round(mult * 100)}%</strong> global</div>`;
+    } else if (support.typeId === 'research_lab') {
+      const rp = def.perLevel.rpPerWave[support.level - 1];
+      statsHtml += `<div>Generates: <strong>+${rp} RP</strong> per wave</div>`;
+    } else if (support.typeId === 'repair_station') {
+      const rs = this.game.supportEffects.getRepairStats(support);
+      statsHtml += `<div>Heals: <strong>+${rs.healAmount}</strong> lives every ${rs.healInterval} waves</div>`;
+    } else if (support.typeId === 'crystal_extractor') {
+      const crystals = this.game.supportEffects.getCrystalYield(support);
+      statsHtml += `<div>Generates: <strong>+${crystals} ◆</strong> per wave</div>`;
+    } else if (support.branch && def.branches?.[support.branch]) {
+      statsHtml += `<div>Path: <strong>${def.branches[support.branch].name}</strong></div>
+        <div>${def.branches[support.branch].description}</div>`;
+    }
+
+    this.elements.upgradeStats.innerHTML = statsHtml;
+    this.elements.upgradeButtons.innerHTML = '';
+
+    if (support.typeId === 'bank') {
+      const depositBtn = document.createElement('button');
+      depositBtn.className = 'upgrade-btn';
+      depositBtn.textContent = 'Deposit 50g';
+      depositBtn.disabled = this.game.phase !== Phase.PLANNING || this.game.economy.gold < 50;
+      depositBtn.addEventListener('click', () => {
+        if (this.game.placementSystem.depositToBank(support, 50)) {
+          this._showSupportUpgrades(support);
+        }
+      });
+      this.elements.upgradeButtons.appendChild(depositBtn);
+
+      const withdrawBtn = document.createElement('button');
+      withdrawBtn.className = 'upgrade-btn';
+      withdrawBtn.textContent = 'Withdraw 50g';
+      withdrawBtn.disabled = this.game.phase !== Phase.PLANNING || support.storedGold < 50;
+      withdrawBtn.addEventListener('click', () => {
+        if (this.game.placementSystem.withdrawFromBank(support, 50)) {
+          this._showSupportUpgrades(support);
+        }
+      });
+      this.elements.upgradeButtons.appendChild(withdrawBtn);
+    }
+
+    if (support.needsBranchChoice()) {
+      const branches = def.branches;
+      for (const [key, branch] of Object.entries(branches)) {
+        const btn = document.createElement('button');
+        btn.className = 'upgrade-btn branch-btn';
+        btn.innerHTML = `<span class="upgrade-btn-name">${branch.name}</span><span class="upgrade-btn-detail">${branch.description}</span>`;
+        btn.disabled = this.game.phase !== Phase.PLANNING;
+        btn.addEventListener('click', () => {
+          if (this.game.placementSystem.upgradeSelected('level', key)) {
+            this._showSupportUpgrades(support);
+          }
+        });
+        this.elements.upgradeButtons.appendChild(btn);
+      }
+      return;
+    }
+
+    const cost = this.game.economy.getUpgradeCost(support, 'level');
+    if (cost !== null) {
+      const btn = document.createElement('button');
+      btn.className = 'upgrade-btn';
+      btn.textContent = `↑ Upgrade (${cost}g)`;
+      btn.disabled = !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
+      btn.addEventListener('click', () => {
+        if (this.game.placementSystem.upgradeSelected('level')) {
+          this._showSupportUpgrades(support);
+        }
+      });
+      this.elements.upgradeButtons.appendChild(btn);
+    } else {
+      const max = document.createElement('div');
+      max.className = 'upgrade-maxed';
+      max.textContent = '★ Fully upgraded';
+      this.elements.upgradeButtons.appendChild(max);
+    }
   }
 
   _updateUpgradeButtons() {

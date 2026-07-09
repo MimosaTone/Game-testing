@@ -597,3 +597,126 @@ body {
     flex: 1 1 45%;
   }
 }
+
+.subsection-title {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #636e72;
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+.stat-value.crystals { color: #ab47bc; }
+.stat-value.research { color: #5c6bc0; }
+
+.support-btn.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.research-hint {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-bottom: 8px;
+}
+
+.research-upgrade-row,
+#research-upgrades .research-upgrade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #dfe6e9;
+}
+
+.research-upgrade-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.research-upgrade-desc {
+  font-size: 11px;
+  color: #7f8c8d;
+  display: block;
+}
+
+.research-upgrade-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: none;
+  border-radius: 6px;
+  background: #5c6bc0;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.research-upgrade-btn:disabled {
+  background: #b0bec5;
+  cursor: not-allowed;
+}
+
+.research-maxed {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5c6bc0;
+}
+
+.mastery-bar-wrap {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dfe6e9;
+}
+
+.mastery-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5c6bc0;
+  margin-bottom: 4px;
+}
+
+.mastery-bar {
+  height: 8px;
+  background: #dfe6e9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mastery-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5c6bc0, #7986cb);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.mastery-xp {
+  font-size: 11px;
+  color: #7f8c8d;
+  margin-top: 2px;
+}
+
+.mastery-alert {
+  color: #5c6bc0 !important;
+}
+
+.mastery-alert-text {
+  font-size: 13px;
+  color: #5c6bc0;
+  margin-top: 4px;
+}
+
+.research-text { color: #5c6bc0; }
+.crystal-text { color: #ab47bc; }
+
+.support-desc {
+  font-size: 12px;
+  color: #636e72;
+  margin-bottom: 8px;
+}
+
+.branch-btn {
+  margin-bottom: 6px;
+}

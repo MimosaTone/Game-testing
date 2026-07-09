@@ -144,7 +144,7 @@ export class Enemy {
     this.y = pos.y;
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, armorPen = 0) {
     if (!this.alive) return false;
 
     if (this.shieldActive) {
@@ -152,7 +152,8 @@ export class Enemy {
     }
 
     const healthBefore = this.health;
-    const actual = amount * (1 - this.armor);
+    const effectiveArmor = Math.max(0, this.armor - armorPen);
+    const actual = amount * (1 - effectiveArmor);
     this.health -= actual;
 
     if (this.definition.bossAbility === 'spawn_minions' && this.eventBus) {

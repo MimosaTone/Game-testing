@@ -47,6 +47,11 @@ try {
       game.placementSystem.farms,
       game.placementSystem.selectedStructure
     );
+    renderer.drawSupports(
+      game.placementSystem.supports,
+      game.placementSystem.selectedStructure,
+      game.supportEffects
+    );
     renderer.drawTowers(
       game.placementSystem.towers,
       game.placementSystem.selectedStructure

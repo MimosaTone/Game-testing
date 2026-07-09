@@ -53,4 +53,10 @@ export const Events = {
   GAME_SAVED: 'game_saved',
   SAVE_LOADED: 'save_loaded',
   SAVE_CLEARED: 'save_cleared',
+  SUPPORT_PLACED: 'support_placed',
+  RESEARCH_CHANGED: 'research_changed',
+  CRYSTALS_CHANGED: 'crystals_changed',
+  BANK_CHANGED: 'bank_changed',
+  MASTERY_GAINED: 'mastery_gained',
+  LIVES_REPAIRED: 'lives_repaired',
 };

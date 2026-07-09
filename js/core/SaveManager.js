@@ -13,8 +13,26 @@ function isValidRun(run) {
   if (!run || typeof run !== 'object') return false;
   if (typeof run.wave !== 'number' || typeof run.gold !== 'number' || typeof run.lives !== 'number') return false;
   if (!Array.isArray(run.towers) || !Array.isArray(run.farms)) return false;
+  if (!Array.isArray(run.supports)) run.supports = [];
   if (run.lives <= 0) return false;
   return true;
+}
+
+function migrateV1ToV2(data) {
+  if (data.version !== 1) return data;
+  if (data.run) {
+    data.run.supports = data.run.supports || [];
+    data.run.crystals = data.run.crystals || 0;
+    data.run.research = data.run.research || { points: 0, levels: {} };
+    data.run.bossesDefeated = data.run.bossesDefeated || 0;
+    data.run.wavesSinceRepair = data.run.wavesSinceRepair || 0;
+    for (const t of data.run.towers) {
+      t.masteryXP = t.masteryXP || 0;
+      t.masterUnlocked = t.masterUnlocked || false;
+    }
+  }
+  data.version = 2;
+  return data;
 }
 
 /**
@@ -34,7 +52,8 @@ export class SaveManager {
     try {
       const raw = localStorage.getItem(SAVE_CONFIG.storageKey);
       if (raw) {
-        const parsed = JSON.parse(raw);
+        let parsed = JSON.parse(raw);
+        if (parsed.version === 1) parsed = migrateV1ToV2(parsed);
         if (parsed.version === SAVE_CONFIG.version) return parsed;
       }
     } catch { /* ignore corrupt save */ }
@@ -96,17 +115,19 @@ export class SaveManager {
       lives: run.lives,
       towerCount: run.towers.length,
       farmCount: run.farms.length,
+      supportCount: run.supports.length,
+      crystals: run.crystals || 0,
     };
   }
 
-  /** Serialize current game state. Returns null if run should not be saved. */
   serializeRun(game) {
     if (game.phase !== 'planning' || game.lives <= 0) return null;
 
     const hasProgress =
       game.waveManager.waveNumber > 0 ||
       game.placementSystem.towers.length > 0 ||
-      game.placementSystem.farms.length > 0;
+      game.placementSystem.farms.length > 0 ||
+      game.placementSystem.supports.length > 0;
 
     if (!hasProgress) return null;
 
@@ -114,16 +135,30 @@ export class SaveManager {
       wave: game.waveManager.waveNumber,
       gold: game.economy.gold,
       lives: game.lives,
+      crystals: game.economy.crystals,
+      bossesDefeated: game.placementSystem.bossesDefeated,
+      wavesSinceRepair: game.wavesSinceRepair,
+      research: game.researchManager.toRunData(),
       towers: game.placementSystem.towers.map((t) => ({
         typeId: t.typeId,
         gridX: t.gridX,
         gridY: t.gridY,
         upgradeTier: t.upgradeTier,
+        masteryXP: t.masteryXP,
+        masterUnlocked: t.masterUnlocked,
       })),
       farms: game.placementSystem.farms.map((f) => ({
         gridX: f.gridX,
         gridY: f.gridY,
         level: f.level,
+      })),
+      supports: game.placementSystem.supports.map((s) => ({
+        typeId: s.typeId,
+        gridX: s.gridX,
+        gridY: s.gridY,
+        level: s.level,
+        branch: s.branch,
+        storedGold: s.storedGold,
       })),
     };
   }
@@ -139,7 +174,6 @@ export class SaveManager {
     };
   }
 
-  /** Persist meta and run (if in planning phase). */
   save(game) {
     this._data.meta = this.serializeMeta(game);
     this._data.run = this.serializeRun(game);
@@ -147,7 +181,6 @@ export class SaveManager {
     this._write(this._data);
   }
 
-  /** Save meta only — used on game over or when clearing the run. */
   saveMeta(game) {
     this._data.meta = this.serializeMeta(game);
     this._data.run = null;

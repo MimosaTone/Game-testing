@@ -258,13 +258,44 @@ export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = nu
     combat.damage *= prestigeMods.towerDamageMult;
   }
 
+  return finalizeCombatStats(combat);
+}
+
+/** Apply support, mastery, and forge modifiers onto base combat stats. */
+export function applyExternalMods(combat, mods) {
+  if (!mods) return combat;
+
+  if (mods.damageMult) combat.damage *= mods.damageMult;
+  if (mods.rangeMult) combat.range *= mods.rangeMult;
+  if (mods.attackSpeedMult) combat.attackSpeed *= mods.attackSpeedMult;
+  if (mods.projectileSpeedMult) combat.projectileSpeedMult = mods.projectileSpeedMult;
+  if (mods.critChance) combat.critChance = (combat.critChance || 0) + mods.critChance;
+  if (mods.critDamageMult) combat.critDamageMult = mods.critDamageMult;
+  if (mods.armorPen) combat.armorPen = (combat.armorPen || 0) + mods.armorPen;
+  if (mods.burnDPSAdd) combat.burnDPS += mods.burnDPSAdd;
+  if (mods.slowPercentAdd) combat.slowPercent = Math.max(combat.slowPercent, mods.slowPercentAdd);
+  if (mods.chainCountAdd) combat.chainCount += Math.floor(mods.chainCountAdd);
+  if (mods.chainCount) combat.chainCount += mods.chainCount;
+  if (mods.splashFalloff !== undefined) combat.splashFalloff = mods.splashFalloff;
+  if (mods.auraSlowMult) combat.auraSlow *= mods.auraSlowMult;
+  if (mods.knockbackIntervalMult && combat.knockbackInterval > 0) {
+    combat.knockbackInterval *= mods.knockbackIntervalMult;
+  }
+  if (mods.burnSpread) combat.burnSpread = mods.burnSpread;
+  if (mods.burnSpreadCount) combat.burnSpreadCount = mods.burnSpreadCount;
+  if (mods.burnIgnoresArmor) combat.burnIgnoresArmor = Math.max(combat.burnIgnoresArmor, mods.burnIgnoresArmor);
+  if (mods.bonusShotInterval) combat.bonusShotInterval = mods.bonusShotInterval;
+
+  return finalizeCombatStats(combat);
+}
+
+function finalizeCombatStats(combat) {
   combat.damage = Math.round(combat.damage);
   combat.range = Math.round(combat.range * 10) / 10;
   combat.attackSpeed = Math.round(combat.attackSpeed * 100) / 100;
   combat.splashRadius = Math.round(combat.splashRadius * 10) / 10;
   combat.burnDPS = Math.round(combat.burnDPS * 10) / 10;
   combat.auraSlow = Math.min(0.65, Math.round(combat.auraSlow * 100) / 100);
-
   return combat;
 }
 

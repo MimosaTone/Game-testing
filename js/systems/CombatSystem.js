@@ -1,6 +1,7 @@
 import { Projectile } from '../entities/Projectile.js';
 import { Events } from '../core/EventBus.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
 
 /**
  * Handles tower targeting, firing, aura effects, and projectile updates.
@@ -23,19 +24,21 @@ export class CombatSystem {
       this._updateTower(tower, dt, enemies);
     }
 
-    const allKilled = [];
+    const killEvents = [];
     const remaining = [];
 
     for (const proj of this.projectiles) {
       const killed = proj.update(dt, enemies);
-      allKilled.push(...killed);
+      for (const enemy of killed) {
+        killEvents.push({ enemy, killerTower: proj.tower });
+      }
       if (proj.alive) remaining.push(proj);
     }
 
     this.projectiles = remaining;
 
-    for (const enemy of allKilled) {
-      this.eventBus.emit(Events.ENEMY_KILLED, enemy);
+    for (const { enemy, killerTower } of killEvents) {
+      this.eventBus.emit(Events.ENEMY_KILLED, { enemy, killerTower });
     }
   }
 
@@ -92,8 +95,14 @@ export class CombatSystem {
 
     if (tower.cooldown <= 0 && tower.target) {
       tower.cooldown = 1 / stats.attackSpeed;
+      tower.shotsFired = (tower.shotsFired || 0) + 1;
+
       const count = stats.projectileCount || 1;
       for (let i = 0; i < count; i++) {
+        this.projectiles.push(new Projectile(tower, tower.target, stats));
+      }
+
+      if (stats.bonusShotInterval && tower.shotsFired % stats.bonusShotInterval === 0) {
         this.projectiles.push(new Projectile(tower, tower.target, stats));
       }
     }
@@ -121,6 +130,15 @@ export class CombatSystem {
     }
 
     return best;
+  }
+
+  awardWaveSurvivalXP() {
+    for (const tower of this.towers) {
+      const result = tower.awardMasteryXP(MASTERY_CONFIG.xpPerWaveSurvived);
+      if (result.newLevel > result.prevLevel || result.unlockedMaster) {
+        this.eventBus.emit(Events.MASTERY_GAINED, { tower, ...result });
+      }
+    }
   }
 
   reset() {

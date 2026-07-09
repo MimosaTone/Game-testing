@@ -26,7 +26,11 @@ export class Projectile {
     this.burnSpread = combatStats.burnSpread || 0;
     this.burnSpreadCount = combatStats.burnSpreadCount || 0;
     this.hitIds = new Set();
-    this.speed = tower.definition.projectileSpeed * 60;
+    const speedMult = combatStats.projectileSpeedMult || 1;
+    this.speed = tower.definition.projectileSpeed * 60 * speedMult;
+    this.critChance = combatStats.critChance || 0;
+    this.critDamageMult = combatStats.critDamageMult || 1.5;
+    this.armorPen = combatStats.armorPen || 0;
     this.color = tower.definition.projectileColor;
     this.alive = true;
 
@@ -123,6 +127,8 @@ export class Projectile {
         }
       }
 
+      dmg *= this._rollCrit();
+
       if (this.slowPercent > 0) {
         enemy.applySlow(this.slowPercent, this.slowDuration);
       }
@@ -131,7 +137,7 @@ export class Projectile {
         enemy.applyBurn(this.burnDPS, this.burnDuration, this.burnIgnoresArmor);
       }
 
-      if (enemy.alive && enemy.takeDamage(dmg)) {
+      if (enemy.alive && enemy.takeDamage(dmg, this.armorPen)) {
         killed.push(enemy);
       }
     }
@@ -154,6 +160,12 @@ export class Projectile {
 
     this.alive = false;
     return killed;
+  }
+
+  _rollCrit() {
+    if (this.critChance <= 0) return 1;
+    if (Math.random() < this.critChance) return this.critDamageMult;
+    return 1;
   }
 
   _findChainTargets(origin, enemies, count) {

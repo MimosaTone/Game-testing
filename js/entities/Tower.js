@@ -2,13 +2,21 @@ import { TOWER_TYPES } from '../config/towerTypes.js';
 import {
   TOWER_UPGRADE_PATHS,
   computeTowerStats,
+  applyExternalMods,
   getTowerAbilityLabels,
 } from '../config/towerUpgradePaths.js';
+import {
+  getMasteryLevel,
+  getMasteryModifiers,
+  getMasteryProgress,
+  MASTERY_CONFIG,
+  MASTER_UPGRADES,
+} from '../config/towerMasteryConfig.js';
 
 let nextTowerId = 1;
 
 /**
- * Tower entity with a sequential upgrade path.
+ * Tower entity with sequential upgrade path and per-instance mastery.
  */
 export class Tower {
   constructor(typeId, gridX, gridY) {
@@ -27,20 +35,54 @@ export class Tower {
     this.target = null;
     this.angle = 0;
     this.prestigeMods = null;
+    this.supportMods = null;
     this.knockbackCooldown = 0;
+    this.masteryXP = 0;
+    this.masterUnlocked = false;
+    this.shotsFired = 0;
+  }
+
+  get masteryLevel() {
+    return getMasteryLevel(this.masteryXP);
+  }
+
+  getMasteryProgress() {
+    return getMasteryProgress(this.masteryXP);
+  }
+
+  awardMasteryXP(amount) {
+    const prevLevel = this.masteryLevel;
+    this.masteryXP += amount;
+    const newLevel = this.masteryLevel;
+    const maxLevel = MASTERY_CONFIG.xpThresholds.length - 1;
+    if (!this.masterUnlocked && newLevel >= maxLevel) {
+      this.masterUnlocked = true;
+    }
+    return { prevLevel, newLevel, unlockedMaster: this.masterUnlocked && prevLevel < maxLevel };
   }
 
   getStats() {
-    return computeTowerStats(
+    const base = computeTowerStats(
       this.definition,
       this.upgradeTier,
       this.upgradePath,
       this.prestigeMods
     );
+
+    const masteryMods = getMasteryModifiers(this.masteryLevel, this.masterUnlocked, this.typeId);
+    const combined = { ...masteryMods, ...(this.supportMods || {}) };
+    return applyExternalMods(base, combined);
   }
 
   getAbilityLabels() {
-    return getTowerAbilityLabels(this.getStats());
+    const labels = getTowerAbilityLabels(this.getStats());
+    if (this.masteryLevel > 0) {
+      labels.unshift(`Mastery Lv${this.masteryLevel}`);
+    }
+    if (this.masterUnlocked && MASTER_UPGRADES[this.typeId]) {
+      labels.push(`★ ${MASTER_UPGRADES[this.typeId].name}`);
+    }
+    return labels;
   }
 
   getRangePixels(tileSize = 40) {
