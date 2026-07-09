@@ -11,6 +11,7 @@ export class CombatSystem {
     this.eventBus = eventBus;
     this.projectiles = [];
     this.towers = [];
+    this.groundBurns = [];
   }
 
   setTowers(towers) {
@@ -18,6 +19,7 @@ export class CombatSystem {
   }
 
   update(dt, enemies) {
+    this._updateGroundBurns(dt, enemies);
     this._updateAuras(dt, enemies);
 
     for (const tower of this.towers) {
@@ -99,11 +101,11 @@ export class CombatSystem {
 
       const count = stats.projectileCount || 1;
       for (let i = 0; i < count; i++) {
-        this.projectiles.push(new Projectile(tower, tower.target, stats));
+        this.projectiles.push(new Projectile(tower, tower.target, stats, this));
       }
 
       if (stats.bonusShotInterval && tower.shotsFired % stats.bonusShotInterval === 0) {
-        this.projectiles.push(new Projectile(tower, tower.target, stats));
+        this.projectiles.push(new Projectile(tower, tower.target, stats, this));
       }
     }
   }
@@ -146,5 +148,34 @@ export class CombatSystem {
   reset() {
     this.projectiles = [];
     this.towers = [];
+    this.groundBurns = [];
+  }
+
+  addGroundBurn(x, y, radiusTiles, dps, duration) {
+    if (!dps || !duration || radiusTiles <= 0) return;
+    this.groundBurns.push({
+      x,
+      y,
+      radiusPx: radiusTiles * GAME_CONFIG.tileSize,
+      dps,
+      timeLeft: duration,
+    });
+  }
+
+  _updateGroundBurns(dt, enemies) {
+    const remaining = [];
+    for (const zone of this.groundBurns) {
+      zone.timeLeft -= dt;
+      if (zone.timeLeft <= 0) continue;
+      remaining.push(zone);
+      for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        const dist = Math.hypot(enemy.x - zone.x, enemy.y - zone.y);
+        if (dist <= zone.radiusPx) {
+          enemy.applyBurn(zone.dps, 0.35, 1);
+        }
+      }
+    }
+    this.groundBurns = remaining;
   }
 }

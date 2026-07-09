@@ -16,6 +16,8 @@ import {
 } from '../config/economyConfig.js';
 import { PRESTIGE_UPGRADES, PRESTIGE_CONFIG } from '../config/prestigeConfig.js';
 import { isBossWave } from '../config/waveConfig.js';
+import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
+import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
 
 /**
  * HUD and build panel UI controller.
@@ -242,6 +244,7 @@ export class HUD {
       this._updateBuildAffordability();
       this._updateUpgradeButtons();
       this._renderHotbarCards();
+      this._updateStatusPanel();
     });
 
     bus.on(Events.CRYSTALS_CHANGED, (crystals) => {
@@ -293,6 +296,11 @@ export class HUD {
       } else {
         this.elements.incomeDetail.textContent = 'Per wave harvest';
       }
+    });
+
+    bus.on(Events.INVESTMENT_CHANGED, () => {
+      this._updateUpgradeButtons();
+      this._updateStatusPanel();
     });
 
     bus.on(Events.WAVE_STARTED, () => {
@@ -409,6 +417,13 @@ export class HUD {
     this.elements.enemyCount.textContent = this.game.getEnemyCount();
     const reward = this.game.getEstimatedWaveReward();
     this.elements.waveReward.textContent = `+${reward}g`;
+
+    const repairCost = this.game.placementSystem.getRepairAllCost();
+    const canRepair = this.game.phase === Phase.PLANNING && repairCost > 0;
+    this.elements.repairAllBtn.textContent = repairCost > 0
+      ? `Repair All (${repairCost}g)`
+      : 'Repair All';
+    this.elements.repairAllBtn.disabled = !canRepair || !this.game.economy.canAfford(repairCost);
   }
 
   _renderHotbar() {
@@ -967,6 +982,7 @@ export class HUD {
     }
 
     this._appendRepairButton(tower);
+    this._appendTowerInvestmentButtons(tower);
   }
 
   _showFarmUpgrades(farm) {
@@ -1022,6 +1038,7 @@ export class HUD {
     });
     this.elements.upgradeButtons.appendChild(btn);
     this._appendRepairButton(farm);
+    this._appendStructureReinforcementButtons(farm);
   }
 
   _showSupportUpgrades(support) {
@@ -1120,10 +1137,113 @@ export class HUD {
       max.textContent = '★ Fully upgraded';
       this.elements.upgradeButtons.appendChild(max);
     }
+    this._appendRepairButton(support);
+    this._appendStructureReinforcementButtons(support);
+  }
+
+  _appendTowerInvestmentButtons(tower) {
+    const im = this.game.investmentManager;
+    const canBuy = this.game.phase === Phase.PLANNING;
+    const oc = im.overclocks[tower.id];
+
+    if (oc) {
+      const def = TOWER_OVERCLOCKS[oc.type];
+      const hint = document.createElement('div');
+      hint.className = 'investment-active-hint';
+      hint.textContent = `⚡ ${def?.name || 'Overclock'} — ${oc.wavesLeft} wave(s) left`;
+      this.elements.upgradeButtons.appendChild(hint);
+    } else if (canBuy) {
+      const header = document.createElement('div');
+      header.className = 'investment-section-label';
+      header.textContent = 'Overclock (3 waves)';
+      this.elements.upgradeButtons.appendChild(header);
+
+      for (const def of Object.values(TOWER_OVERCLOCKS)) {
+        const btn = document.createElement('button');
+        btn.className = 'upgrade-btn investment-btn';
+        btn.innerHTML = `<span class="upgrade-btn-name">⚡ ${def.name}</span><span class="upgrade-btn-detail">${def.description} · ${def.cost}g</span>`;
+        btn.disabled = !this.game.economy.canAfford(def.cost);
+        btn.addEventListener('click', () => {
+          if (im.purchaseOverclock(this.game, tower, def.id)) {
+            this.game.saveGame();
+            this._showTowerUpgrades(tower);
+          }
+        });
+        this.elements.upgradeButtons.appendChild(btn);
+      }
+    }
+
+    const wave = this.game.waveManager.waveNumber;
+    const legDef = LEGENDARY_UPGRADES[tower.typeId];
+    if (legDef) {
+      if (im.legendary[tower.id]) {
+        const owned = document.createElement('div');
+        owned.className = 'investment-active-hint legendary-owned';
+        owned.textContent = `★ ${legDef.name} — ${legDef.description}`;
+        this.elements.upgradeButtons.appendChild(owned);
+      } else if (canBuy && wave >= LEGENDARY_UNLOCK_WAVE) {
+        const btn = document.createElement('button');
+        btn.className = 'upgrade-btn investment-btn legendary-btn';
+        btn.innerHTML = `<span class="upgrade-btn-name">★ ${legDef.name}</span><span class="upgrade-btn-detail">${legDef.description} · ${legDef.cost}g</span>`;
+        btn.disabled = !this.game.economy.canAfford(legDef.cost);
+        btn.addEventListener('click', () => {
+          if (im.purchaseLegendary(this.game, tower)) {
+            this.game.saveGame();
+            this._showTowerUpgrades(tower);
+          }
+        });
+        this.elements.upgradeButtons.appendChild(btn);
+      } else if (wave < LEGENDARY_UNLOCK_WAVE) {
+        const lock = document.createElement('div');
+        lock.className = 'investment-locked-hint';
+        lock.textContent = `Legendary unlocks at wave ${LEGENDARY_UNLOCK_WAVE}`;
+        this.elements.upgradeButtons.appendChild(lock);
+      }
+    }
+  }
+
+  _appendStructureReinforcementButtons(structure) {
+    if (this.game.phase !== Phase.PLANNING) return;
+    const im = this.game.investmentManager;
+    const key = `${structure.gridX},${structure.gridY}`;
+
+    const header = document.createElement('div');
+    header.className = 'investment-section-label';
+    header.textContent = 'Reinforce (permanent this run)';
+    this.elements.upgradeButtons.appendChild(header);
+
+    for (const def of Object.values(STRUCTURE_REINFORCEMENTS)) {
+      const level = im.reinforcements[`${key}:${def.id}`] || 0;
+      const cost = im.getReinforcementCost(key, def.id);
+      const maxed = level >= def.maxLevel;
+
+      if (maxed) {
+        const row = document.createElement('div');
+        row.className = 'investment-maxed-row';
+        row.textContent = `${def.name} (${level}/${def.maxLevel}) — MAX`;
+        this.elements.upgradeButtons.appendChild(row);
+        continue;
+      }
+
+      const btn = document.createElement('button');
+      btn.className = 'upgrade-btn investment-btn';
+      btn.innerHTML = `<span class="upgrade-btn-name">🛡 ${def.name}</span><span class="upgrade-btn-detail">${def.description} · ${cost}g (${level}/${def.maxLevel})</span>`;
+      btn.disabled = cost === null || !this.game.economy.canAfford(cost);
+      btn.addEventListener('click', () => {
+        if (im.purchaseReinforcement(this.game, structure, def.id)) {
+          this.game.saveGame();
+          if (structure.type === 'tower') this._showTowerUpgrades(structure);
+          else if (structure.type === 'farm') this._showFarmUpgrades(structure);
+          else this._showSupportUpgrades(structure);
+        }
+      });
+      this.elements.upgradeButtons.appendChild(btn);
+    }
   }
 
   _appendRepairButton(structure) {
-    const cost = getRepairCost(structure);
+    const mult = this.game.investmentManager?.getStructureRepairCostMult?.(structure) ?? 1;
+    const cost = getRepairCost(structure, mult);
     if (cost === null || cost <= 0) return;
     const btn = document.createElement('button');
     btn.className = 'upgrade-btn';

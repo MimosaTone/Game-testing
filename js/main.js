@@ -5,6 +5,7 @@ import { FloatingTextManager } from './render/FloatingTextManager.js';
 import { HUD } from './ui/HUD.js';
 import { StartModal } from './ui/StartModal.js';
 import { SaveCodeModal } from './ui/SaveCodeModal.js';
+import { InvestmentPanel } from './ui/InvestmentPanel.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -15,16 +16,23 @@ let renderer;
 let hud;
 let startModal;
 let saveCodeModal;
+let investmentPanel;
 
 try {
   game = new Game();
   renderer = new Renderer(ctx);
   hud = new HUD(game);
+  investmentPanel = new InvestmentPanel(game);
   saveCodeModal = new SaveCodeModal(game, hud);
   saveCodeModal.updateButtons();
 
-  for (const evt of [Events.WAVE_STARTED, Events.WAVE_COMPLETED, Events.GAME_OVER, Events.SAVE_LOADED, Events.SAVE_CLEARED]) {
-    game.eventBus.on(evt, () => saveCodeModal.updateButtons());
+  for (const evt of [Events.WAVE_STARTED, Events.WAVE_COMPLETED, Events.GAME_OVER, Events.SAVE_LOADED, Events.SAVE_CLEARED, Events.GOLD_CHANGED, Events.INVESTMENT_CHANGED]) {
+    game.eventBus.on(evt, () => {
+      saveCodeModal.updateButtons();
+      if (investmentPanel && (evt === Events.GOLD_CHANGED || evt === Events.INVESTMENT_CHANGED || evt === Events.WAVE_COMPLETED || evt === Events.WAVE_STARTED || evt === Events.SAVE_LOADED)) {
+        investmentPanel.render();
+      }
+    });
   }
 
   canvas.width = GAME_CONFIG.canvasWidth;

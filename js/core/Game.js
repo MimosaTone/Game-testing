@@ -4,6 +4,7 @@ import { WaveManager } from './WaveManager.js';
 import { PrestigeManager } from './PrestigeManager.js';
 import { SaveManager } from './SaveManager.js';
 import { SaveCodeManager } from './SaveCodeManager.js';
+import { InvestmentManager } from './InvestmentManager.js';
 import { ResearchManager } from './ResearchManager.js';
 import { ChallengeManager } from './ChallengeManager.js';
 import { SpeedController } from './SpeedController.js';
@@ -16,6 +17,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
 import { isBossWave } from '../config/waveConfig.js';
 import { ECONOMY_CONFIG } from '../config/economyConfig.js';
+import { STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
 
 /** Game phases. */
 export const Phase = {
@@ -38,12 +40,14 @@ export class Game {
     this.prestigeManager = new PrestigeManager(this.eventBus);
     this.prestigeManager.loadFromMeta(this.saveManager.meta);
     this.researchManager = new ResearchManager(this.eventBus);
+    this.investmentManager = new InvestmentManager(this.eventBus);
     this.challengeManager = new ChallengeManager(this.eventBus);
     this.speedController = new SpeedController(this.eventBus, this.prestigeManager);
     this.speedController.loadFromSettings(this.saveManager.meta.settings);
     this.supportEffects = new SupportEffectManager();
     this.economy = new Economy(this.eventBus, this.prestigeManager);
     this.economy.setSupportEffects(this.supportEffects);
+    this.economy.setInvestmentManager(this.investmentManager);
     this.waveManager = new WaveManager(this.eventBus, this.path);
     this.combatSystem = new CombatSystem(this.eventBus);
     this.placementSystem = new PlacementSystem(this.eventBus, this.economy);
@@ -91,7 +95,8 @@ export class Game {
 
   _refreshSupportEffects() {
     const researchMods = this.researchManager.getModifiers();
-    this.supportEffects.recalculate(this.placementSystem.supports, researchMods);
+    const investMods = this.investmentManager.getCombinedMods();
+    this.supportEffects.recalculate(this.placementSystem.supports, researchMods, investMods);
     this.economy.setSupportsForBank(this.placementSystem.supports);
 
     for (const tower of this.placementSystem.towers) {
@@ -105,6 +110,38 @@ export class Game {
     this._refreshFarmIncome();
   }
 
+  _refreshInvestmentEffects() {
+    this._refreshSupportEffects();
+    this._applyPrestigeToTowers();
+    this.combatSystem.setTowers(this.placementSystem.towers);
+  }
+
+  _applyReinforcementPurchase(structure, typeId) {
+    const def = STRUCTURE_REINFORCEMENTS[typeId];
+    if (!def) return;
+    const fx = def.effectPerLevel;
+    if (fx.healthMult) {
+      const bonus = Math.round(structure.maxHealth * fx.healthMult);
+      structure.maxHealth += bonus;
+      structure.health += bonus;
+    }
+    if (fx.armorAdd) {
+      structure.armor = Math.min(0.75, (structure.armor || 0) + fx.armorAdd);
+    }
+  }
+
+  _applyWonderToStructures() {
+    const mods = this.investmentManager.getPassiveMods();
+    if (mods.structureHealthMult <= 0) return;
+    for (const s of [...this.placementSystem.towers, ...this.placementSystem.farms, ...this.placementSystem.supports]) {
+      if (s.destroyed) continue;
+      const bonus = Math.round(s.maxHealth * mods.structureHealthMult);
+      s.maxHealth += bonus;
+      s.health += bonus;
+      if (mods.structureArmor) s.armor = Math.min(0.75, (s.armor || 0) + mods.structureArmor);
+    }
+  }
+
   _applyPrestigeToTowers() {
     const mods = this.prestigeManager.getModifiers();
     for (const tower of this.placementSystem.towers) {
@@ -114,7 +151,31 @@ export class Game {
         tower.gridX,
         tower.gridY
       );
+      const oc = this.investmentManager.getOverclockMods(tower.id);
+      let leg = this.investmentManager.getLegendaryMods(tower);
+      if (this.investmentManager.getPassiveMods().magicTowerBonus && tower.typeId === 'prism' && !leg.chainCount) {
+        leg = { ...leg, chainCount: 2 };
+      }
+      tower.investmentMods = this._mergeTowerInvestmentMods(oc, leg);
     }
+  }
+
+  _mergeTowerInvestmentMods(overclock, legendary) {
+    const out = {};
+    for (const src of [overclock, legendary]) {
+      for (const [k, v] of Object.entries(src)) {
+        if (k.includes('Mult') && k !== 'critChance' && typeof v === 'number' && v < 2 && v > 0 && v < 1) {
+          out[k] = (out[k] ?? 1) * (1 + v);
+        } else if (k.includes('Mult') && k !== 'critChance') {
+          out[k] = (out[k] ?? 1) * v;
+        } else if (out[k] === undefined) {
+          out[k] = v;
+        } else if (typeof v === 'number') {
+          out[k] += v;
+        }
+      }
+    }
+    return out;
   }
 
   _setupEventHandlers() {
@@ -133,7 +194,8 @@ export class Game {
 
       if (killerTower && !killerTower.destroyed) {
         const baseXp = isBoss ? MASTERY_CONFIG.xpPerBossKill : MASTERY_CONFIG.xpPerKill;
-        const xp = Math.round(baseXp * rewardMult);
+        const xpMult = this.investmentManager.getPassiveMods().masteryXpMult;
+        const xp = Math.round(baseXp * rewardMult * xpMult);
         const result = killerTower.awardMasteryXP(xp);
         if (result.newLevel > result.prevLevel || result.unlockedMaster) {
           this.eventBus.emit(Events.MASTERY_GAINED, { tower: killerTower, ...result });
@@ -291,6 +353,7 @@ export class Game {
 
     this.researchManager.loadFromRun(run.research);
     this.challengeManager.loadFromRun(run.challenge);
+    this.investmentManager.loadFromRun(run.investments);
     this._applyChallengeEffects();
     this.waveManager.reset();
     this.waveManager.waveNumber = run.wave;
@@ -306,9 +369,8 @@ export class Game {
     this.speedController.loadFromSettings(meta.settings);
     this.placementSystem.clearSelection();
     this.placementSystem.sellMode = false;
-    this._refreshSupportEffects();
-    this._applyPrestigeToTowers();
-    this.combatSystem.setTowers(this.placementSystem.towers);
+    this.investmentManager.applyExpansionSpots(this.placementSystem);
+    this._refreshInvestmentEffects();
 
     this._emitFullState();
     this.eventBus.emit(Events.SAVE_LOADED);
@@ -342,6 +404,7 @@ export class Game {
     this.eventBus.emit(Events.CRYSTALS_CHANGED, this.economy.crystals);
     this.eventBus.emit(Events.RESEARCH_CHANGED, this.researchManager.getState());
     this.eventBus.emit(Events.CHALLENGE_CHANGED, this.challengeManager.getState());
+    this.eventBus.emit(Events.INVESTMENT_CHANGED, this.investmentManager.getState());
     this.eventBus.emit(Events.SPEED_CHANGED, this.speedController.getState());
     this.eventBus.emit(Events.INCOME_CHANGED, {
       total: this.economy.incomePerWave,
@@ -394,6 +457,7 @@ export class Game {
   startWave() {
     if (this.phase !== Phase.PLANNING) return;
     this._clearAutoStartTimer();
+    this.investmentManager.onWaveStart(this);
     this.waveManager.startNextWave();
     this.phase = Phase.WAVE;
     this._applyPrestigeToTowers();
@@ -449,7 +513,8 @@ export class Game {
     let crystalGain = 0;
     for (const s of this.placementSystem.supports) {
       if (s.typeId !== 'crystal_extractor' || s.destroyed) continue;
-      const yieldAmt = Math.round(this.supportEffects.getCrystalYield(s) * rewardMult);
+      const crystalMult = this.supportEffects.global.crystalMult ?? 1;
+      const yieldAmt = Math.round(this.supportEffects.getCrystalYield(s) * rewardMult * crystalMult);
       crystalGain += yieldAmt;
       if (yieldAmt > 0) s.triggerPulse();
     }
@@ -473,8 +538,10 @@ export class Game {
     this.phase = Phase.PLANNING;
     this.economy.setWaveNumber(wave);
     this._refreshSupportEffects();
+    this.investmentManager.onWaveComplete(this);
 
-    const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult);
+    const rpMult = this.supportEffects.global.researchMult ?? 1;
+    const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult * rpMult);
     if (rpGain > 0) {
       this.researchManager.addPoints(rpGain);
     }
@@ -598,6 +665,7 @@ export class Game {
   resetRun() {
     this._clearAutoStartTimer();
     this.researchManager.reset();
+    this.investmentManager.reset();
     this.challengeManager.reset();
     this._applyChallengeEffects();
     this.economy.gold = this._startingGold();

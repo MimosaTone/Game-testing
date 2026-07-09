@@ -218,7 +218,8 @@ export class PlacementSystem {
   }
 
   manualRepair(structure) {
-    const cost = getRepairCost(structure);
+    const mult = this.economy._investmentManager?.getStructureRepairCostMult?.(structure) ?? 1;
+    const cost = getRepairCost(structure, mult);
     if (cost === null || cost <= 0) return false;
     if (!this.economy.spend(cost)) return false;
     const healed = repairStructure(structure, structure.maxHealth);
@@ -226,12 +227,24 @@ export class PlacementSystem {
     return healed > 0;
   }
 
-  repairAllDamaged() {
+  getRepairAllCost() {
     const structures = [...this.towers, ...this.farms, ...this.supports].filter(
       (s) => !s.destroyed && s.health < s.maxHealth
     );
     let totalCost = 0;
-    for (const s of structures) totalCost += getRepairCost(s) || 0;
+    const im = this.economy._investmentManager;
+    for (const s of structures) {
+      const mult = im?.getStructureRepairCostMult?.(s) ?? im?.getRepairCostMult?.() ?? 1;
+      totalCost += getRepairCost(s, mult) || 0;
+    }
+    return totalCost;
+  }
+
+  repairAllDamaged() {
+    const structures = [...this.towers, ...this.farms, ...this.supports].filter(
+      (s) => !s.destroyed && s.health < s.maxHealth
+    );
+    const totalCost = this.getRepairAllCost();
     if (totalCost <= 0 || !this.economy.canAfford(totalCost)) return false;
     this.economy.spend(totalCost);
     for (const s of structures) {

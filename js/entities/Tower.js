@@ -37,6 +37,7 @@ export class Tower {
     this.angle = 0;
     this.prestigeMods = null;
     this.supportMods = null;
+    this.investmentMods = null;
     this.knockbackCooldown = 0;
     this.masteryXP = 0;
     this.masterUnlocked = false;
@@ -72,7 +73,11 @@ export class Tower {
     );
 
     const masteryMods = getMasteryModifiers(this.masteryLevel, this.masterUnlocked, this.typeId);
-    const combined = { ...masteryMods, ...(this.supportMods || {}) };
+    const combined = {
+      ...masteryMods,
+      ...(this.supportMods || {}),
+      ...(this.investmentMods || {}),
+    };
     return applyExternalMods(base, combined);
   }
 

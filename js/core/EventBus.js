@@ -66,4 +66,6 @@ export const Events = {
   STRUCTURE_REPAIRED: 'structure_repaired',
   STRUCTURE_REBUILT: 'structure_rebuilt',
   STRUCTURE_SOLD: 'structure_sold',
+  INVESTMENT_CHANGED: 'investment_changed',
+  GROUND_BURN: 'ground_burn',
 };

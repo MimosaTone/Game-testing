@@ -55,9 +55,19 @@ function migrateV2ToV3(data) {
   return data;
 }
 
+function migrateV3ToV4(data) {
+  if (data.version !== 3) return data;
+  if (data.run) {
+    data.run.investments = data.run.investments || null;
+  }
+  data.version = 4;
+  return data;
+}
+
 function migrateSave(data) {
   if (data.version === 1) data = migrateV1ToV2(data);
   if (data.version === 2) data = migrateV2ToV3(data);
+  if (data.version === 3) data = migrateV3ToV4(data);
   return data;
 }
 
@@ -168,6 +178,7 @@ export class SaveManager {
       wavesSinceRepair: game.wavesSinceRepair,
       research: game.researchManager.toRunData(),
       challenge: game.challengeManager.toRunData(),
+      investments: game.investmentManager.toRunData(),
       towers: game.placementSystem.towers.map((t) => ({
         typeId: t.typeId,
         gridX: t.gridX,

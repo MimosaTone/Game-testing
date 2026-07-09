@@ -35,10 +35,13 @@ export class SupportEffectManager {
       buildCostMult: 1,
       farmIncomeMult: 1,
       bossRewardMult: 1,
+      bankInterestMult: 1,
+      crystalMult: 1,
+      researchMult: 1,
     };
   }
 
-  recalculate(supports, researchMods) {
+  recalculate(supports, researchMods, investMods) {
     this.global = this._emptyGlobal();
     this._nearbyCache.clear();
 
@@ -74,6 +77,22 @@ export class SupportEffectManager {
       this.global.buildCostMult *= researchMods.buildCostMult;
       this.global.sellValueMult *= researchMods.sellValueMult;
       this.global.bossRewardMult *= researchMods.bossRewardMult;
+    }
+
+    if (investMods) {
+      this.global.damageMult *= investMods.damageMult ?? 1;
+      this.global.rangeMult *= investMods.rangeMult ?? 1;
+      this.global.attackSpeedMult *= investMods.attackSpeedMult ?? 1;
+      this.global.projectileSpeedMult *= investMods.projectileSpeedMult ?? 1;
+      this.global.farmIncomeMult *= investMods.farmIncomeMult ?? 1;
+      this.global.goldEarnedMult *= investMods.goldEarnedMult ?? 1;
+      this.global.bossRewardMult *= investMods.bossRewardMult ?? 1;
+      this.global.sellValueMult *= investMods.sellValueMult ?? 1;
+      this.global.bankInterestMult *= investMods.bankInterestMult ?? 1;
+      this.global.crystalMult *= investMods.crystalMult ?? 1;
+      this.global.researchMult *= investMods.researchMult ?? 1;
+      this.global.critChance += investMods.critChance ?? 0;
+      this.global.chainCountAdd += investMods.chainCountAdd ?? 0;
     }
   }
 

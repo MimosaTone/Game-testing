@@ -119,7 +119,8 @@ export class Economy {
       for (const s of this._supports || []) {
         if (s.typeId !== 'bank' || s.storedGold <= 0) continue;
         const { interestRate } = this.supportEffects.getBankStats(s);
-        const interest = Math.round(s.storedGold * interestRate);
+        const bankMult = this.supportEffects.global.bankInterestMult ?? 1;
+        const interest = Math.round(s.storedGold * interestRate * bankMult);
         s.storedGold += interest;
         bankInterest += interest;
       }
@@ -146,6 +147,11 @@ export class Economy {
 
   resetWaveKillGold() {
     this.lastWaveKillGold = 0;
+    this._investmentManager = null;
+  }
+
+  setInvestmentManager(manager) {
+    this._investmentManager = manager;
   }
 
   getUpgradeCost(structure, stat) {
@@ -176,6 +182,9 @@ export class Economy {
     if (this.supportEffects) {
       const towerMods = this.supportEffects.getTowerMods(this._supports || [], gridX, gridY);
       mult = towerMods.upgradeCostMult;
+    }
+    if (this._investmentManager) {
+      mult *= this._investmentManager.getUpgradeCostMult();
     }
     return Math.max(1, Math.round(base * mult));
   }

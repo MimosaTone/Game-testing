@@ -1155,9 +1155,189 @@ body {
   min-height: 120px;
 }
 
-.save-code-textarea:focus {
-  outline: none;
+.investment-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.investment-tab {
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid rgba(120, 140, 160, 0.3);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.investment-tab.active {
+  background: var(--accent);
   border-color: var(--accent);
+  color: #fff;
+}
+
+.investment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.investment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(120, 140, 160, 0.2);
+  border-radius: 8px;
+}
+
+.investment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.investment-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.investment-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.investment-buy-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  background: var(--gold);
+  color: #1a1a1a;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.investment-buy-btn:disabled {
+  background: #4a5560;
+  color: #9aa8b8;
+  cursor: not-allowed;
+}
+
+.investment-maxed,
+.investment-locked {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.structure-invest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(120, 140, 160, 0.15);
+}
+
+.structure-invest-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.structure-invest-btn {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(120, 140, 160, 0.35);
+  border-radius: 6px;
+  background: rgba(240, 192, 64, 0.12);
+  color: var(--gold);
+  cursor: pointer;
+  text-align: left;
+}
+
+.structure-invest-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.legendary-offer {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 138, 255, 0.45);
+  background: rgba(212, 138, 255, 0.1);
+}
+
+.legendary-offer-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--shard);
+}
+
+.legendary-offer-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0 8px;
+}
+
+.investment-section-label {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(120, 140, 160, 0.15);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.investment-active-hint {
+  font-size: 12px;
+  color: var(--gold);
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(240, 192, 64, 0.1);
+  border: 1px solid rgba(240, 192, 64, 0.25);
+}
+
+.investment-active-hint.legendary-owned {
+  color: var(--shard);
+  background: rgba(212, 138, 255, 0.1);
+  border-color: rgba(212, 138, 255, 0.35);
+}
+
+.investment-locked-hint,
+.investment-maxed-row {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.upgrade-btn.investment-btn {
+  border-color: rgba(240, 192, 64, 0.3);
+}
+
+.upgrade-btn.legendary-btn {
+  border-color: rgba(212, 138, 255, 0.45);
+  background: rgba(212, 138, 255, 0.08);
 }
 
 /* ── Responsive ── */

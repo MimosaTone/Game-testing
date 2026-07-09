@@ -6,7 +6,7 @@ let nextProjectileId = 1;
  * Projectile with support for splash, pierce, chain, and slow effects.
  */
 export class Projectile {
-  constructor(tower, target, combatStats) {
+  constructor(tower, target, combatStats, combatSystem = null) {
     this.id = nextProjectileId++;
     this.tower = tower;
     this.target = target;
@@ -31,6 +31,8 @@ export class Projectile {
     this.critChance = combatStats.critChance || 0;
     this.critDamageMult = combatStats.critDamageMult || 1.5;
     this.armorPen = combatStats.armorPen || 0;
+    this.groundBurn = combatStats.groundBurn || false;
+    this.combatSystem = combatSystem;
     this.color = tower.definition.projectileColor;
     this.alive = true;
 
@@ -147,6 +149,17 @@ export class Projectile {
       for (const enemy of spreadTargets) {
         enemy.applyBurn(this.burnDPS * 0.7, this.burnDuration, this.burnIgnoresArmor);
       }
+    }
+
+    if (this.groundBurn && this.combatSystem) {
+      const splashTiles = this.splashRadius > 0 ? this.splashRadius : 1.2;
+      this.combatSystem.addGroundBurn(
+        primaryTarget.x,
+        primaryTarget.y,
+        splashTiles,
+        this.burnDPS || this.damage * 0.15,
+        this.burnDuration || 4
+      );
     }
 
     if (this.pierceRemaining > 0) {

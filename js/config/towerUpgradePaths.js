@@ -276,6 +276,7 @@ export function applyExternalMods(combat, mods) {
   if (mods.slowPercentAdd) combat.slowPercent = Math.max(combat.slowPercent, mods.slowPercentAdd);
   if (mods.chainCountAdd) combat.chainCount += Math.floor(mods.chainCountAdd);
   if (mods.chainCount) combat.chainCount += mods.chainCount;
+  if (mods.splashRadiusMult) combat.splashRadius *= mods.splashRadiusMult;
   if (mods.splashFalloff !== undefined) combat.splashFalloff = mods.splashFalloff;
   if (mods.auraSlowMult) combat.auraSlow *= mods.auraSlowMult;
   if (mods.knockbackIntervalMult && combat.knockbackInterval > 0) {
@@ -285,6 +286,9 @@ export function applyExternalMods(combat, mods) {
   if (mods.burnSpreadCount) combat.burnSpreadCount = mods.burnSpreadCount;
   if (mods.burnIgnoresArmor) combat.burnIgnoresArmor = Math.max(combat.burnIgnoresArmor, mods.burnIgnoresArmor);
   if (mods.bonusShotInterval) combat.bonusShotInterval = mods.bonusShotInterval;
+  if (mods.groundBurn) combat.groundBurn = mods.groundBurn;
+  if (mods.burnDPS) combat.burnDPS = Math.max(combat.burnDPS, mods.burnDPS);
+  if (mods.burnDuration) combat.burnDuration = Math.max(combat.burnDuration, mods.burnDuration);
 
   return finalizeCombatStats(combat);
 }

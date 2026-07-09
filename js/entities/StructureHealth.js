@@ -43,11 +43,11 @@ export function repairStructure(entity, amount) {
   return entity.health - before;
 }
 
-export function getRepairCost(entity) {
+export function getRepairCost(entity, costMult = 1) {
   if (entity.destroyed) return null;
   const missing = entity.maxHealth - entity.health;
   if (missing <= 0) return 0;
-  return Math.ceil(missing * REPAIR_GOLD_PER_HP);
+  return Math.ceil(missing * REPAIR_GOLD_PER_HP * costMult);
 }
 
 export function getHealthPct(entity) {
