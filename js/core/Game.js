@@ -6,6 +6,7 @@ import { SaveManager } from './SaveManager.js';
 import { ResearchManager } from './ResearchManager.js';
 import { ChallengeManager } from './ChallengeManager.js';
 import { SpeedController } from './SpeedController.js';
+import { SupportEffectManager } from './SupportEffectManager.js';
 import { StructureCombatSystem } from '../systems/StructureCombatSystem.js';
 import { Path } from '../entities/Path.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
