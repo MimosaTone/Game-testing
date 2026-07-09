@@ -3,7 +3,9 @@ import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES, SUPPORT_BUILD_ORDER } from '../config/supportConfig.js';
 import { RESEARCH_UPGRADES } from '../config/researchConfig.js';
-import { MASTER_UPGRADES } from '../config/towerMasteryConfig.js';
+import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js';
+import { getRepairCost } from '../entities/StructureHealth.js';
+import { REBUILD_COST_MULT } from '../config/structureHealthConfig.js';
 import { Phase } from '../core/Game.js';
 import {
   calculateFarmIncome,
@@ -44,6 +46,11 @@ export class HUD {
       prestigeUpgrades: document.getElementById('prestige-upgrades'),
       autoStartToggle: document.getElementById('auto-start-toggle'),
       resetSaveBtn: document.getElementById('reset-save-btn'),
+      speedBtn: document.getElementById('speed-btn'),
+      challengeHint: document.getElementById('challenge-hint'),
+      challengePresets: document.getElementById('challenge-presets'),
+      challengeModifiers: document.getElementById('challenge-modifiers'),
+      challengeReward: document.getElementById('challenge-reward'),
     };
 
     this._bindEvents();
@@ -51,6 +58,7 @@ export class HUD {
     this._renderBuildPanel();
     this._renderSupportPanel();
     this._renderResearchUpgrades();
+    this._renderChallengePanel();
     this._renderPrestigeUpgrades();
     this._updateStartButton();
     this._updatePrestigeUI();
@@ -104,6 +112,10 @@ export class HUD {
 
     this.elements.autoStartToggle.addEventListener('change', (e) => {
       this.game.autoStartWaves = e.target.checked;
+    });
+
+    this.elements.speedBtn.addEventListener('click', () => {
+      this.game.speedController.cycleSpeed();
     });
 
     this.elements.resetSaveBtn.addEventListener('click', () => {
@@ -273,10 +285,72 @@ export class HUD {
       this._refreshBuildPanelHints();
     });
 
+    bus.on(Events.SPEED_CHANGED, (state) => {
+      const label = state.forcedNormal ? '1x' : `${state.speed}x`;
+      this.elements.speedBtn.textContent = label;
+      this.elements.speedBtn.classList.toggle('forced-normal', state.forcedNormal);
+    });
+
+    bus.on(Events.CHALLENGE_CHANGED, (state) => {
+      this._renderChallengePanel();
+    });
+
+    bus.on(Events.STRUCTURE_DESTROYED, () => {
+      this._renderBuildPanel();
+      this._renderSupportPanel();
+    });
+
     bus.on(Events.SUPPORT_PLACED, () => {
       this._renderSupportPanel();
       this._updateBuildSelection();
     });
+  }
+
+  _renderChallengePanel() {
+    const cm = this.game.challengeManager;
+    const canEdit = cm.canEdit(this.game.phase === Phase.PLANNING);
+    const state = cm.getState();
+
+    this.elements.challengeHint.textContent = canEdit
+      ? 'Stack modifiers for bigger rewards — adjust before each wave'
+      : 'Modifiers can only be changed between waves';
+
+    this.elements.challengeReward.textContent = `Reward multiplier: ${state.rewardMultiplier.toFixed(1)}x`;
+
+    const presetsEl = this.elements.challengePresets;
+    presetsEl.innerHTML = '';
+    for (const preset of Object.values(CHALLENGE_PRESETS)) {
+      const btn = document.createElement('button');
+      btn.className = 'challenge-preset-btn';
+      btn.textContent = preset.name;
+      btn.title = preset.description;
+      btn.classList.toggle('active', state.presetId === preset.id);
+      btn.disabled = !canEdit;
+      if (canEdit) {
+        btn.addEventListener('click', () => this.game.challengeManager.applyPreset(preset.id));
+      }
+      presetsEl.appendChild(btn);
+    }
+
+    const modsEl = this.elements.challengeModifiers;
+    modsEl.innerHTML = '';
+    for (const mod of Object.values(CHALLENGE_MODIFIERS)) {
+      const row = document.createElement('label');
+      row.className = 'challenge-mod-row';
+      const active = cm.active.has(mod.id);
+      row.innerHTML = `
+        <input type="checkbox" ${active ? 'checked' : ''} ${canEdit ? '' : 'disabled'}>
+        <span class="challenge-mod-name">${mod.name}</span>
+        <span class="challenge-mod-diff">${mod.difficulty}</span>
+        <span class="challenge-mod-bonus">+${Math.round(mod.rewardBonus * 100)}%</span>
+      `;
+      if (canEdit) {
+        row.querySelector('input').addEventListener('change', () => {
+          this.game.challengeManager.toggleModifier(mod.id);
+        });
+      }
+      modsEl.appendChild(row);
+    }
   }
 
   _renderSupportPanel() {
@@ -555,13 +629,35 @@ export class HUD {
     const panel = this.elements.upgradePanel;
     panel.classList.remove('hidden');
 
-    if (structure.type === 'farm') {
+    if (structure?.destroyed) {
+      this._showDestroyedPanel(structure);
+    } else if (structure.type === 'farm') {
       this._showFarmUpgrades(structure);
     } else if (structure.type === 'support') {
       this._showSupportUpgrades(structure);
     } else {
       this._showTowerUpgrades(structure);
     }
+  }
+
+  _showDestroyedPanel(data) {
+    const cost = this.game.placementSystem.getRebuildCost(data);
+    this.elements.upgradeTitle.textContent = 'Destroyed — Rebuild';
+    this.elements.upgradeStats.innerHTML = `
+      <div class="support-desc">This structure was destroyed. Rebuild at ${Math.round(REBUILD_COST_MULT * 100)}% cost.</div>
+      <div>Type: <strong>${data.typeId}</strong></div>
+    `;
+    this.elements.upgradeButtons.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.className = 'upgrade-btn';
+    btn.textContent = `Rebuild (${cost}g)`;
+    btn.disabled = !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
+    btn.addEventListener('click', () => {
+      this.game.placementSystem.setBuildType(data.typeId);
+      this.game.placementSystem.tryPlace(data.gridX, data.gridY);
+      this._hideUpgradePanel();
+    });
+    this.elements.upgradeButtons.appendChild(btn);
   }
 
   _hideUpgradePanel() {
@@ -631,6 +727,8 @@ export class HUD {
       max.textContent = '★ Fully upgraded — peak performance';
       this.elements.upgradeButtons.appendChild(max);
     }
+
+    this._appendRepairButton(tower);
   }
 
   _showFarmUpgrades(farm) {
@@ -684,6 +782,7 @@ export class HUD {
       }
     });
     this.elements.upgradeButtons.appendChild(btn);
+    this._appendRepairButton(farm);
   }
 
   _showSupportUpgrades(support) {
@@ -709,8 +808,9 @@ export class HUD {
       const rp = def.perLevel.rpPerWave[support.level - 1];
       statsHtml += `<div>Generates: <strong>+${rp} RP</strong> per wave</div>`;
     } else if (support.typeId === 'repair_station') {
-      const rs = this.game.supportEffects.getRepairStats(support);
-      statsHtml += `<div>Heals: <strong>+${rs.healAmount}</strong> lives every ${rs.healInterval} waves</div>`;
+      const rs = this.game.supportEffects.getStructureRepairStats(support);
+      statsHtml += `<div>Heals: <strong>+${rs.waveRepairAmount} HP</strong> to nearby structures each wave</div>
+        <div>Combat repair: <strong>${rs.combatRepairPerSec} HP/s</strong> · radius ${rs.radius} tiles</div>`;
     } else if (support.typeId === 'crystal_extractor') {
       const crystals = this.game.supportEffects.getCrystalYield(support);
       statsHtml += `<div>Generates: <strong>+${crystals} ◆</strong> per wave</div>`;
@@ -781,6 +881,23 @@ export class HUD {
       max.textContent = '★ Fully upgraded';
       this.elements.upgradeButtons.appendChild(max);
     }
+  }
+
+  _appendRepairButton(structure) {
+    const cost = getRepairCost(structure);
+    if (cost === null || cost <= 0) return;
+    const btn = document.createElement('button');
+    btn.className = 'upgrade-btn';
+    btn.textContent = `Repair (${cost}g)`;
+    btn.disabled = !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
+    btn.addEventListener('click', () => {
+      if (this.game.placementSystem.manualRepair(structure)) {
+        if (structure.type === 'tower') this._showTowerUpgrades(structure);
+        else if (structure.type === 'farm') this._showFarmUpgrades(structure);
+        else this._showSupportUpgrades(structure);
+      }
+    });
+    this.elements.upgradeButtons.appendChild(btn);
   }
 
   _updateUpgradeButtons() {

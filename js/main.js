@@ -29,7 +29,8 @@ try {
     lastFrameTime = time;
 
     game.update(time);
-    floatingTexts.update(dt);
+    const speed = game.speedController.getEffectiveSpeed();
+    floatingTexts.update(dt * speed);
 
     for (const effect of game.consumeHarvestEffects()) {
       floatingTexts.add(effect.x, effect.y, effect.text, '#2e7d4f', 20);

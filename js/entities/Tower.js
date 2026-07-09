@@ -12,6 +12,7 @@ import {
   MASTERY_CONFIG,
   MASTER_UPGRADES,
 } from '../config/towerMasteryConfig.js';
+import { initStructureHealth } from './StructureHealth.js';
 
 let nextTowerId = 1;
 
@@ -40,6 +41,7 @@ export class Tower {
     this.masteryXP = 0;
     this.masterUnlocked = false;
     this.shotsFired = 0;
+    initStructureHealth(this, 'tower');
   }
 
   get masteryLevel() {

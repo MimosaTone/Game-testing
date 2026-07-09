@@ -27,7 +27,9 @@ export class Enemy {
     this.health = this.maxHealth;
     this.baseSpeed = def.speed * speedMult * 60;
     this.speed = this.baseSpeed;
-    this.goldReward = Math.round(def.goldReward * goldMult * (def.isBoss ? 1.5 : 1));
+    this.goldReward = Math.round(
+      def.goldReward * goldMult * (def.isBoss ? 1.5 * (scaling.bossGoldMult ?? 1) : 1)
+    );
     this.armor = Math.min(0.5, (def.innateArmor || 0) + (scaling.armor || 0));
     this.regenPerSec = (def.innateRegen || 0) + (scaling.regenPerSec || 0);
     this.distance = 0;
@@ -45,6 +47,14 @@ export class Enemy {
     this.abilityTimer = 0;
     this.surgeActive = false;
     this.shieldActive = false;
+    this.attackCooldown = 0;
+    this.siegePaused = false;
+
+    if (scaling.bossEmpowered && def.isBoss) {
+      this.maxHealth = Math.round(this.maxHealth * 1.25);
+      this.health = this.maxHealth;
+      this.regenPerSec *= 1.3;
+    }
   }
 
   update(dt) {
@@ -194,6 +204,10 @@ export class Enemy {
 
   get isSlowed() {
     return this.slowTimer > 0;
+  }
+
+  get isFlying() {
+    return !!this.definition.isFlying;
   }
 
   get isBurning() {

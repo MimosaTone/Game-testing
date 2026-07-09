@@ -156,8 +156,19 @@ export class SupportEffectManager {
     const def = SUPPORT_TYPES.repair_station;
     const idx = support.level - 1;
     return {
-      healAmount: def.perLevel.healAmount[idx],
-      healInterval: def.perLevel.healInterval[idx],
+      healAmount: def.perLevel.lifeHealAmount[idx],
+      healInterval: def.perLevel.lifeHealInterval[idx],
+    };
+  }
+
+  getStructureRepairStats(support) {
+    const def = SUPPORT_TYPES.repair_station;
+    const idx = support.level - 1;
+    return {
+      radius: def.perLevel.radius[idx],
+      waveRepairAmount: def.perLevel.waveRepairAmount[idx],
+      combatRepairPerSec: def.perLevel.combatRepairPerSec[idx],
+      maxSimultaneous: def.perLevel.maxSimultaneous[idx],
     };
   }
 

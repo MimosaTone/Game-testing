@@ -53,6 +53,22 @@ export class Renderer {
   drawBuildSpots(placementSystem, hoveredCell, selectedBuildType) {
     const { ctx, tileSize, colors } = this;
 
+    for (const [key, data] of placementSystem.destroyedSpots) {
+      const [x, y] = key.split(',').map(Number);
+      ctx.fillStyle = 'rgba(80, 80, 80, 0.45)';
+      ctx.fillRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8);
+      ctx.strokeStyle = '#c0392b';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8);
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#c0392b';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✕', x * tileSize + tileSize / 2, y * tileSize + tileSize / 2);
+    }
+
     for (const key of placementSystem.buildSpots) {
       const [x, y] = key.split(',').map(Number);
       const occupied = placementSystem.isOccupied(x, y);
@@ -153,6 +169,21 @@ export class Renderer {
       ctx.font = 'bold 9px sans-serif';
       ctx.fillText(`M${tower.masteryLevel}`, x - 12, y - 11);
     }
+
+    this._drawStructureHealthBar(x, y + 18, tower);
+  }
+
+  _drawStructureHealthBar(x, y, structure) {
+    if (!structure?.maxHealth || structure.destroyed) return;
+    if (structure.health >= structure.maxHealth) return;
+    const { ctx } = this;
+    const w = 30;
+    const h = 4;
+    const pct = structure.health / structure.maxHealth;
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(x - w / 2, y, w, h);
+    ctx.fillStyle = pct > 0.5 ? '#43a047' : pct > 0.25 ? '#f9a825' : '#e53935';
+    ctx.fillRect(x - w / 2, y, w * pct, h);
   }
 
   drawSupports(supports, selectedStructure, supportEffects) {
@@ -214,6 +245,8 @@ export class Renderer {
       ctx.font = '8px sans-serif';
       ctx.fillText(support.branch[0].toUpperCase(), x + 14, y - 14);
     }
+
+    this._drawStructureHealthBar(x, y + 20, support);
   }
 
   drawFarms(farms, selectedStructure) {
@@ -258,6 +291,7 @@ export class Renderer {
     ctx.fillStyle = '#2c3e50';
     ctx.font = '12px sans-serif';
     ctx.fillText(`L${farm.level}`, x, y + 12);
+    this._drawStructureHealthBar(x, y + 20, farm);
   }
 
   drawEnemies(enemies) {
@@ -270,6 +304,11 @@ export class Renderer {
   _drawEnemy(enemy) {
     const { ctx } = this;
     const size = enemy.size;
+
+    if (enemy.isFlying) {
+      ctx.save();
+      ctx.translate(0, -10);
+    }
 
     ctx.fillStyle = enemy.color;
     ctx.strokeStyle = '#fff';
@@ -352,6 +391,8 @@ export class Renderer {
     ctx.fillRect(enemy.x - barWidth / 2, enemy.y - size - 10, barWidth, barHeight);
     ctx.fillStyle = healthPct > 0.5 ? '#2ecc71' : healthPct > 0.25 ? '#f1c40f' : '#e74c3c';
     ctx.fillRect(enemy.x - barWidth / 2, enemy.y - size - 10, barWidth * healthPct, barHeight);
+
+    if (enemy.isFlying) ctx.restore();
   }
 
   drawProjectiles(projectiles) {

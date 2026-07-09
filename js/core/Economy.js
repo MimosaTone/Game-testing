@@ -53,7 +53,11 @@ export class Economy {
       final = Math.round(amount * this.getGoldMultiplier());
       if (options.isBoss) {
         const bossMult = this.supportEffects?.global.bossRewardMult ?? 1;
-        final = Math.round(final * bossMult);
+        const challengeBoss = this._challengeFx?.bossGoldMult ?? 1;
+        final = Math.round(final * bossMult * challengeBoss);
+      }
+      if (options.rewardMult) {
+        final = Math.round(final * options.rewardMult);
       }
     }
     this.gold += final;
@@ -107,7 +111,8 @@ export class Economy {
   collectWaveIncome() {
     const farmIncome = this.incomePerWave;
     const mods = this.prestigeManager.getModifiers();
-    const waveBonus = Math.round(ECONOMY_CONFIG.waveClearBonus(this.waveNumber) * mods.waveBonusMult);
+    let waveBonus = Math.round(ECONOMY_CONFIG.waveClearBonus(this.waveNumber) * mods.waveBonusMult);
+    waveBonus = Math.round(waveBonus * (this._challengeRewardMult ?? 1));
 
     let bankInterest = 0;
     if (this.supportEffects) {
@@ -128,6 +133,11 @@ export class Economy {
 
   setSupportsForBank(supports) {
     this._supports = supports;
+  }
+
+  setChallengeEffects(fx, rewardMult = 1) {
+    this._challengeFx = fx;
+    this._challengeRewardMult = rewardMult;
   }
 
   trackKillGold(amount) {

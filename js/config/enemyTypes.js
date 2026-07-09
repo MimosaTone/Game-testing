@@ -102,6 +102,68 @@ export const ENEMY_TYPES = {
     innateRegen: 6,
     bossAbility: 'damage_shield',
   },
+
+  /** Siege — attacks towers from long range while advancing slowly. */
+  siege: {
+    id: 'siege',
+    name: 'Siege Mauler',
+    color: '#5d4037',
+    baseHealth: 95,
+    speed: 0.75,
+    goldReward: 38,
+    size: 18,
+    innateArmor: 0.15,
+    attackBehavior: 'siege',
+    structureDamage: 14,
+    attackRange: 120,
+    attackInterval: 2.2,
+  },
+
+  /** Bomber — explodes on death, damaging nearby structures. */
+  bomber: {
+    id: 'bomber',
+    name: 'Bomber',
+    color: '#ff6f00',
+    baseHealth: 42,
+    speed: 1.5,
+    goldReward: 22,
+    size: 14,
+    attackBehavior: 'bomber',
+    explosionRadius: 90,
+    explosionDamage: 35,
+  },
+
+  /** Saboteur — targets farms and support buildings. */
+  saboteur: {
+    id: 'saboteur',
+    name: 'Saboteur',
+    color: '#6a1b9a',
+    baseHealth: 38,
+    speed: 2.2,
+    goldReward: 26,
+    size: 12,
+    attackBehavior: 'saboteur',
+    structureDamage: 18,
+    attackRange: 50,
+    attackInterval: 1.4,
+    detectRange: 140,
+  },
+
+  /** Skyrift — flying unit that strikes towers while passing overhead. */
+  skyrift: {
+    id: 'skyrift',
+    name: 'Skyrift',
+    color: '#0288d1',
+    baseHealth: 65,
+    speed: 2.0,
+    goldReward: 32,
+    size: 13,
+    attackBehavior: 'flyer',
+    structureDamage: 10,
+    attackRange: 70,
+    attackInterval: 1.8,
+    isFlying: true,
+  },
 };
 
 /** Boss types cycle every 15 waves. */

@@ -2,9 +2,11 @@ import { BUILD_SPOTS } from '../config/gameConfig.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES } from '../config/supportConfig.js';
+import { REBUILD_COST_MULT } from '../config/structureHealthConfig.js';
 import { Tower } from '../entities/Tower.js';
 import { Farm } from '../entities/Farm.js';
 import { Support } from '../entities/Support.js';
+import { restoreStructureHealth, repairStructure, getRepairCost } from '../entities/StructureHealth.js';
 import { Events } from '../core/EventBus.js';
 
 /**
@@ -17,11 +19,40 @@ export class PlacementSystem {
     this.towers = [];
     this.farms = [];
     this.supports = [];
-    this.buildSpots = new Set(BUILD_SPOTS.map((s) => `${s.x},${s.y}`));
+    this.allBuildSpots = BUILD_SPOTS.map((s) => `${s.x},${s.y}`);
+    this.buildSpots = new Set(this.allBuildSpots);
     this.occupied = new Map();
+    this.destroyedSpots = new Map();
     this.selectedBuildType = null;
     this.selectedStructure = null;
     this.bossesDefeated = 0;
+    this.challengeFx = null;
+  }
+
+  setChallengeEffects(fx) {
+    this.challengeFx = fx;
+    this._applyBuildSpotLimit();
+  }
+
+  _applyBuildSpotLimit() {
+    const mult = this.challengeFx?.buildSpotMult ?? 1;
+    const targetCount = Math.max(12, Math.round(this.allBuildSpots.length * mult));
+    if (targetCount >= this.allBuildSpots.length) {
+      this.buildSpots = new Set(this.allBuildSpots);
+      return;
+    }
+    const spots = [...this.allBuildSpots];
+    const seeded = spots
+      .map((s, i) => ({ s, h: this._hashSpot(s, i) }))
+      .sort((a, b) => a.h - b.h)
+      .slice(0, targetCount)
+      .map((x) => x.s);
+    this.buildSpots = new Set(seeded);
+  }
+
+  _hashSpot(key, i) {
+    const [x, y] = key.split(',').map(Number);
+    return ((x * 73856093) ^ (y * 19349663) ^ (i * 83492791)) >>> 0;
   }
 
   isBuildSpot(gridX, gridY) {
@@ -32,6 +63,10 @@ export class PlacementSystem {
     return this.occupied.has(`${gridX},${gridY}`);
   }
 
+  getDestroyedAt(gridX, gridY) {
+    return this.destroyedSpots.get(`${gridX},${gridY}`) || null;
+  }
+
   setBuildType(typeId) {
     this.selectedBuildType = typeId;
     this.selectedStructure = null;
@@ -40,7 +75,7 @@ export class PlacementSystem {
 
   selectStructure(gridX, gridY) {
     const key = `${gridX},${gridY}`;
-    const structure = this.occupied.get(key) || null;
+    const structure = this.occupied.get(key) || this.destroyedSpots.get(key) || null;
     this.selectedStructure = structure;
     this.selectedBuildType = null;
     this.eventBus.emit(Events.STRUCTURE_SELECTED, structure);
@@ -69,7 +104,20 @@ export class PlacementSystem {
     return null;
   }
 
+  getRebuildCost(destroyedData) {
+    const base = this.getBuildCost(destroyedData.typeId);
+    if (base === null) return null;
+    return Math.max(1, Math.round(base * REBUILD_COST_MULT));
+  }
+
   tryPlace(gridX, gridY) {
+    const key = `${gridX},${gridY}`;
+    const destroyed = this.destroyedSpots.get(key);
+
+    if (destroyed) {
+      return this._rebuildAt(gridX, gridY, destroyed);
+    }
+
     if (!this.isBuildSpot(gridX, gridY) || this.isOccupied(gridX, gridY)) {
       return false;
     }
@@ -87,6 +135,42 @@ export class PlacementSystem {
     }
 
     return false;
+  }
+
+  _rebuildAt(gridX, gridY, data) {
+    if (this.selectedBuildType !== data.typeId) return false;
+    const cost = this.getRebuildCost(data);
+    if (!this.economy.spend(cost)) return false;
+
+    const key = `${gridX},${gridY}`;
+    this.destroyedSpots.delete(key);
+
+    let structure;
+    if (data.structureType === 'tower') {
+      structure = new Tower(data.typeId, gridX, gridY);
+      structure.upgradeTier = data.upgradeTier || 0;
+      structure.masteryXP = data.masteryXP || 0;
+      structure.masterUnlocked = data.masterUnlocked || false;
+      this.towers.push(structure);
+      this.eventBus.emit(Events.TOWER_PLACED, structure);
+    } else if (data.structureType === 'farm') {
+      structure = new Farm(gridX, gridY);
+      structure.level = data.level || 1;
+      this.farms.push(structure);
+      this.economy.recalculateIncome(this.farms);
+      this.eventBus.emit(Events.FARM_PLACED, structure);
+    } else {
+      structure = new Support(data.typeId, gridX, gridY);
+      structure.level = data.level || 1;
+      structure.branch = data.branch || null;
+      structure.storedGold = data.storedGold || 0;
+      this.supports.push(structure);
+      this.eventBus.emit(Events.SUPPORT_PLACED, structure);
+    }
+
+    this.occupied.set(key, structure);
+    this.eventBus.emit(Events.STRUCTURE_REBUILT, structure);
+    return true;
   }
 
   _placeTower(typeId, gridX, gridY) {
@@ -123,9 +207,18 @@ export class PlacementSystem {
     return true;
   }
 
+  manualRepair(structure) {
+    const cost = getRepairCost(structure);
+    if (cost === null || cost <= 0) return false;
+    if (!this.economy.spend(cost)) return false;
+    const healed = repairStructure(structure, structure.maxHealth);
+    this.eventBus.emit(Events.STRUCTURE_REPAIRED, structure);
+    return healed > 0;
+  }
+
   upgradeSelected(stat, branch = null) {
     const structure = this.selectedStructure;
-    if (!structure) return false;
+    if (!structure || structure.destroyed) return false;
 
     const cost = this.economy.getUpgradeCost(structure, stat);
     if (cost === null || !this.economy.spend(cost)) return false;
@@ -146,7 +239,7 @@ export class PlacementSystem {
   }
 
   depositToBank(support, amount) {
-    if (support.typeId !== 'bank' || amount <= 0) return false;
+    if (support.typeId !== 'bank' || amount <= 0 || support.destroyed) return false;
     const capacity = this.economy.supportEffects.getBankStats(support).capacity;
     const space = capacity - support.storedGold;
     const deposit = Math.min(amount, space, this.economy.gold);
@@ -158,7 +251,7 @@ export class PlacementSystem {
   }
 
   withdrawFromBank(support, amount) {
-    if (support.typeId !== 'bank' || amount <= 0) return false;
+    if (support.typeId !== 'bank' || amount <= 0 || support.destroyed) return false;
     const withdraw = Math.min(amount, support.storedGold);
     if (withdraw <= 0) return false;
     support.storedGold -= withdraw;
@@ -167,43 +260,112 @@ export class PlacementSystem {
     return true;
   }
 
-  loadStructures(towerData, farmData, supportData = [], bossesDefeated = 0) {
+  recordDestroyed(structure) {
+    const key = `${structure.gridX},${structure.gridY}`;
+    if (structure.type === 'tower') {
+      this.towers = this.towers.filter((t) => t.id !== structure.id);
+    } else if (structure.type === 'farm') {
+      this.farms = this.farms.filter((f) => f.id !== structure.id);
+    } else if (structure.type === 'support') {
+      this.supports = this.supports.filter((s) => s.id !== structure.id);
+    }
+    this.occupied.delete(key);
+
+    const data = {
+      structureType: structure.type,
+      typeId: structure.typeId,
+      gridX: structure.gridX,
+      gridY: structure.gridY,
+      upgradeTier: structure.upgradeTier,
+      masteryXP: structure.masteryXP,
+      masterUnlocked: structure.masterUnlocked,
+      level: structure.level,
+      branch: structure.branch,
+      storedGold: structure.storedGold,
+    };
+    this.destroyedSpots.set(key, data);
+  }
+
+  loadStructures(towerData, farmData, supportData = [], bossesDefeated = 0, destroyedData = []) {
     this.towers = [];
     this.farms = [];
     this.supports = [];
     this.occupied.clear();
+    this.destroyedSpots.clear();
     this.selectedBuildType = null;
     this.selectedStructure = null;
     this.bossesDefeated = bossesDefeated;
 
     for (const t of towerData) {
+      if (t.destroyed) {
+        this.destroyedSpots.set(`${t.gridX},${t.gridY}`, {
+          structureType: 'tower',
+          typeId: t.typeId,
+          gridX: t.gridX,
+          gridY: t.gridY,
+          upgradeTier: t.upgradeTier,
+          masteryXP: t.masteryXP,
+          masterUnlocked: t.masterUnlocked,
+        });
+        continue;
+      }
       if (!TOWER_TYPES[t.typeId]) continue;
       const tower = new Tower(t.typeId, t.gridX, t.gridY);
       tower.upgradeTier = t.upgradeTier || 0;
       tower.masteryXP = t.masteryXP || 0;
       tower.masterUnlocked = t.masterUnlocked || false;
+      restoreStructureHealth(tower, t.health, t.maxHealth, false);
       this.towers.push(tower);
       this.occupied.set(`${t.gridX},${t.gridY}`, tower);
     }
 
     for (const f of farmData) {
+      if (f.destroyed) {
+        this.destroyedSpots.set(`${f.gridX},${f.gridY}`, {
+          structureType: 'farm',
+          typeId: FARM_CONFIG.id,
+          gridX: f.gridX,
+          gridY: f.gridY,
+          level: f.level,
+        });
+        continue;
+      }
       const farm = new Farm(f.gridX, f.gridY);
       farm.level = f.level || 1;
+      restoreStructureHealth(farm, f.health, f.maxHealth, false);
       this.farms.push(farm);
       this.occupied.set(`${f.gridX},${f.gridY}`, farm);
     }
 
     for (const s of supportData) {
+      if (s.destroyed) {
+        this.destroyedSpots.set(`${s.gridX},${s.gridY}`, {
+          structureType: 'support',
+          typeId: s.typeId,
+          gridX: s.gridX,
+          gridY: s.gridY,
+          level: s.level,
+          branch: s.branch,
+          storedGold: s.storedGold,
+        });
+        continue;
+      }
       if (!SUPPORT_TYPES[s.typeId]) continue;
       const support = new Support(s.typeId, s.gridX, s.gridY);
       support.level = s.level || 1;
       support.branch = s.branch || null;
       support.storedGold = s.storedGold || 0;
+      restoreStructureHealth(support, s.health, s.maxHealth, false);
       this.supports.push(support);
       this.occupied.set(`${s.gridX},${s.gridY}`, support);
     }
 
     this.economy.recalculateIncome(this.farms);
+
+    for (const d of destroyedData) {
+      const key = d.key || `${d.gridX},${d.gridY}`;
+      this.destroyedSpots.set(key, d);
+    }
   }
 
   getPlacementCost() {
@@ -216,9 +378,11 @@ export class PlacementSystem {
     this.farms = [];
     this.supports = [];
     this.occupied.clear();
+    this.destroyedSpots.clear();
     this.selectedBuildType = null;
     this.selectedStructure = null;
     this.bossesDefeated = 0;
+    this._applyBuildSpotLimit();
     this.economy.recalculateIncome([]);
   }
 }

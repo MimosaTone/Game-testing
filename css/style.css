@@ -720,3 +720,70 @@ body {
 .branch-btn {
   margin-bottom: 6px;
 }
+
+.speed-btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid #4a7ba7;
+  border-radius: 8px;
+  background: #fff;
+  color: #4a7ba7;
+  cursor: pointer;
+  min-width: 48px;
+}
+
+.speed-btn.forced-normal {
+  border-color: #e67e22;
+  color: #e67e22;
+}
+
+.challenge-hint {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-bottom: 8px;
+}
+
+.challenge-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.challenge-preset-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 1px solid #b8c4bf;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.challenge-preset-btn.active {
+  background: #4a7ba7;
+  color: #fff;
+  border-color: #4a7ba7;
+}
+
+.challenge-mod-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  padding: 5px 0;
+  border-bottom: 1px solid #ecf0f1;
+  cursor: pointer;
+}
+
+.challenge-mod-name { font-weight: 600; color: #2c3e50; }
+.challenge-mod-diff { color: #c0392b; }
+.challenge-mod-bonus { color: #2e7d4f; font-weight: 600; }
+
+.challenge-reward {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e67e22;
+}

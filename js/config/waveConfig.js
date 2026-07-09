@@ -7,29 +7,69 @@ export function isBossWave(waveNumber) {
 
 /**
  * Boss wave composition — one unique boss plus supporting minions.
+ * @param {object} challengeFx - optional challenge effects
  */
-export function generateBossWave(waveNumber) {
+export function generateBossWave(waveNumber, challengeFx = {}) {
   const cycle = Math.floor(waveNumber / 15) - 1;
   const bossType = BOSS_ROTATION[cycle % BOSS_ROTATION.length];
   const escort = 3 + Math.floor(waveNumber / 15) * 2;
+  const waves = [];
 
-  return [
-    { type: bossType, count: 1, spawnDelayMs: 0, isBoss: true },
+  if (challengeFx.doubleBoss) {
+    waves.push({ type: bossType, count: 2, spawnDelayMs: 0, isBoss: true });
+  } else {
+    waves.push({ type: bossType, count: 1, spawnDelayMs: 0, isBoss: true });
+  }
+
+  waves.push(
     { type: 'drift', count: escort, spawnDelayMs: 700 },
     { type: 'husk', count: Math.floor(escort / 2), spawnDelayMs: 1100 },
-  ];
+  );
+
+  return waves;
+}
+
+/** Inject special structure-attacking enemies based on wave and challenges. */
+function injectSpecialEnemies(waves, waveNumber, challengeFx) {
+  if (waveNumber < 6 && !challengeFx.spawnSpecialEnemies) return waves;
+
+  const mult = challengeFx.eliteSpawnMult ?? 1;
+  const extra = [];
+
+  if (waveNumber >= 6 || challengeFx.spawnSpecialEnemies) {
+    extra.push({ type: 'bomber', count: Math.ceil(1 * mult), spawnDelayMs: 1200 });
+  }
+  if (waveNumber >= 9 || challengeFx.spawnSpecialEnemies) {
+    extra.push({ type: 'saboteur', count: Math.ceil(1 * mult), spawnDelayMs: 1400 });
+  }
+  if (waveNumber >= 12) {
+    extra.push({ type: 'siege', count: Math.ceil(1 * mult), spawnDelayMs: 2000 });
+  }
+  if (waveNumber >= 15) {
+    extra.push({ type: 'skyrift', count: Math.ceil(1 * mult), spawnDelayMs: 1600 });
+  }
+
+  return [...waves, ...extra];
+}
+
+function scaleWaveGroups(waves, challengeFx) {
+  const countMult = challengeFx.enemyCountMult ?? 1;
+  if (countMult === 1) return waves;
+  return waves.map((g) => ({
+    ...g,
+    count: Math.max(1, Math.round(g.count * countMult)),
+  }));
 }
 
 /**
  * Wave composition generator.
- * Early waves stay gentle; late waves demand upgraded towers and strong economy.
  */
-export function generateWave(waveNumber) {
+export function generateWave(waveNumber, challengeFx = {}) {
   if (isBossWave(waveNumber)) {
-    return generateBossWave(waveNumber);
+    return scaleWaveGroups(generateBossWave(waveNumber, challengeFx), challengeFx);
   }
 
-  const waves = [];
+  let waves = [];
 
   if (waveNumber === 1) {
     waves.push({ type: 'mote', count: 5, spawnDelayMs: 1000 });
@@ -76,11 +116,11 @@ export function generateWave(waveNumber) {
     );
   }
 
-  return waves.filter((g) => g.count > 0);
+  return scaleWaveGroups(injectSpecialEnemies(waves.filter((g) => g.count > 0), waveNumber, challengeFx), challengeFx);
 }
 
-/** Scaling curve: approachable waves 1–5, steep ramp after wave 10. */
-export function getWaveScaling(waveNumber) {
+/** Scaling curve with optional challenge multipliers. */
+export function getWaveScaling(waveNumber, challengeFx = {}) {
   let healthMultiplier;
   let speedMultiplier;
 
@@ -113,11 +153,13 @@ export function getWaveScaling(waveNumber) {
     waveNumber >= 9 ? 0.8 : 0;
 
   return {
-    healthMultiplier: healthMultiplier * bossHealthMult,
-    speedMultiplier,
-    goldMultiplier: 1 + (waveNumber - 1) * 0.075,
+    healthMultiplier: healthMultiplier * bossHealthMult * (challengeFx.enemyHealthMult ?? 1),
+    speedMultiplier: speedMultiplier * (challengeFx.enemySpeedMult ?? 1),
+    goldMultiplier: (1 + (waveNumber - 1) * 0.075) * (challengeFx.killGoldMult ?? 1),
+    bossGoldMult: challengeFx.bossGoldMult ?? 1,
     armor,
     regenPerSec,
     isBossWave: isBossWave(waveNumber),
+    bossEmpowered: challengeFx.bossEmpowered ?? false,
   };
 }

@@ -5,7 +5,7 @@ const DEFAULT_META = {
   upgrades: {},
   totalPrestiges: 0,
   bestWave: 0,
-  settings: { autoStartWaves: false },
+  settings: { autoStartWaves: false, preferredSpeed: 1 },
 };
 
 /** Validate saved run payload before use. */
@@ -35,6 +35,32 @@ function migrateV1ToV2(data) {
   return data;
 }
 
+function migrateV2ToV3(data) {
+  if (data.version !== 2) return data;
+  if (data.run) {
+    data.run.challenge = data.run.challenge || { active: [], presetId: 'normal', locked: false };
+    const addHealth = (s) => {
+      if (s.destroyed) return;
+      s.health = s.health ?? undefined;
+      s.maxHealth = s.maxHealth ?? undefined;
+    };
+    for (const t of data.run.towers) addHealth(t);
+    for (const f of data.run.farms) addHealth(f);
+    for (const s of data.run.supports) addHealth(s);
+  }
+  if (data.meta?.settings) {
+    data.meta.settings.preferredSpeed = data.meta.settings.preferredSpeed ?? 1;
+  }
+  data.version = 3;
+  return data;
+}
+
+function migrateSave(data) {
+  if (data.version === 1) data = migrateV1ToV2(data);
+  if (data.version === 2) data = migrateV2ToV3(data);
+  return data;
+}
+
 /**
  * Serializes and persists game state to localStorage.
  * Only saves run data during the planning phase (between waves).
@@ -53,7 +79,7 @@ export class SaveManager {
       const raw = localStorage.getItem(SAVE_CONFIG.storageKey);
       if (raw) {
         let parsed = JSON.parse(raw);
-        if (parsed.version === 1) parsed = migrateV1ToV2(parsed);
+        parsed = migrateSave(parsed);
         if (parsed.version === SAVE_CONFIG.version) return parsed;
       }
     } catch { /* ignore corrupt save */ }
@@ -139,6 +165,7 @@ export class SaveManager {
       bossesDefeated: game.placementSystem.bossesDefeated,
       wavesSinceRepair: game.wavesSinceRepair,
       research: game.researchManager.toRunData(),
+      challenge: game.challengeManager.toRunData(),
       towers: game.placementSystem.towers.map((t) => ({
         typeId: t.typeId,
         gridX: t.gridX,
@@ -146,11 +173,15 @@ export class SaveManager {
         upgradeTier: t.upgradeTier,
         masteryXP: t.masteryXP,
         masterUnlocked: t.masterUnlocked,
+        health: t.health,
+        maxHealth: t.maxHealth,
       })),
       farms: game.placementSystem.farms.map((f) => ({
         gridX: f.gridX,
         gridY: f.gridY,
         level: f.level,
+        health: f.health,
+        maxHealth: f.maxHealth,
       })),
       supports: game.placementSystem.supports.map((s) => ({
         typeId: s.typeId,
@@ -159,6 +190,12 @@ export class SaveManager {
         level: s.level,
         branch: s.branch,
         storedGold: s.storedGold,
+        health: s.health,
+        maxHealth: s.maxHealth,
+      })),
+      destroyed: [...game.placementSystem.destroyedSpots.entries()].map(([key, d]) => ({
+        key,
+        ...d,
       })),
     };
   }
@@ -170,7 +207,10 @@ export class SaveManager {
       upgrades: { ...pm.data.upgrades },
       totalPrestiges: pm.data.totalPrestiges,
       bestWave: pm.data.bestWave,
-      settings: { autoStartWaves: pm.autoStartWaves },
+      settings: {
+        autoStartWaves: pm.autoStartWaves,
+        preferredSpeed: game.speedController.preferredSpeed,
+      },
     };
   }
 

@@ -40,6 +40,7 @@
         <span class="stat-value research" id="research-value">0 RP</span>
       </div>
       <div class="hud-controls">
+        <button id="speed-btn" class="speed-btn" title="Cycle game speed">1x</button>
         <label class="toggle-label" title="Automatically start the next wave after a short delay">
           <input type="checkbox" id="auto-start-toggle">
           Auto-start waves
@@ -66,6 +67,14 @@
         </section>
 
         <section id="wave-summary" class="hidden"></section>
+
+        <section id="challenge-section">
+          <h2>Challenges</h2>
+          <p class="challenge-hint" id="challenge-hint">Optional modifiers for bonus rewards</p>
+          <div id="challenge-presets" class="challenge-presets"></div>
+          <div id="challenge-modifiers" class="challenge-modifiers"></div>
+          <div id="challenge-reward" class="challenge-reward">Reward multiplier: 1.0x</div>
+        </section>
 
         <section id="research-section">
           <h2>Research</h2>

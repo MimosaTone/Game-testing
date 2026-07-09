@@ -59,4 +59,10 @@ export const Events = {
   BANK_CHANGED: 'bank_changed',
   MASTERY_GAINED: 'mastery_gained',
   LIVES_REPAIRED: 'lives_repaired',
+  CHALLENGE_CHANGED: 'challenge_changed',
+  SPEED_CHANGED: 'speed_changed',
+  STRUCTURE_DAMAGED: 'structure_damaged',
+  STRUCTURE_DESTROYED: 'structure_destroyed',
+  STRUCTURE_REPAIRED: 'structure_repaired',
+  STRUCTURE_REBUILT: 'structure_rebuilt',
 };

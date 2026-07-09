@@ -1,4 +1,5 @@
 import { SUPPORT_TYPES } from '../config/supportConfig.js';
+import { initStructureHealth } from './StructureHealth.js';
 
 let nextSupportId = 1;
 
@@ -22,6 +23,7 @@ export class Support {
     /** Bank-only: gold stored in vault */
     this.storedGold = 0;
     this.pulse = 0;
+    initStructureHealth(this, 'support');
   }
 
   canUpgrade() {

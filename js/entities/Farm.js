@@ -1,4 +1,5 @@
 import { FARM_CONFIG } from '../config/farmConfig.js';
+import { initStructureHealth } from './StructureHealth.js';
 
 let nextFarmId = 1;
 
@@ -15,6 +16,7 @@ export class Farm {
     this.gridY = gridY;
     this.level = 1;
     this.harvestPulse = 0;
+    initStructureHealth(this, 'farm');
   }
 
   getBaseIncome() {

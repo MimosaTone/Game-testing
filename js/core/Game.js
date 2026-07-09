@@ -4,7 +4,9 @@ import { WaveManager } from './WaveManager.js';
 import { PrestigeManager } from './PrestigeManager.js';
 import { SaveManager } from './SaveManager.js';
 import { ResearchManager } from './ResearchManager.js';
-import { SupportEffectManager } from './SupportEffectManager.js';
+import { ChallengeManager } from './ChallengeManager.js';
+import { SpeedController } from './SpeedController.js';
+import { StructureCombatSystem } from '../systems/StructureCombatSystem.js';
 import { Path } from '../entities/Path.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
 import { PlacementSystem } from '../systems/PlacementSystem.js';
@@ -32,12 +34,18 @@ export class Game {
     this.prestigeManager = new PrestigeManager(this.eventBus);
     this.prestigeManager.loadFromMeta(this.saveManager.meta);
     this.researchManager = new ResearchManager(this.eventBus);
+    this.challengeManager = new ChallengeManager(this.eventBus);
+    this.speedController = new SpeedController(this.eventBus, this.prestigeManager);
+    this.speedController.loadFromSettings(this.saveManager.meta.settings);
     this.supportEffects = new SupportEffectManager();
     this.economy = new Economy(this.eventBus, this.prestigeManager);
     this.economy.setSupportEffects(this.supportEffects);
     this.waveManager = new WaveManager(this.eventBus, this.path);
     this.combatSystem = new CombatSystem(this.eventBus);
     this.placementSystem = new PlacementSystem(this.eventBus, this.economy);
+    this.structureCombat = new StructureCombatSystem(this.eventBus);
+    this.structureCombat.setPlacementSystem(this.placementSystem);
+    this.structureCombat.setSupportEffects(this.supportEffects);
 
     this.phase = Phase.PLANNING;
     this.lives = this._startingLives();
@@ -50,7 +58,19 @@ export class Game {
     this.wavesSinceRepair = 0;
 
     this._setupEventHandlers();
+    this._applyChallengeEffects();
     this._refreshSupportEffects();
+  }
+
+  _applyChallengeEffects() {
+    const fx = this.challengeManager.getEffects();
+    this.placementSystem.setChallengeEffects(fx);
+    this.waveManager.setChallengeEffects(fx);
+    this.economy.setChallengeEffects(fx, this.challengeManager.getRewardMultiplier());
+  }
+
+  getChallengeRewardMult() {
+    return this.challengeManager.getRewardMultiplier();
   }
 
   _startingGold() {
@@ -60,7 +80,9 @@ export class Game {
   }
 
   _startingLives() {
-    return GAME_CONFIG.startingLives + this.prestigeManager.getModifiers().bonusStartingLives;
+    const base = GAME_CONFIG.startingLives + this.prestigeManager.getModifiers().bonusStartingLives;
+    const reduction = this.challengeManager.getEffects().livesReduction || 0;
+    return Math.max(5, base - reduction);
   }
 
   _refreshSupportEffects() {
@@ -98,12 +120,16 @@ export class Game {
         this.placementSystem.bossesDefeated++;
       }
 
-      const earned = this.economy.earn(enemy.goldReward, { isBoss });
+      this.structureCombat.onEnemyKilled(enemy);
+
+      const rewardMult = this.getChallengeRewardMult();
+      const earned = this.economy.earn(enemy.goldReward, { isBoss, rewardMult });
       this.economy.trackKillGold(earned);
       this.waveManager.removeEnemy(enemy);
 
-      if (killerTower) {
-        const xp = isBoss ? MASTERY_CONFIG.xpPerBossKill : MASTERY_CONFIG.xpPerKill;
+      if (killerTower && !killerTower.destroyed) {
+        const baseXp = isBoss ? MASTERY_CONFIG.xpPerBossKill : MASTERY_CONFIG.xpPerKill;
+        const xp = Math.round(baseXp * rewardMult);
         const result = killerTower.awardMasteryXP(xp);
         if (result.newLevel > result.prevLevel || result.unlockedMaster) {
           this.eventBus.emit(Events.MASTERY_GAINED, { tower: killerTower, ...result });
@@ -163,13 +189,33 @@ export class Game {
       this.saveGame();
     });
 
+    this.eventBus.on(Events.STRUCTURE_DESTROYED, () => {
+      this.combatSystem.setTowers(this.placementSystem.towers);
+      this._refreshSupportEffects();
+      this.saveGame();
+    });
+
+    this.eventBus.on(Events.CHALLENGE_CHANGED, () => {
+      this._applyChallengeEffects();
+      this._refreshSupportEffects();
+      if (this.phase === Phase.PLANNING && this.waveManager.waveNumber === 0) {
+        this.lives = this._startingLives();
+        this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
+      }
+      this.saveGame();
+    });
+
     this.eventBus.on(Events.SETTINGS_CHANGED, () => {
       this.saveGame();
     });
   }
 
   _refreshFarmIncome() {
-    const fn = (gx, gy) => this.supportEffects.getFarmMods(this.placementSystem.supports, gx, gy);
+    const fn = (gx, gy) => {
+      let mult = this.supportEffects.getFarmMods(this.placementSystem.supports, gx, gy);
+      mult *= this.challengeManager.getEffects().farmIncomeMult ?? 1;
+      return mult;
+    };
     this.economy.recalculateIncome(this.placementSystem.farms, fn);
   }
 
@@ -209,6 +255,8 @@ export class Game {
     this.wavesSinceRepair = run.wavesSinceRepair || 0;
 
     this.researchManager.loadFromRun(run.research);
+    this.challengeManager.loadFromRun(run.challenge);
+    this._applyChallengeEffects();
     this.waveManager.reset();
     this.waveManager.waveNumber = run.wave;
     this.combatSystem.reset();
@@ -217,8 +265,10 @@ export class Game {
       run.towers,
       run.farms,
       run.supports || [],
-      run.bossesDefeated || 0
+      run.bossesDefeated || 0,
+      run.destroyed || []
     );
+    this.speedController.loadFromSettings(this.saveManager.meta.settings);
     this.placementSystem.clearSelection();
     this._refreshSupportEffects();
     this._applyPrestigeToTowers();
@@ -240,6 +290,8 @@ export class Game {
     this._clearAutoStartTimer();
     this.prestigeManager.resetAll();
     this.researchManager.reset();
+    this.challengeManager.reset();
+    this._applyChallengeEffects();
     this.saveManager.clearAll();
     this.resetRun();
     this.eventBus.emit(Events.SAVE_CLEARED);
@@ -253,6 +305,8 @@ export class Game {
     this.eventBus.emit(Events.PRESTIGE_CHANGED, this.prestigeManager.data);
     this.eventBus.emit(Events.CRYSTALS_CHANGED, this.economy.crystals);
     this.eventBus.emit(Events.RESEARCH_CHANGED, this.researchManager.getState());
+    this.eventBus.emit(Events.CHALLENGE_CHANGED, this.challengeManager.getState());
+    this.eventBus.emit(Events.SPEED_CHANGED, this.speedController.getState());
     this.eventBus.emit(Events.INCOME_CHANGED, {
       total: this.economy.incomePerWave,
       farmCount: this.placementSystem.farms.length,
@@ -285,6 +339,12 @@ export class Game {
     if (!this.canPrestige()) return false;
     const wave = this.waveManager.waveNumber;
     const earned = this.prestigeManager.prestige(wave);
+    const rewardMult = this.getChallengeRewardMult();
+    if (rewardMult > 1) {
+      const bonus = Math.round(earned * (rewardMult - 1));
+      this.prestigeManager.data.shards += bonus;
+      this.eventBus.emit(Events.PRESTIGE_CHANGED, this.prestigeManager.data);
+    }
     const crystalBonus = Math.floor(this.economy.crystals * 0.25);
     if (crystalBonus > 0) {
       this.prestigeManager.data.shards += crystalBonus;
@@ -307,20 +367,23 @@ export class Game {
   update(currentTime) {
     if (!this.running) return;
 
-    const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+    const rawDt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
+    const dt = this.speedController.applyToDt(rawDt);
 
     for (const farm of this.placementSystem.farms) {
-      farm.updatePulse(dt);
+      if (!farm.destroyed) farm.updatePulse(dt);
     }
 
     for (const support of this.placementSystem.supports) {
-      support.updatePulse(dt);
+      if (!support.destroyed) support.updatePulse(dt);
     }
 
     if (this.phase === Phase.WAVE) {
       this.waveManager.update(dt);
       this.combatSystem.update(dt, this.waveManager.enemies);
+      this.structureCombat.update(dt, this.waveManager.enemies);
+      this.structureCombat.processRepairs(dt, true);
 
       if (this.waveManager.isWaveComplete) {
         this._completeWave();
@@ -345,15 +408,17 @@ export class Game {
       }
     }
 
-    const rpGain = this.supportEffects.getRpPerWave(this.placementSystem.supports);
+    const rewardMult = this.getChallengeRewardMult();
+
+    const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult);
     if (rpGain > 0) {
       this.researchManager.addPoints(rpGain);
     }
 
     let crystalGain = 0;
     for (const s of this.placementSystem.supports) {
-      if (s.typeId !== 'crystal_extractor') continue;
-      const yieldAmt = this.supportEffects.getCrystalYield(s);
+      if (s.typeId !== 'crystal_extractor' || s.destroyed) continue;
+      const yieldAmt = Math.round(this.supportEffects.getCrystalYield(s) * rewardMult);
       crystalGain += yieldAmt;
       if (yieldAmt > 0) s.triggerPulse();
     }
@@ -361,7 +426,8 @@ export class Game {
       this.economy.addCrystals(crystalGain);
     }
 
-    this.combatSystem.awardWaveSurvivalXP();
+    this.structureCombat.processRepairs(1, false);
+    this.combatSystem.awardWaveSurvivalXP(rewardMult);
     this._processRepairStations(wave);
 
     if (bankInterest > 0) {
@@ -387,17 +453,20 @@ export class Game {
       bankInterest,
       rpGain,
       crystalGain,
+      rewardMult,
       total: killGold + farmIncome + waveBonus + bankInterest,
     });
 
     if (this.prestigeManager.autoStartWaves && this.lives > 0) {
       this._clearAutoStartTimer();
+      const delay = AUTO_START_DELAY_MS * (this.challengeManager.getEffects().autoStartDelayMult ?? 1);
+      const scaledDelay = delay / this.speedController.getEffectiveSpeed();
       this.autoStartTimer = setTimeout(() => {
         if (this.phase === Phase.PLANNING && this.lives > 0) {
           this.startWave();
           this.eventBus.emit(Events.AUTO_WAVE_STARTED);
         }
-      }, AUTO_START_DELAY_MS);
+      }, scaledDelay);
     }
   }
 
@@ -407,8 +476,9 @@ export class Game {
     let bestInterval = Infinity;
 
     for (const s of this.placementSystem.supports) {
-      if (s.typeId !== 'repair_station') continue;
+      if (s.typeId !== 'repair_station' || s.destroyed) continue;
       const stats = this.supportEffects.getRepairStats(s);
+      if (!stats.healAmount) continue;
       if (stats.healInterval < bestInterval) bestInterval = stats.healInterval;
       if (this.wavesSinceRepair >= stats.healInterval) {
         bestHeal = Math.max(bestHeal, stats.healAmount);
@@ -416,8 +486,9 @@ export class Game {
     }
 
     if (bestHeal > 0 && this.lives < this._startingLives()) {
-      const maxLives = GAME_CONFIG.startingLives + this.prestigeManager.getModifiers().bonusStartingLives;
-      this.lives = Math.min(maxLives, this.lives + bestHeal);
+      const maxLives = GAME_CONFIG.startingLives + this.prestigeManager.getModifiers().bonusStartingLives
+        - (this.challengeManager.getEffects().livesReduction || 0);
+      this.lives = Math.min(Math.max(5, maxLives), this.lives + bestHeal);
       this.wavesSinceRepair = 0;
       this.eventBus.emit(Events.LIVES_REPAIRED, this.lives);
       this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
@@ -468,6 +539,8 @@ export class Game {
   resetRun() {
     this._clearAutoStartTimer();
     this.researchManager.reset();
+    this.challengeManager.reset();
+    this._applyChallengeEffects();
     this.economy.gold = this._startingGold();
     this.economy.crystals = 0;
     this.economy.incomePerWave = 0;
@@ -488,6 +561,8 @@ export class Game {
     this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
     this.eventBus.emit(Events.WAVE_CHANGED, 0);
     this.eventBus.emit(Events.RESEARCH_CHANGED, this.researchManager.getState());
+    this.eventBus.emit(Events.CHALLENGE_CHANGED, this.challengeManager.getState());
+    this.eventBus.emit(Events.SPEED_CHANGED, this.speedController.getState());
     this.eventBus.emit(Events.INCOME_CHANGED, {
       total: 0,
       farmCount: 0,

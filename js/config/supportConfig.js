@@ -74,13 +74,20 @@ export const SUPPORT_TYPES = {
   repair_station: {
     id: 'repair_station',
     name: 'Repair Station',
-    description: 'Restores base health every few waves.',
+    description: 'Repairs nearby structures between waves and slowly during combat.',
     cost: 85,
     color: '#43a047',
     icon: '+',
     maxLevel: 4,
     upgradeCosts: [65, 110, 175],
-    perLevel: { healAmount: [1, 2, 3, 5], healInterval: [4, 3, 3, 2] },
+    perLevel: {
+      radius: [2.5, 3.0, 3.5, 4.5],
+      waveRepairAmount: [25, 45, 70, 110],
+      combatRepairPerSec: [2, 4, 7, 12],
+      maxSimultaneous: [1, 2, 3, 4],
+      lifeHealAmount: [0, 0, 1, 2],
+      lifeHealInterval: [99, 99, 5, 4],
+    },
   },
 
   forge: {

@@ -14,7 +14,7 @@ export class CombatSystem {
   }
 
   setTowers(towers) {
-    this.towers = towers;
+    this.towers = towers.filter((t) => !t.destroyed);
   }
 
   update(dt, enemies) {
@@ -132,9 +132,11 @@ export class CombatSystem {
     return best;
   }
 
-  awardWaveSurvivalXP() {
+  awardWaveSurvivalXP(challengeMult = 1) {
     for (const tower of this.towers) {
-      const result = tower.awardMasteryXP(MASTERY_CONFIG.xpPerWaveSurvived);
+      if (tower.destroyed) continue;
+      const xp = Math.round(MASTERY_CONFIG.xpPerWaveSurvived * challengeMult);
+      const result = tower.awardMasteryXP(xp);
       if (result.newLevel > result.prevLevel || result.unlockedMaster) {
         this.eventBus.emit(Events.MASTERY_GAINED, { tower, ...result });
       }
