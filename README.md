@@ -1,58 +1,59 @@
 # Meadow Defense
 
-A relaxing 2D tower defense game focused on farming currency and upgrading defenses. Built with HTML5 Canvas and vanilla JavaScript (ES modules).
+A relaxing 2D tower defense game built around **satisfying economic progression**. Invest in Sunpatches, upgrade your defenses, and snowball into an unstoppable meadow fortress.
 
 ## Gameplay Loop
 
-**Defeat enemies → Earn gold → Invest in economy → Upgrade towers → Survive stronger waves**
+**Defeat invaders → Earn gold → Grow Sunpatches → Upgrade towers → Survive stronger waves**
+
+The early game is generous — you can afford both defense and economy right away. Smart Sunpatch investments pay back quickly and compound over time through network bonuses and wave scaling.
 
 ## How to Play
 
-1. Open `index.html` in a browser, or run a local server:
-   ```bash
-   python3 -m http.server 8080
-   ```
-   Then visit http://localhost:8080
+```bash
+python3 -m http.server 8080
+```
 
-2. **Between waves** (unlimited planning time):
-   - Select a tower or farm from the Build panel
-   - Click a green tile to place it
-   - Click placed structures to upgrade them
+Open http://localhost:8080
+
+1. **Between waves** (unlimited planning time):
+   - Place **Needle Posts**, **Boulder Pits**, or **Prism Spires** for defense
+   - Plant **Sunpatches** for passive gold each wave — they pay back in ~2 waves
+   - Click structures to upgrade them
    - Press **Start Wave** when ready
 
-3. **During waves**:
-   - Towers automatically attack enemies on the path
-   - Earn gold for each kill
-   - Enemies that reach the end cost a life
+2. **During waves**: towers auto-attack; kills earn gold; leaks cost lives
 
-4. **Farms** generate passive gold income at the end of each wave — upgrade them for more income.
+3. **After each wave**: collect a harvest summary showing kill gold, Sunpatch income, and wave bonus
 
-## Features
+## Economy Design
 
-- Single enemy path with strategic build spots
-- Three tower types: Arrow (fast), Cannon (splash), Magic (long range)
-- Farms with 6 upgrade levels for passive income
-- Tower upgrades: damage, range, attack speed
-- Scaling wave difficulty
-- Minimal HUD: Gold, Lives, Wave, Income/Wave
+| Mechanic | Purpose |
+|----------|---------|
+| **Generous start** (180g) | Afford a tower + Sunpatch immediately |
+| **Strong Sunpatch ROI** | Level 1 pays back in ~2 waves |
+| **Network bonus** | +12% income per additional Sunpatch |
+| **Wave scaling** | +3.5% farm income per wave survived |
+| **Wave clear bonus** | 25g + 12g per wave — never feel starved |
+
+## Original Content
+
+All mechanics, visuals, towers, enemies, and UI are original meadow-themed designs:
+
+- **Towers:** Needle Post, Boulder Pit, Prism Spire
+- **Economy:** Sunpatch (passive harvest)
+- **Invaders:** Mote, Drift, Husk, Titan
 
 ## Architecture
 
-The codebase is modular for easy extension:
-
 ```
 js/
-  config/     — Game balance data (towers, enemies, waves, farms)
+  config/     — Balance data (towers, enemies, waves, economy)
   core/       — Game loop, economy, wave manager, event bus
   entities/   — Tower, Farm, Enemy, Projectile, Path
   systems/    — Combat, placement
-  render/     — Canvas renderer
+  render/     — Canvas renderer, floating text
   ui/         — HUD and build panel
 ```
 
-**Adding new content:**
-- New tower: add entry to `config/towerTypes.js`
-- New enemy: add entry to `config/enemyTypes.js`, reference in `config/waveConfig.js`
-- New economy upgrade: extend `config/farmConfig.js` or add new structure config
-
-No core system changes required.
+Add new content via config files — no core rewrites needed.

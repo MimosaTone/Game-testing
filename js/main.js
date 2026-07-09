@@ -1,5 +1,6 @@
 import { Game, Phase } from './core/Game.js';
 import { Renderer } from './render/Renderer.js';
+import { FloatingTextManager } from './render/FloatingTextManager.js';
 import { HUD } from './ui/HUD.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 
@@ -8,12 +9,15 @@ const ctx = canvas.getContext('2d');
 
 const game = new Game();
 const renderer = new Renderer(ctx);
+const floatingTexts = new FloatingTextManager();
 const hud = new HUD(game);
 
 canvas.width = GAME_CONFIG.canvasWidth;
 canvas.height = GAME_CONFIG.canvasHeight;
 
 game.start();
+
+let lastFrameTime = performance.now();
 
 canvas.addEventListener('mousemove', (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -40,7 +44,15 @@ canvas.addEventListener('click', (e) => {
 });
 
 function gameLoop(time) {
+  const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
+  lastFrameTime = time;
+
   game.update(time);
+  floatingTexts.update(dt);
+
+  for (const effect of game.consumeHarvestEffects()) {
+    floatingTexts.add(effect.x, effect.y, effect.text, '#27ae60', 18);
+  }
 
   renderer.clear();
   renderer.drawGrid();
@@ -60,6 +72,7 @@ function gameLoop(time) {
   );
   renderer.drawEnemies(game.waveManager.enemies);
   renderer.drawProjectiles(game.combatSystem.projectiles);
+  floatingTexts.draw(ctx);
   renderer.drawPhaseOverlay(game.phase, game.waveManager.waveNumber);
 
   requestAnimationFrame(gameLoop);

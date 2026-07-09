@@ -1,16 +1,16 @@
-/** Farm economy configuration. */
+/** Sunpatch — passive income structure with strong return on investment. */
 export const FARM_CONFIG = {
-  id: 'farm',
-  name: 'Farm',
-  description: 'Generates passive gold each wave.',
-  cost: 60,
-  color: '#f1c40f',
-  icon: '☘',
+  id: 'sunpatch',
+  name: 'Sunpatch',
+  description: 'Harvests gold each wave. Great long-term investment.',
+  cost: 50,
+  color: '#ffc857',
+  icon: '✿',
 
-  /** Income per wave at each upgrade level (index 0 = level 1). */
-  incomePerLevel: [15, 25, 40, 60, 90, 130],
+  /** Base income per wave at each level (index 0 = level 1). */
+  incomePerLevel: [35, 58, 95, 150, 230, 350],
   maxLevel: 6,
 
   /** Gold cost to upgrade to the next level. */
-  upgradeCosts: [40, 70, 110, 160, 230],
+  upgradeCosts: [30, 55, 90, 140, 200],
 };

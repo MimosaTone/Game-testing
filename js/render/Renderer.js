@@ -1,5 +1,4 @@
 import { GAME_CONFIG } from '../config/gameConfig.js';
-import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { Phase } from '../core/Game.js';
 
@@ -80,7 +79,6 @@ export class Renderer {
     for (const tower of towers) {
       const pos = tower.getPixelPosition(this.tileSize);
       const isSelected = selectedStructure && selectedStructure.id === tower.id;
-
       this._drawTower(pos.x, pos.y, tower, isSelected);
     }
   }
@@ -136,6 +134,15 @@ export class Renderer {
   _drawFarm(x, y, farm, isSelected) {
     const { ctx } = this;
     const def = FARM_CONFIG;
+    const pulse = farm.harvestPulse;
+
+    if (pulse > 0) {
+      const glow = pulse * 20;
+      ctx.beginPath();
+      ctx.arc(x, y, 18 + glow, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 200, 87, ${pulse * 0.35})`;
+      ctx.fill();
+    }
 
     if (isSelected) {
       ctx.strokeStyle = '#9b59b6';
@@ -145,7 +152,7 @@ export class Renderer {
 
     ctx.fillStyle = def.color;
     ctx.fillRect(x - 14, y - 14, 28, 28);
-    ctx.strokeStyle = '#d4ac0d';
+    ctx.strokeStyle = '#e6a817';
     ctx.lineWidth = 2;
     ctx.strokeRect(x - 14, y - 14, 28, 28);
 
@@ -172,12 +179,29 @@ export class Renderer {
     const size = enemy.size;
 
     ctx.fillStyle = enemy.color;
-    ctx.beginPath();
-    ctx.arc(enemy.x, enemy.y, size, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    if (enemy.typeId === 'drift') {
+      ctx.moveTo(enemy.x, enemy.y - size);
+      ctx.lineTo(enemy.x + size, enemy.y + size * 0.6);
+      ctx.lineTo(enemy.x - size, enemy.y + size * 0.6);
+      ctx.closePath();
+    } else if (enemy.typeId === 'husk') {
+      ctx.rect(enemy.x - size, enemy.y - size, size * 2, size * 2);
+    } else if (enemy.typeId === 'titan') {
+      const s = size * 1.1;
+      ctx.moveTo(enemy.x, enemy.y - s);
+      ctx.lineTo(enemy.x + s, enemy.y);
+      ctx.lineTo(enemy.x, enemy.y + s);
+      ctx.lineTo(enemy.x - s, enemy.y);
+      ctx.closePath();
+    } else {
+      ctx.arc(enemy.x, enemy.y, size, 0, Math.PI * 2);
+    }
+
+    ctx.fill();
     ctx.stroke();
 
     const barWidth = size * 2;
@@ -204,9 +228,9 @@ export class Renderer {
     const { ctx } = this;
 
     if (phase === Phase.PLANNING && waveNumber === 0) {
-      this._drawCenterMessage('Build towers & farms, then start Wave 1', '#3498db');
+      this._drawCenterMessage('Place a tower for defense, Sunpatches for long-term gold', '#3498db');
     } else if (phase === Phase.PLANNING) {
-      this._drawCenterMessage(`Wave ${waveNumber} complete — plan your next move`, '#27ae60');
+      this._drawCenterMessage(`Wave ${waveNumber} cleared — invest, upgrade, or start the next wave`, '#27ae60');
     } else if (phase === Phase.GAME_OVER) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, GAME_CONFIG.canvasWidth, GAME_CONFIG.canvasHeight);
@@ -217,7 +241,7 @@ export class Renderer {
   _drawCenterMessage(text, color) {
     const { ctx } = this;
     ctx.fillStyle = color;
-    ctx.font = 'bold 18px sans-serif';
+    ctx.font = 'bold 17px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, GAME_CONFIG.canvasWidth / 2, GAME_CONFIG.canvasHeight - 30);

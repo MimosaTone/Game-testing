@@ -54,7 +54,7 @@ export class PlacementSystem {
       return false;
     }
 
-    if (this.selectedBuildType === 'farm') {
+    if (this.selectedBuildType === FARM_CONFIG.id) {
       return this._placeFarm(gridX, gridY);
     }
 
@@ -107,7 +107,7 @@ export class PlacementSystem {
 
   getPlacementCost() {
     if (!this.selectedBuildType) return null;
-    if (this.selectedBuildType === 'farm') return FARM_CONFIG.cost;
+    if (this.selectedBuildType === FARM_CONFIG.id) return FARM_CONFIG.cost;
     return TOWER_TYPES[this.selectedBuildType]?.cost ?? null;
   }
 

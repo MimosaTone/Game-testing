@@ -2,6 +2,11 @@ import { Events } from '../core/EventBus.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { Phase } from '../core/Game.js';
+import {
+  calculateFarmIncome,
+  estimatePaybackWaves,
+  ECONOMY_CONFIG,
+} from '../config/economyConfig.js';
 
 /**
  * HUD and build panel UI controller.
@@ -14,12 +19,14 @@ export class HUD {
       lives: document.getElementById('lives-value'),
       wave: document.getElementById('wave-value'),
       income: document.getElementById('income-value'),
+      incomeDetail: document.getElementById('income-detail'),
       startWave: document.getElementById('start-wave-btn'),
       buildPanel: document.getElementById('build-panel'),
       upgradePanel: document.getElementById('upgrade-panel'),
       upgradeTitle: document.getElementById('upgrade-title'),
       upgradeStats: document.getElementById('upgrade-stats'),
       upgradeButtons: document.getElementById('upgrade-buttons'),
+      waveSummary: document.getElementById('wave-summary'),
     };
 
     this._bindEvents();
@@ -34,6 +41,7 @@ export class HUD {
         this.game.startWave();
         this._updateStartButton();
         this._hideUpgradePanel();
+        this._hideWaveSummary();
       }
     });
 
@@ -72,19 +80,39 @@ export class HUD {
       this.elements.wave.textContent = wave;
     });
 
-    bus.on(Events.INCOME_CHANGED, (income) => {
+    bus.on(Events.INCOME_CHANGED, (data) => {
+      const income = typeof data === 'number' ? data : data.total;
+      const farmCount = typeof data === 'number' ? 0 : data.farmCount;
+      const waveBonus = typeof data === 'number' ? 0 : data.waveBonus;
+
       this.elements.income.textContent = `+${income}`;
+
+      if (farmCount === 0) {
+        this.elements.incomeDetail.textContent = 'Invest in Sunpatches';
+      } else if (farmCount > 1) {
+        this.elements.incomeDetail.textContent = `${farmCount} patches · network +${Math.round(ECONOMY_CONFIG.farmNetworkBonus * (farmCount - 1) * 100)}%`;
+      } else if (waveBonus > 0) {
+        this.elements.incomeDetail.textContent = `+${waveBonus}% wave scaling`;
+      } else {
+        this.elements.incomeDetail.textContent = 'Per wave harvest';
+      }
     });
 
     bus.on(Events.WAVE_STARTED, () => {
       this._updateStartButton();
       this._hideUpgradePanel();
+      this._hideWaveSummary();
       this.game.placementSystem.clearSelection();
       this._updateBuildSelection();
     });
 
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
+      this._refreshBuildPanelHints();
+    });
+
+    bus.on(Events.WAVE_SUMMARY, (summary) => {
+      this._showWaveSummary(summary);
     });
 
     bus.on(Events.STRUCTURE_SELECTED, (structure) => {
@@ -94,11 +122,25 @@ export class HUD {
         this._hideUpgradePanel();
       }
     });
+
+    bus.on(Events.FARM_PLACED, () => {
+      this._refreshBuildPanelHints();
+    });
+  }
+
+  _projectedIncomeWithNewSunpatch() {
+    const wave = this.game.waveManager.waveNumber;
+    const fakeNew = { getBaseIncome: () => FARM_CONFIG.incomePerLevel[0] };
+    const farms = [...this.game.placementSystem.farms, fakeNew];
+    return calculateFarmIncome(farms, wave);
   }
 
   _renderBuildPanel() {
     const panel = this.elements.buildPanel;
     panel.innerHTML = '';
+
+    const projectedIncome = this._projectedIncomeWithNewSunpatch();
+    const sunpatchPayback = estimatePaybackWaves(FARM_CONFIG.cost, projectedIncome);
 
     const items = [
       ...Object.values(TOWER_TYPES).map((t) => ({
@@ -107,13 +149,15 @@ export class HUD {
         cost: t.cost,
         icon: t.icon,
         color: t.color,
+        hint: t.description,
       })),
       {
-        id: 'farm',
+        id: FARM_CONFIG.id,
         name: FARM_CONFIG.name,
         cost: FARM_CONFIG.cost,
         icon: FARM_CONFIG.icon,
         color: FARM_CONFIG.color,
+        hint: `+${FARM_CONFIG.incomePerLevel[0]}/wave · pays back ~${sunpatchPayback} wave${sunpatchPayback === 1 ? '' : 's'}`,
       },
     ];
 
@@ -123,11 +167,20 @@ export class HUD {
       btn.dataset.buildType = item.id;
       btn.innerHTML = `
         <span class="build-icon" style="color:${item.color}">${item.icon}</span>
-        <span class="build-name">${item.name}</span>
+        <span class="build-info">
+          <span class="build-name">${item.name}</span>
+          <span class="build-hint">${item.hint}</span>
+        </span>
         <span class="build-cost">${item.cost}g</span>
       `;
       panel.appendChild(btn);
     }
+  }
+
+  _refreshBuildPanelHints() {
+    this._renderBuildPanel();
+    this._updateBuildSelection();
+    this._updateBuildAffordability();
   }
 
   _updateBuildSelection() {
@@ -141,7 +194,7 @@ export class HUD {
     const gold = this.game.economy.gold;
     for (const btn of this.elements.buildPanel.querySelectorAll('.build-btn')) {
       const type = btn.dataset.buildType;
-      const cost = type === 'farm' ? FARM_CONFIG.cost : TOWER_TYPES[type].cost;
+      const cost = type === FARM_CONFIG.id ? FARM_CONFIG.cost : TOWER_TYPES[type].cost;
       btn.classList.toggle('unaffordable', gold < cost);
     }
   }
@@ -160,6 +213,24 @@ export class HUD {
       btn.disabled = true;
       btn.textContent = 'Game Over';
     }
+  }
+
+  _showWaveSummary({ wave, killGold, farmIncome, waveBonus, total }) {
+    const el = this.elements.waveSummary;
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <div class="summary-title">Wave ${wave} Harvest</div>
+      <div class="summary-rows">
+        ${killGold > 0 ? `<div class="summary-row"><span>Defeated foes</span><span class="gold-text">+${killGold}g</span></div>` : ''}
+        ${farmIncome > 0 ? `<div class="summary-row"><span>Sunpatch harvest</span><span class="income-text">+${farmIncome}g</span></div>` : ''}
+        <div class="summary-row"><span>Wave bonus</span><span class="wave-text">+${waveBonus}g</span></div>
+        <div class="summary-row summary-total"><span>Total earned</span><span>+${total}g</span></div>
+      </div>
+    `;
+  }
+
+  _hideWaveSummary() {
+    this.elements.waveSummary.classList.add('hidden');
   }
 
   _showUpgradePanel(structure) {
@@ -211,21 +282,52 @@ export class HUD {
   }
 
   _showFarmUpgrades(farm) {
-    this.elements.upgradeTitle.textContent = `Farm (Level ${farm.level})`;
+    const wave = this.game.waveManager.waveNumber;
+    const totalIncome = this.game.economy.incomePerWave;
+    const share = this.game.placementSystem.farms.length > 0
+      ? Math.round(totalIncome / this.game.placementSystem.farms.length)
+      : farm.getBaseIncome();
+
+    this.elements.upgradeTitle.textContent = `${FARM_CONFIG.name} (Level ${farm.level})`;
     this.elements.upgradeStats.innerHTML = `
-      <div>Income: <strong>+${farm.getIncome()}/wave</strong></div>
-      ${farm.canUpgrade() ? `<div>Next level: <strong>+${FARM_CONFIG.incomePerLevel[farm.level]}/wave</strong></div>` : '<div><strong>MAX LEVEL</strong></div>'}
+      <div>Your share: <strong>+${share}/wave</strong></div>
+      <div>Total harvest: <strong>+${totalIncome}/wave</strong></div>
+      ${farm.canUpgrade()
+        ? `<div>Next level base: <strong>+${FARM_CONFIG.incomePerLevel[farm.level]}/wave</strong></div>`
+        : '<div><strong>MAX LEVEL — thriving harvest!</strong></div>'}
     `;
 
     this.elements.upgradeButtons.innerHTML = '';
     const cost = this.game.economy.getUpgradeCost(farm, 'level');
+    const projectedAfterUpgrade = farm.canUpgrade()
+      ? calculateFarmIncome(
+          this.game.placementSystem.farms.map((f) =>
+            f.id === farm.id
+              ? { getBaseIncome: () => FARM_CONFIG.incomePerLevel[farm.level] }
+              : f
+          ),
+          wave
+        )
+      : null;
+    const incomeGain = projectedAfterUpgrade !== null
+      ? Math.max(1, projectedAfterUpgrade - totalIncome)
+      : null;
+    const payback = cost !== null && incomeGain !== null
+      ? estimatePaybackWaves(cost, incomeGain)
+      : null;
+
     const btn = document.createElement('button');
-    btn.className = 'upgrade-btn';
-    btn.textContent = cost !== null ? `↑ Upgrade (${cost}g)` : 'MAX LEVEL';
+    btn.className = 'upgrade-btn upgrade-btn-farm';
+    if (cost !== null && payback !== null) {
+      btn.textContent = `↑ Cultivate (${cost}g · ~${payback} wave payback)`;
+    } else {
+      btn.textContent = cost !== null ? `↑ Cultivate (${cost}g)` : 'MAX LEVEL';
+    }
     btn.disabled = cost === null || !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
     btn.addEventListener('click', () => {
       if (this.game.placementSystem.upgradeSelected('level')) {
         this._showFarmUpgrades(farm);
+        this._refreshBuildPanelHints();
       }
     });
     this.elements.upgradeButtons.appendChild(btn);

@@ -30,12 +30,14 @@ export class Game {
     this.hoveredCell = null;
     this.lastTime = 0;
     this.running = false;
+    this.pendingHarvestEffects = [];
 
     this._setupEventHandlers();
   }
 
   _setupEventHandlers() {
     this.eventBus.on(Events.ENEMY_KILLED, (enemy) => {
+      this.economy.trackKillGold(enemy.goldReward);
       this.economy.earn(enemy.goldReward);
       this.waveManager.removeEnemy(enemy);
     });
@@ -52,6 +54,19 @@ export class Game {
     this.eventBus.on(Events.TOWER_PLACED, () => {
       this.combatSystem.setTowers(this.placementSystem.towers);
     });
+
+    this.eventBus.on(Events.FARM_PLACED, () => {
+      this._refreshFarmIncome();
+    });
+
+    this.eventBus.on(Events.WAVE_STARTED, (wave) => {
+      this.economy.setWaveNumber(wave);
+      this.economy.resetWaveKillGold();
+    });
+  }
+
+  _refreshFarmIncome() {
+    this.economy.recalculateIncome(this.placementSystem.farms);
   }
 
   start() {
@@ -60,7 +75,11 @@ export class Game {
     this.eventBus.emit(Events.GOLD_CHANGED, this.economy.gold);
     this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
     this.eventBus.emit(Events.WAVE_CHANGED, this.waveManager.waveNumber);
-    this.eventBus.emit(Events.INCOME_CHANGED, this.economy.incomePerWave);
+    this.eventBus.emit(Events.INCOME_CHANGED, {
+      total: this.economy.incomePerWave,
+      farmCount: 0,
+      waveBonus: 0,
+    });
   }
 
   startWave() {
@@ -76,6 +95,10 @@ export class Game {
     const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
 
+    for (const farm of this.placementSystem.farms) {
+      farm.updatePulse(dt);
+    }
+
     if (this.phase === Phase.WAVE) {
       this.waveManager.update(dt);
       this.combatSystem.update(dt, this.waveManager.enemies);
@@ -87,10 +110,41 @@ export class Game {
   }
 
   _completeWave() {
-    this.economy.collectWaveIncome();
+    const wave = this.waveManager.waveNumber;
+    const { farmIncome, waveBonus, killGold } = this.economy.collectWaveIncome();
+
+    if (farmIncome > 0) {
+      const perFarm = Math.round(farmIncome / this.placementSystem.farms.length);
+      for (const farm of this.placementSystem.farms) {
+        farm.triggerHarvestPulse();
+        const pos = farm.getPixelPosition(GAME_CONFIG.tileSize);
+        this.pendingHarvestEffects.push({
+          x: pos.x,
+          y: pos.y - 20,
+          text: `+${perFarm}`,
+        });
+      }
+    }
+
     this.waveManager.active = false;
     this.phase = Phase.PLANNING;
-    this.eventBus.emit(Events.WAVE_COMPLETED, this.waveManager.waveNumber);
+    this.economy.setWaveNumber(wave);
+    this._refreshFarmIncome();
+
+    this.eventBus.emit(Events.WAVE_COMPLETED, wave);
+    this.eventBus.emit(Events.WAVE_SUMMARY, {
+      wave,
+      killGold,
+      farmIncome,
+      waveBonus,
+      total: killGold + farmIncome + waveBonus,
+    });
+  }
+
+  consumeHarvestEffects() {
+    const effects = this.pendingHarvestEffects;
+    this.pendingHarvestEffects = [];
+    return effects;
   }
 
   setHoveredCell(gridX, gridY) {
@@ -124,8 +178,11 @@ export class Game {
   restart() {
     this.economy.gold = GAME_CONFIG.startingGold;
     this.economy.incomePerWave = 0;
+    this.economy.waveNumber = 0;
+    this.economy.resetWaveKillGold();
     this.lives = GAME_CONFIG.startingLives;
     this.phase = Phase.PLANNING;
+    this.pendingHarvestEffects = [];
     this.waveManager.reset();
     this.combatSystem.reset();
     this.placementSystem.reset();
@@ -134,6 +191,10 @@ export class Game {
     this.eventBus.emit(Events.GOLD_CHANGED, this.economy.gold);
     this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
     this.eventBus.emit(Events.WAVE_CHANGED, 0);
-    this.eventBus.emit(Events.INCOME_CHANGED, 0);
+    this.eventBus.emit(Events.INCOME_CHANGED, {
+      total: 0,
+      farmCount: 0,
+      waveBonus: 0,
+    });
   }
 }

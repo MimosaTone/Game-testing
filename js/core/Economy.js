@@ -1,6 +1,11 @@
 import { Events } from './EventBus.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
+import {
+  ECONOMY_CONFIG,
+  calculateFarmIncome,
+  estimatePaybackWaves,
+} from '../config/economyConfig.js';
 
 /**
  * Manages gold, passive income, and transactions.
@@ -10,6 +15,12 @@ export class Economy {
     this.eventBus = eventBus;
     this.gold = GAME_CONFIG.startingGold;
     this.incomePerWave = 0;
+    this.waveNumber = 0;
+    this.lastWaveKillGold = 0;
+  }
+
+  setWaveNumber(waveNumber) {
+    this.waveNumber = waveNumber;
   }
 
   canAfford(cost) {
@@ -28,17 +39,33 @@ export class Economy {
     this.eventBus.emit(Events.GOLD_CHANGED, this.gold);
   }
 
-  /** Recalculate total farm income from all farms. */
+  /** Recalculate total farm income including network and wave scaling bonuses. */
   recalculateIncome(farms) {
-    this.incomePerWave = farms.reduce((sum, farm) => sum + farm.getIncome(), 0);
-    this.eventBus.emit(Events.INCOME_CHANGED, this.incomePerWave);
+    this.incomePerWave = calculateFarmIncome(farms, this.waveNumber);
+    this.eventBus.emit(Events.INCOME_CHANGED, {
+      total: this.incomePerWave,
+      farmCount: farms.length,
+      waveBonus: this.waveNumber > 0 ? Math.round(this.waveNumber * ECONOMY_CONFIG.incomeWaveScaling * 100) : 0,
+    });
   }
 
-  /** Award farm income at end of wave. */
+  /** Award farm income and wave-clear bonus at end of wave. */
   collectWaveIncome() {
-    if (this.incomePerWave > 0) {
-      this.earn(this.incomePerWave);
-    }
+    const farmIncome = this.incomePerWave;
+    const waveBonus = ECONOMY_CONFIG.waveClearBonus(this.waveNumber);
+
+    if (farmIncome > 0) this.earn(farmIncome);
+    this.earn(waveBonus);
+
+    return { farmIncome, waveBonus, killGold: this.lastWaveKillGold };
+  }
+
+  trackKillGold(amount) {
+    this.lastWaveKillGold += amount;
+  }
+
+  resetWaveKillGold() {
+    this.lastWaveKillGold = 0;
   }
 
   getUpgradeCost(structure, stat) {
@@ -52,5 +79,9 @@ export class Economy {
     const upgradeLevel = structure.upgrades[stat];
     if (upgradeLevel >= towerDef.maxUpgradeLevel) return null;
     return towerDef.upgradeCosts[stat][upgradeLevel];
+  }
+
+  getSunpatchPayback(cost, projectedIncome) {
+    return estimatePaybackWaves(cost, projectedIncome || this.incomePerWave);
   }
 }

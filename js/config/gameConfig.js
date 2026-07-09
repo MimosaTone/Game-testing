@@ -6,8 +6,8 @@ export const GAME_CONFIG = {
   gridCols: 24,
   gridRows: 15,
 
-  startingGold: 120,
-  startingLives: 20,
+  startingGold: 180,
+  startingLives: 25,
 
   /** Gold awarded per enemy kill (scaled by enemy type). */
   killGoldMultiplier: 1,

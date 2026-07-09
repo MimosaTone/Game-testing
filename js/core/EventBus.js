@@ -42,4 +42,5 @@ export const Events = {
   STRUCTURE_SELECTED: 'structure_selected',
   GAME_OVER: 'game_over',
   GAME_WON: 'game_won',
+  WAVE_SUMMARY: 'wave_summary',
 };

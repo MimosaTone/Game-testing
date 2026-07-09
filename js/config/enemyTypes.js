@@ -1,42 +1,42 @@
-/** Enemy type definitions — register new types here for wave scaling. */
+/** Invader definitions — meadow-themed original enemy roster. */
 export const ENEMY_TYPES = {
-  grunt: {
-    id: 'grunt',
-    name: 'Grunt',
-    color: '#e67e22',
-    baseHealth: 30,
-    speed: 1.8,
-    goldReward: 8,
-    size: 14,
+  mote: {
+    id: 'mote',
+    name: 'Mote',
+    color: '#7e57c2',
+    baseHealth: 26,
+    speed: 1.7,
+    goldReward: 12,
+    size: 13,
   },
 
-  runner: {
-    id: 'runner',
-    name: 'Runner',
-    color: '#f39c12',
-    baseHealth: 18,
-    speed: 3.2,
-    goldReward: 10,
-    size: 12,
+  drift: {
+    id: 'drift',
+    name: 'Drift',
+    color: '#26a69a',
+    baseHealth: 16,
+    speed: 3.0,
+    goldReward: 15,
+    size: 11,
   },
 
-  tank: {
-    id: 'tank',
-    name: 'Tank',
-    color: '#d35400',
-    baseHealth: 80,
+  husk: {
+    id: 'husk',
+    name: 'Husk',
+    color: '#6d4c41',
+    baseHealth: 72,
     speed: 1.0,
-    goldReward: 20,
-    size: 18,
+    goldReward: 28,
+    size: 17,
   },
 
-  boss: {
-    id: 'boss',
-    name: 'Boss',
-    color: '#c0392b',
-    baseHealth: 200,
-    speed: 0.7,
-    goldReward: 50,
-    size: 22,
+  titan: {
+    id: 'titan',
+    name: 'Titan',
+    color: '#ad1457',
+    baseHealth: 185,
+    speed: 0.65,
+    goldReward: 70,
+    size: 21,
   },
 };

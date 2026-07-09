@@ -58,6 +58,16 @@ body {
 .stat-value.wave { color: #3498db; }
 .stat-value.income { color: #27ae60; }
 
+.stat-sub {
+  font-size: 10px;
+  color: #95a5a6;
+  font-weight: 500;
+}
+
+.stat-income {
+  min-width: 120px;
+}
+
 .primary-btn {
   margin-left: auto;
   padding: 10px 24px;
@@ -92,7 +102,7 @@ body {
 }
 
 #sidebar {
-  width: 220px;
+  width: 250px;
   padding: 16px;
   background: #f8f9fa;
   border-left: 2px solid #e9ecef;
@@ -126,6 +136,22 @@ body {
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   text-align: left;
+  width: 100%;
+}
+
+.build-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.build-hint {
+  font-size: 10px;
+  color: #95a5a6;
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 .build-btn:hover {
@@ -149,7 +175,6 @@ body {
 }
 
 .build-name {
-  flex: 1;
   font-size: 13px;
   font-weight: 600;
 }
@@ -160,13 +185,66 @@ body {
   font-weight: 600;
 }
 
-#upgrade-section {
+#upgrade-panel {
   padding-top: 8px;
   border-top: 2px solid #e9ecef;
 }
 
-#upgrade-section.hidden {
+#upgrade-panel.hidden {
   display: none;
+}
+
+#wave-summary {
+  padding: 12px;
+  background: linear-gradient(135deg, #fff9e6 0%, #e8f8f0 100%);
+  border-radius: 10px;
+  border: 2px solid #f1c40f;
+}
+
+#wave-summary.hidden {
+  display: none;
+}
+
+.summary-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  color: #636e72;
+}
+
+.summary-row.summary-total {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #dfe6e9;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.gold-text { color: #f39c12; font-weight: 600; }
+.income-text { color: #27ae60; font-weight: 600; }
+.wave-text { color: #3498db; font-weight: 600; }
+
+.upgrade-btn-farm {
+  background: #f39c12;
+}
+
+.upgrade-btn-farm:hover:not(:disabled) {
+  background: #e67e22;
 }
 
 #upgrade-stats {

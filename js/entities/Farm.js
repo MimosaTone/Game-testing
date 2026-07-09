@@ -3,21 +3,27 @@ import { FARM_CONFIG } from '../config/farmConfig.js';
 let nextFarmId = 1;
 
 /**
- * Farm entity — generates passive income each wave.
+ * Sunpatch entity — generates passive income each wave.
  */
 export class Farm {
   constructor(gridX, gridY) {
     this.id = nextFarmId++;
     this.type = 'farm';
-    this.typeId = 'farm';
+    this.typeId = FARM_CONFIG.id;
     this.definition = FARM_CONFIG;
     this.gridX = gridX;
     this.gridY = gridY;
     this.level = 1;
+    this.harvestPulse = 0;
   }
 
-  getIncome() {
+  getBaseIncome() {
     return FARM_CONFIG.incomePerLevel[this.level - 1] || 0;
+  }
+
+  /** Legacy alias used by economy helpers. */
+  getIncome() {
+    return this.getBaseIncome();
   }
 
   canUpgrade() {
@@ -28,6 +34,16 @@ export class Farm {
     if (!this.canUpgrade()) return false;
     this.level++;
     return true;
+  }
+
+  triggerHarvestPulse() {
+    this.harvestPulse = 1;
+  }
+
+  updatePulse(dt) {
+    if (this.harvestPulse > 0) {
+      this.harvestPulse = Math.max(0, this.harvestPulse - dt * 1.5);
+    }
   }
 
   getPixelPosition(tileSize) {

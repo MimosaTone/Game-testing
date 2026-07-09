@@ -1,49 +1,54 @@
-import { ENEMY_TYPES } from './enemyTypes.js';
-
 /**
  * Wave composition generator.
- * Each wave entry: { type, count, spawnDelayMs }
- * Difficulty scales with wave number via health/speed multipliers in WaveManager.
+ * Early waves are gentle so players can invest in economy without feeling starved.
  */
 export function generateWave(waveNumber) {
   const waves = [];
 
-  if (waveNumber <= 3) {
+  if (waveNumber === 1) {
+    waves.push({ type: 'mote', count: 5, spawnDelayMs: 1000 });
+  } else if (waveNumber === 2) {
     waves.push(
-      { type: 'grunt', count: 4 + waveNumber * 2, spawnDelayMs: 900 },
-      { type: 'runner', count: Math.max(0, waveNumber - 1) * 2, spawnDelayMs: 700 },
+      { type: 'mote', count: 6, spawnDelayMs: 900 },
+      { type: 'drift', count: 2, spawnDelayMs: 750 },
     );
-  } else if (waveNumber <= 7) {
+  } else if (waveNumber <= 4) {
     waves.push(
-      { type: 'grunt', count: 6 + waveNumber, spawnDelayMs: 800 },
-      { type: 'runner', count: 3 + waveNumber, spawnDelayMs: 600 },
-      { type: 'tank', count: Math.floor((waveNumber - 3) / 2), spawnDelayMs: 1400 },
+      { type: 'mote', count: 5 + waveNumber, spawnDelayMs: 850 },
+      { type: 'drift', count: 1 + waveNumber, spawnDelayMs: 650 },
     );
-  } else if (waveNumber <= 12) {
+  } else if (waveNumber <= 8) {
     waves.push(
-      { type: 'grunt', count: 8 + waveNumber, spawnDelayMs: 700 },
-      { type: 'runner', count: 5 + waveNumber, spawnDelayMs: 500 },
-      { type: 'tank', count: 2 + Math.floor(waveNumber / 3), spawnDelayMs: 1200 },
-      { type: 'boss', count: waveNumber >= 10 ? 1 : 0, spawnDelayMs: 3000 },
+      { type: 'mote', count: 6 + waveNumber, spawnDelayMs: 800 },
+      { type: 'drift', count: 2 + waveNumber, spawnDelayMs: 580 },
+      { type: 'husk', count: Math.floor((waveNumber - 4) / 2), spawnDelayMs: 1300 },
+    );
+  } else if (waveNumber <= 14) {
+    waves.push(
+      { type: 'mote', count: 7 + waveNumber, spawnDelayMs: 700 },
+      { type: 'drift', count: 4 + waveNumber, spawnDelayMs: 500 },
+      { type: 'husk', count: 1 + Math.floor(waveNumber / 3), spawnDelayMs: 1100 },
+      { type: 'titan', count: waveNumber >= 11 ? 1 : 0, spawnDelayMs: 2800 },
     );
   } else {
-    const scale = waveNumber - 12;
+    const scale = waveNumber - 14;
     waves.push(
-      { type: 'grunt', count: 15 + scale * 2, spawnDelayMs: 600 },
-      { type: 'runner', count: 10 + scale * 2, spawnDelayMs: 450 },
-      { type: 'tank', count: 4 + scale, spawnDelayMs: 1000 },
-      { type: 'boss', count: 1 + Math.floor(scale / 3), spawnDelayMs: 2500 },
+      { type: 'mote', count: 12 + scale * 2, spawnDelayMs: 600 },
+      { type: 'drift', count: 8 + scale * 2, spawnDelayMs: 450 },
+      { type: 'husk', count: 3 + scale, spawnDelayMs: 950 },
+      { type: 'titan', count: 1 + Math.floor(scale / 3), spawnDelayMs: 2400 },
     );
   }
 
   return waves.filter((g) => g.count > 0);
 }
 
-/** Health and speed scale per wave for incremental difficulty. */
+/** Scaling tuned for a smooth early curve and tougher late game. */
 export function getWaveScaling(waveNumber) {
+  const earlyEase = waveNumber <= 4 ? 0.08 : 0.11;
   return {
-    healthMultiplier: 1 + (waveNumber - 1) * 0.12,
-    speedMultiplier: 1 + (waveNumber - 1) * 0.03,
-    goldMultiplier: 1 + (waveNumber - 1) * 0.05,
+    healthMultiplier: 1 + (waveNumber - 1) * earlyEase,
+    speedMultiplier: 1 + (waveNumber - 1) * 0.025,
+    goldMultiplier: 1 + (waveNumber - 1) * 0.06,
   };
 }
