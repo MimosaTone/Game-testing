@@ -21,6 +21,33 @@ try {
   canvas.width = GAME_CONFIG.canvasWidth;
   canvas.height = GAME_CONFIG.canvasHeight;
 
+  const canvasWrap = document.getElementById('canvas-wrap');
+  const bottomHotbar = document.getElementById('bottom-hotbar');
+
+  function resizeCanvasDisplay() {
+    const aspect = GAME_CONFIG.canvasWidth / GAME_CONFIG.canvasHeight;
+    const pad = 8;
+    const availW = canvasWrap.clientWidth - pad;
+    const availH = canvasWrap.clientHeight - pad;
+    if (availW <= 0 || availH <= 0) return;
+
+    let displayW = availW;
+    let displayH = displayW / aspect;
+    if (displayH > availH) {
+      displayH = availH;
+      displayW = displayH * aspect;
+    }
+
+    canvas.style.width = `${Math.floor(displayW)}px`;
+    canvas.style.height = `${Math.floor(displayH)}px`;
+  }
+
+  const resizeObserver = new ResizeObserver(() => resizeCanvasDisplay());
+  resizeObserver.observe(canvasWrap);
+  if (bottomHotbar) resizeObserver.observe(bottomHotbar);
+  window.addEventListener('resize', resizeCanvasDisplay);
+  requestAnimationFrame(resizeCanvasDisplay);
+
   let floatingTexts = new FloatingTextManager();
   let lastFrameTime = performance.now();
 
