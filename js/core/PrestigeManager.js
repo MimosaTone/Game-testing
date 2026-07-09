@@ -1,38 +1,35 @@
 import { PRESTIGE_CONFIG, PRESTIGE_UPGRADES } from '../config/prestigeConfig.js';
 import { Events } from './EventBus.js';
 
+const DEFAULT_DATA = {
+  shards: 0,
+  upgrades: {},
+  totalPrestiges: 0,
+  bestWave: 0,
+};
+
+const DEFAULT_SETTINGS = { autoStartWaves: false };
+
 /**
  * Manages Bloom Shards, permanent upgrades, and persisted settings.
+ * Persistence is handled by SaveManager — this class holds runtime state.
  */
 export class PrestigeManager {
   constructor(eventBus) {
     this.eventBus = eventBus;
-    this.data = this._load();
-    this.settings = this._loadSettings();
+    this.data = { ...DEFAULT_DATA };
+    this.settings = { ...DEFAULT_SETTINGS };
   }
 
-  _load() {
-    try {
-      const raw = localStorage.getItem(PRESTIGE_CONFIG.storageKey);
-      if (raw) return JSON.parse(raw);
-    } catch { /* ignore */ }
-    return { shards: 0, upgrades: {}, totalPrestiges: 0, bestWave: 0 };
-  }
-
-  _loadSettings() {
-    try {
-      const raw = localStorage.getItem(PRESTIGE_CONFIG.settingsKey);
-      if (raw) return JSON.parse(raw);
-    } catch { /* ignore */ }
-    return { autoStartWaves: false };
-  }
-
-  save() {
-    localStorage.setItem(PRESTIGE_CONFIG.storageKey, JSON.stringify(this.data));
-  }
-
-  saveSettings() {
-    localStorage.setItem(PRESTIGE_CONFIG.settingsKey, JSON.stringify(this.settings));
+  loadFromMeta(meta) {
+    if (!meta) return;
+    this.data = {
+      shards: meta.shards ?? 0,
+      upgrades: meta.upgrades ?? {},
+      totalPrestiges: meta.totalPrestiges ?? 0,
+      bestWave: meta.bestWave ?? 0,
+    };
+    this.settings = { ...DEFAULT_SETTINGS, ...meta.settings };
   }
 
   get shards() {
@@ -53,14 +50,12 @@ export class PrestigeManager {
 
   set autoStartWaves(value) {
     this.settings.autoStartWaves = value;
-    this.saveSettings();
     this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
   }
 
   recordWave(wave) {
     if (wave > this.data.bestWave) {
       this.data.bestWave = wave;
-      this.save();
     }
   }
 
@@ -105,8 +100,8 @@ export class PrestigeManager {
     this.data.shards += earned;
     this.data.totalPrestiges++;
     this.recordWave(waveReached);
-    this.save();
     this.eventBus.emit(Events.PRESTIGE_COMPLETED, { earned, total: this.data.shards });
+    this.eventBus.emit(Events.PRESTIGE_CHANGED, this.data);
     return earned;
   }
 
@@ -124,8 +119,12 @@ export class PrestigeManager {
 
     this.data.shards -= def.cost;
     this.data.upgrades[id] = this.getUpgradeLevel(id) + 1;
-    this.save();
     this.eventBus.emit(Events.PRESTIGE_CHANGED, this.data);
     return true;
+  }
+
+  resetAll() {
+    this.data = { ...DEFAULT_DATA };
+    this.settings = { ...DEFAULT_SETTINGS };
   }
 }

@@ -2,6 +2,7 @@ import { EventBus, Events } from './EventBus.js';
 import { Economy } from './Economy.js';
 import { WaveManager } from './WaveManager.js';
 import { PrestigeManager } from './PrestigeManager.js';
+import { SaveManager } from './SaveManager.js';
 import { Path } from '../entities/Path.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
 import { PlacementSystem } from '../systems/PlacementSystem.js';
@@ -22,8 +23,10 @@ const AUTO_START_DELAY_MS = 2500;
 export class Game {
   constructor() {
     this.eventBus = new EventBus();
+    this.saveManager = new SaveManager();
     this.path = new Path();
     this.prestigeManager = new PrestigeManager(this.eventBus);
+    this.prestigeManager.loadFromMeta(this.saveManager.meta);
     this.economy = new Economy(this.eventBus, this.prestigeManager);
     this.waveManager = new WaveManager(this.eventBus, this.path);
     this.combatSystem = new CombatSystem(this.eventBus);
@@ -69,6 +72,7 @@ export class Game {
       if (this.lives <= 0) {
         this.phase = Phase.GAME_OVER;
         this.prestigeManager.recordWave(this.waveManager.waveNumber);
+        this.saveManager.saveMeta(this);
         this.eventBus.emit(Events.GAME_OVER, { wave: this.waveManager.waveNumber });
       }
     });
@@ -76,10 +80,16 @@ export class Game {
     this.eventBus.on(Events.TOWER_PLACED, () => {
       this._applyPrestigeToTowers();
       this.combatSystem.setTowers(this.placementSystem.towers);
+      this.saveGame();
     });
 
     this.eventBus.on(Events.FARM_PLACED, () => {
       this._refreshFarmIncome();
+      this.saveGame();
+    });
+
+    this.eventBus.on(Events.STRUCTURE_UPGRADED, () => {
+      this.saveGame();
     });
 
     this.eventBus.on(Events.WAVE_STARTED, (wave) => {
@@ -92,6 +102,11 @@ export class Game {
     this.eventBus.on(Events.PRESTIGE_CHANGED, () => {
       this._applyPrestigeToTowers();
       this._refreshFarmIncome();
+      this.saveGame();
+    });
+
+    this.eventBus.on(Events.SETTINGS_CHANGED, () => {
+      this.saveGame();
     });
   }
 
@@ -106,18 +121,81 @@ export class Game {
     }
   }
 
-  start() {
-    this.running = true;
-    this.lastTime = performance.now();
+  saveGame() {
+    if (this.phase !== Phase.PLANNING || this.lives <= 0) return;
+    this.saveManager.save(this);
+    this.eventBus.emit(Events.GAME_SAVED);
+  }
+
+  hasSavedRun() {
+    return this.saveManager.hasContinuableRun();
+  }
+
+  getSavedRunSummary() {
+    return this.saveManager.getRunSummary();
+  }
+
+  loadSavedRun() {
+    const run = this.saveManager.getRunData();
+    if (!run) return false;
+
+    this._clearAutoStartTimer();
+    this.phase = Phase.PLANNING;
+    this.lives = run.lives;
+    this.economy.gold = run.gold;
+    this.economy.waveNumber = run.wave;
+    this.economy.resetWaveKillGold();
+    this.pendingHarvestEffects = [];
+
+    this.waveManager.reset();
+    this.waveManager.waveNumber = run.wave;
+    this.combatSystem.reset();
+
+    this.placementSystem.loadStructures(run.towers, run.farms);
+    this.placementSystem.clearSelection();
+    this._applyPrestigeToTowers();
+    this.combatSystem.setTowers(this.placementSystem.towers);
+    this._refreshFarmIncome();
+
+    this._emitFullState();
+    this.eventBus.emit(Events.SAVE_LOADED);
+    return true;
+  }
+
+  startNewRun() {
+    this.resetRun();
+    this.saveManager.clearRun();
+    this.saveManager.saveMeta(this);
+    this.eventBus.emit(Events.SAVE_LOADED);
+  }
+
+  clearAllSaveData() {
+    this._clearAutoStartTimer();
+    this.prestigeManager.resetAll();
+    this.saveManager.clearAll();
+    this.resetRun();
+    this.eventBus.emit(Events.SAVE_CLEARED);
+    this._emitFullState();
+  }
+
+  _emitFullState() {
     this.eventBus.emit(Events.GOLD_CHANGED, this.economy.gold);
     this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
     this.eventBus.emit(Events.WAVE_CHANGED, this.waveManager.waveNumber);
     this.eventBus.emit(Events.PRESTIGE_CHANGED, this.prestigeManager.data);
     this.eventBus.emit(Events.INCOME_CHANGED, {
       total: this.economy.incomePerWave,
-      farmCount: 0,
-      waveBonus: 0,
+      farmCount: this.placementSystem.farms.length,
+      waveBonus: this.waveManager.waveNumber > 0
+        ? Math.round(this.waveManager.waveNumber * 3.5)
+        : 0,
     });
+  }
+
+  start() {
+    this.running = true;
+    this.lastTime = performance.now();
+    this._emitFullState();
   }
 
   get autoStartWaves() {
@@ -138,7 +216,7 @@ export class Game {
     const wave = this.waveManager.waveNumber;
     const earned = this.prestigeManager.prestige(wave);
     this.resetRun();
-    this.eventBus.emit(Events.PRESTIGE_COMPLETED, { earned, wave });
+    this.saveManager.save(this);
     return earned;
   }
 
@@ -192,6 +270,7 @@ export class Game {
     this.phase = Phase.PLANNING;
     this.economy.setWaveNumber(wave);
     this._refreshFarmIncome();
+    this.saveGame();
 
     this.eventBus.emit(Events.WAVE_COMPLETED, wave);
     this.eventBus.emit(Events.WAVE_SUMMARY, {
@@ -250,6 +329,8 @@ export class Game {
 
   restart() {
     this.resetRun();
+    this.saveManager.clearRun();
+    this.saveManager.saveMeta(this);
   }
 
   resetRun() {

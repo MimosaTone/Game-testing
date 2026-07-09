@@ -2,6 +2,7 @@ import { Game, Phase } from './core/Game.js';
 import { Renderer } from './render/Renderer.js';
 import { FloatingTextManager } from './render/FloatingTextManager.js';
 import { HUD } from './ui/HUD.js';
+import { StartModal } from './ui/StartModal.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -15,9 +16,23 @@ const hud = new HUD(game);
 canvas.width = GAME_CONFIG.canvasWidth;
 canvas.height = GAME_CONFIG.canvasHeight;
 
-game.start();
-
+let gameLoopStarted = false;
 let lastFrameTime = performance.now();
+
+function beginGame() {
+  if (gameLoopStarted) return;
+  gameLoopStarted = true;
+  game.start();
+  requestAnimationFrame(gameLoop);
+}
+
+const startModal = new StartModal(game, beginGame);
+
+if (game.hasSavedRun()) {
+  startModal.show(game.getSavedRunSummary());
+} else {
+  beginGame();
+}
 
 canvas.addEventListener('mousemove', (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -77,5 +92,3 @@ function gameLoop(time) {
 
   requestAnimationFrame(gameLoop);
 }
-
-requestAnimationFrame(gameLoop);

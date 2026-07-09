@@ -69,8 +69,7 @@ Every 15th wave features a unique boss with special abilities and a large gold r
 
 - **Auto-start waves** — toggle to automatically begin the next wave after a short delay
 - **52 build spots** — expanded map for more strategic layouts
-
-Late waves (10+) introduce **Ward** (armored) and **Rime** (regenerating) invaders, plus scaling armor and regen on all foes. Smart Sunpatch investment and tower upgrades are both required to survive.
+- **Save system** — auto-saves between waves and on upgrades; continue or start new on launch
 
 ## Architecture
 js/

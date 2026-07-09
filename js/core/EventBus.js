@@ -47,5 +47,10 @@ export const Events = {
   PRESTIGE_COMPLETED: 'prestige_completed',
   SETTINGS_CHANGED: 'settings_changed',
   BOSS_WAVE: 'boss_wave',
+  BOSS_SPAWN_MINIONS: 'boss_spawn_minions',
   AUTO_WAVE_STARTED: 'auto_wave_started',
+  STRUCTURE_UPGRADED: 'structure_upgraded',
+  GAME_SAVED: 'game_saved',
+  SAVE_LOADED: 'save_loaded',
+  SAVE_CLEARED: 'save_cleared',
 };

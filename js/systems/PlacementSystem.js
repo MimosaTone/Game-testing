@@ -102,7 +102,34 @@ export class PlacementSystem {
     }
 
     this.eventBus.emit(Events.STRUCTURE_SELECTED, structure);
+    this.eventBus.emit(Events.STRUCTURE_UPGRADED, structure);
     return true;
+  }
+
+  /** Restore towers and farms from save data. */
+  loadStructures(towerData, farmData) {
+    this.towers = [];
+    this.farms = [];
+    this.occupied.clear();
+    this.selectedBuildType = null;
+    this.selectedStructure = null;
+
+    for (const t of towerData) {
+      if (!TOWER_TYPES[t.typeId]) continue;
+      const tower = new Tower(t.typeId, t.gridX, t.gridY);
+      tower.upgradeTier = t.upgradeTier || 0;
+      this.towers.push(tower);
+      this.occupied.set(`${t.gridX},${t.gridY}`, tower);
+    }
+
+    for (const f of farmData) {
+      const farm = new Farm(f.gridX, f.gridY);
+      farm.level = f.level || 1;
+      this.farms.push(farm);
+      this.occupied.set(`${f.gridX},${f.gridY}`, farm);
+    }
+
+    this.economy.recalculateIncome(this.farms);
   }
 
   getPlacementCost() {

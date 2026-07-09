@@ -35,6 +35,7 @@ export class HUD {
       prestigeBtn: document.getElementById('prestige-btn'),
       prestigeUpgrades: document.getElementById('prestige-upgrades'),
       autoStartToggle: document.getElementById('auto-start-toggle'),
+      resetSaveBtn: document.getElementById('reset-save-btn'),
     };
 
     this._bindEvents();
@@ -75,6 +76,21 @@ export class HUD {
 
     this.elements.autoStartToggle.addEventListener('change', (e) => {
       this.game.autoStartWaves = e.target.checked;
+    });
+
+    this.elements.resetSaveBtn.addEventListener('click', () => {
+      const confirmed = confirm(
+        'Reset all save data?\n\nThis clears your current run, Bloom Shards, prestige upgrades, and settings. This cannot be undone.'
+      );
+      if (confirmed) {
+        this.game.clearAllSaveData();
+        this._renderPrestigeUpgrades();
+        this._updatePrestigeUI();
+        this._updateStartButton();
+        this._hideWaveSummary();
+        this._hideUpgradePanel();
+        this.elements.autoStartToggle.checked = false;
+      }
     });
 
     this.elements.prestigeBtn.addEventListener('click', () => {
@@ -162,6 +178,19 @@ export class HUD {
 
     bus.on(Events.AUTO_WAVE_STARTED, () => {
       this._updateStartButton();
+    });
+
+    bus.on(Events.SAVE_LOADED, () => {
+      this.elements.autoStartToggle.checked = this.game.autoStartWaves;
+      this._renderBuildPanel();
+      this._renderPrestigeUpgrades();
+      this._updatePrestigeUI();
+      this._updateStartButton();
+      this._updateBuildAffordability();
+    });
+
+    bus.on(Events.SAVE_CLEARED, () => {
+      this.elements.autoStartToggle.checked = false;
     });
 
     bus.on(Events.BOSS_WAVE, (wave) => {
