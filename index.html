@@ -8,93 +8,162 @@
 </head>
 <body>
   <div id="game-container">
-    <header id="hud">
-      <div class="stat">
-        <span class="stat-label">Gold</span>
-        <span class="stat-value gold" id="gold-value">0</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Lives</span>
-        <span class="stat-value lives" id="lives-value">0</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Wave</span>
-        <span class="stat-value wave" id="wave-value">0</span>
-      </div>
-      <div class="stat stat-income">
-        <span class="stat-label">Income / Wave</span>
-        <span class="stat-value income" id="income-value">+0</span>
-        <span class="stat-sub" id="income-detail">Invest in Sunpatches</span>
-      </div>
-      <div class="stat stat-shards">
-        <span class="stat-label">Bloom Shards</span>
-        <span class="stat-value shards" id="shards-value">0</span>
-        <span class="stat-sub" id="prestige-count">Prestige 0</span>
-      </div>
-      <div class="stat stat-crystals">
-        <span class="stat-label">Crystals</span>
-        <span class="stat-value crystals" id="crystals-value">0</span>
-      </div>
-      <div class="stat stat-research">
-        <span class="stat-label">Research</span>
-        <span class="stat-value research" id="research-value">0 RP</span>
-      </div>
-      <div class="hud-controls">
-        <button id="speed-btn" class="speed-btn" title="Cycle game speed">1x</button>
-        <label class="toggle-label" title="Automatically start the next wave after a short delay">
-          <input type="checkbox" id="auto-start-toggle">
-          Auto-start waves
-        </label>
-        <button id="start-wave-btn" class="primary-btn">Start Wave 1</button>
-      </div>
-    </header>
+    <div id="game-layout">
+      <!-- LEFT: Run status & resources -->
+      <aside id="left-panel" class="panel">
+        <header class="panel-header">
+          <h1 class="game-title">Meadow Defense</h1>
+        </header>
 
-    <main id="game-area">
-      <canvas id="game-canvas"></canvas>
-
-      <aside id="sidebar">
-        <section id="build-section">
-          <h2>Build</h2>
-          <div id="build-panel"></div>
-          <h3 class="subsection-title">Support</h3>
-          <div id="support-panel"></div>
+        <section class="panel-section">
+          <h2 class="section-title">Resources</h2>
+          <div class="resource-grid">
+            <div class="resource-card">
+              <span class="res-icon gold-icon">◎</span>
+              <div class="res-body">
+                <span class="res-label">Gold</span>
+                <span class="res-value" id="gold-value">0</span>
+              </div>
+            </div>
+            <div class="resource-card">
+              <span class="res-icon lives-icon">♥</span>
+              <div class="res-body">
+                <span class="res-label">Lives</span>
+                <span class="res-value" id="lives-value">0</span>
+              </div>
+            </div>
+            <div class="resource-card">
+              <span class="res-icon crystal-icon">◆</span>
+              <div class="res-body">
+                <span class="res-label">Crystals</span>
+                <span class="res-value" id="crystals-value">0</span>
+              </div>
+            </div>
+            <div class="resource-card">
+              <span class="res-icon research-icon">⚗</span>
+              <div class="res-body">
+                <span class="res-label">Research</span>
+                <span class="res-value" id="research-value">0 RP</span>
+              </div>
+            </div>
+            <div class="resource-card wide">
+              <span class="res-icon shard-icon">✿</span>
+              <div class="res-body">
+                <span class="res-label">Bloom Shards</span>
+                <span class="res-value" id="shards-value">0</span>
+                <span class="res-sub" id="prestige-count">Prestige 0</span>
+              </div>
+            </div>
+            <div class="resource-card">
+              <span class="res-icon income-icon">☘</span>
+              <div class="res-body">
+                <span class="res-label">Income / Wave</span>
+                <span class="res-value income" id="income-value">+0</span>
+                <span class="res-sub" id="income-detail">Invest in Sunpatches</span>
+              </div>
+            </div>
+          </div>
         </section>
 
-        <section id="upgrade-panel" class="hidden">
-          <h2 id="upgrade-title">Upgrade</h2>
-          <div id="upgrade-stats"></div>
-          <div id="upgrade-buttons"></div>
+        <section class="panel-section">
+          <h2 class="section-title">Wave Status</h2>
+          <div class="wave-status-grid">
+            <div class="status-row">
+              <span class="status-label">Current Wave</span>
+              <span class="status-value wave" id="wave-value">0</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Enemies Active</span>
+              <span class="status-value" id="enemy-count-value">0</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Next Wave Reward</span>
+              <span class="status-value gold-text" id="wave-reward-value">+0g</span>
+            </div>
+          </div>
+          <div id="wave-summary" class="wave-summary-box hidden"></div>
         </section>
 
-        <section id="wave-summary" class="hidden"></section>
-
-        <section id="challenge-section">
-          <h2>Challenges</h2>
-          <p class="challenge-hint" id="challenge-hint">Optional modifiers for bonus rewards</p>
+        <section class="panel-section">
+          <h2 class="section-title">Challenges</h2>
+          <p class="hint-text" id="challenge-hint">Optional modifiers for bonus rewards</p>
           <div id="challenge-presets" class="challenge-presets"></div>
-          <div id="challenge-modifiers" class="challenge-modifiers"></div>
-          <div id="challenge-reward" class="challenge-reward">Reward multiplier: 1.0x</div>
+          <div id="challenge-active-list" class="challenge-active-list"></div>
+          <div id="challenge-reward" class="challenge-reward-badge">Total Bonus: 1.0×</div>
+          <div id="challenge-modifiers" class="challenge-modifiers hidden"></div>
+          <button type="button" id="toggle-challenges-btn" class="text-btn">Show all modifiers</button>
         </section>
 
-        <section id="research-section">
-          <h2>Research</h2>
-          <p class="research-hint" id="research-hint">Build Research Labs to earn Research Points</p>
-          <div id="research-upgrades"></div>
+        <section class="panel-section controls-section">
+          <h2 class="section-title">Controls</h2>
+          <div class="control-row">
+            <button id="start-wave-btn" class="primary-btn full-width">Start Wave 1</button>
+          </div>
+          <div class="control-row speed-row">
+            <span class="control-label">Speed</span>
+            <button id="speed-btn" class="speed-btn" title="Cycle game speed">1×</button>
+          </div>
+          <label class="toggle-row">
+            <input type="checkbox" id="auto-start-toggle">
+            <span>Auto-start next wave</span>
+          </label>
+          <div class="control-row action-row">
+            <button type="button" id="repair-all-btn" class="secondary-btn">Repair All</button>
+            <button type="button" id="sell-mode-btn" class="secondary-btn">Sell Mode</button>
+          </div>
+        </section>
+      </aside>
+
+      <!-- CENTER: Map + hotbar -->
+      <main id="center-stage">
+        <div id="canvas-wrap">
+          <canvas id="game-canvas"></canvas>
+        </div>
+        <footer id="bottom-hotbar">
+          <div id="hotbar-tabs" class="hotbar-tabs"></div>
+          <div id="hotbar-cards" class="hotbar-cards"></div>
+        </footer>
+      </main>
+
+      <!-- RIGHT: Actions & selection -->
+      <aside id="right-panel" class="panel">
+        <section id="selection-section" class="panel-section">
+          <h2 class="section-title">Selection</h2>
+          <div id="selection-placeholder" class="selection-placeholder">
+            <p>Select a tower or building on the map to view stats, upgrades, and actions.</p>
+          </div>
+          <div id="upgrade-panel" class="hidden">
+            <h3 id="upgrade-title" class="upgrade-title">—</h3>
+            <div id="upgrade-stats" class="upgrade-stats"></div>
+            <div id="upgrade-buttons" class="upgrade-buttons"></div>
+            <div class="selection-actions">
+              <button type="button" id="sell-btn" class="danger-btn hidden">Sell</button>
+            </div>
+          </div>
         </section>
 
-        <section id="prestige-section">
-          <h2>Prestige</h2>
-          <p class="prestige-hint" id="prestige-hint">Reach Wave 50 to unlock Prestige</p>
+        <section class="panel-section">
+          <h2 class="section-title">Build Menu</h2>
+          <div id="build-panel" class="build-list"></div>
+          <h3 class="subsection-title">Support Structures</h3>
+          <div id="support-panel" class="build-list"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="section-title">Research</h2>
+          <p class="hint-text" id="research-hint">Build Research Labs to earn Research Points</p>
+          <div id="research-upgrades" class="research-list"></div>
+        </section>
+
+        <section class="panel-section prestige-section">
+          <h2 class="section-title">Prestige</h2>
+          <p class="hint-text" id="prestige-hint">Reach Wave 50 to unlock Prestige</p>
           <button id="prestige-btn" class="prestige-btn hidden" disabled>Prestige Run</button>
-          <div id="prestige-upgrades"></div>
+          <div id="prestige-upgrades" class="prestige-list"></div>
           <button id="reset-save-btn" class="reset-save-btn" type="button">Reset Save Data</button>
         </section>
       </aside>
-    </main>
-
-    <footer id="instructions">
-      <p>Progress saves automatically between waves. Balance Sunpatch investments with tower upgrades.</p>
-    </footer>
+    </div>
   </div>
 
   <div id="start-modal" class="modal-overlay hidden">

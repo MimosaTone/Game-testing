@@ -31,8 +31,26 @@ export const GAME_CONFIG = {
     selection: '#7d6b9e',
     enemy: '#c06030',
     projectile: '#c08028',
+    terrainGrass: '#a8bdb5',
+    terrainMeadow: '#9cb5ac',
+    terrainFlower: '#b8a0c8',
+    terrainStone: '#9aa5a0',
+    buildSpotRing: 'rgba(143, 170, 150, 0.55)',
+    buildSpotFill: 'rgba(120, 155, 130, 0.35)',
   },
 };
+
+/** Decorative non-buildable terrain accents (grid coordinates). */
+export const DECORATIVE_TILES = [
+  { x: 0, y: 0, type: 'flower' }, { x: 1, y: 0, type: 'grass' },
+  { x: 23, y: 0, type: 'flower' }, { x: 22, y: 1, type: 'grass' },
+  { x: 0, y: 14, type: 'grass' }, { x: 23, y: 14, type: 'flower' },
+  { x: 22, y: 14, type: 'stone' }, { x: 1, y: 14, type: 'meadow' },
+  { x: 7, y: 0, type: 'flower' }, { x: 16, y: 0, type: 'meadow' },
+  { x: 7, y: 14, type: 'grass' }, { x: 16, y: 14, type: 'flower' },
+  { x: 2, y: 1, type: 'meadow' }, { x: 21, y: 1, type: 'meadow' },
+  { x: 2, y: 13, type: 'flower' }, { x: 21, y: 13, type: 'grass' },
+];
 
 /** Waypoints define the single enemy path (grid coordinates). */
 export const PATH_WAYPOINTS = [
@@ -62,4 +80,14 @@ export const BUILD_SPOTS = [
   { x: 15, y: 4 }, { x: 15, y: 10 }, { x: 17, y: 5 }, { x: 17, y: 9 },
   { x: 19, y: 3 }, { x: 19, y: 7 }, { x: 21, y: 3 }, { x: 21, y: 7 },
   { x: 6, y: 9 }, { x: 8, y: 11 }, { x: 14, y: 5 }, { x: 16, y: 8 },
+  // Flank clusters — left and right of path (path unchanged)
+  { x: 0, y: 2 }, { x: 0, y: 4 }, { x: 0, y: 10 }, { x: 0, y: 12 },
+  { x: 1, y: 2 }, { x: 1, y: 11 }, { x: 1, y: 13 },
+  { x: 22, y: 2 }, { x: 22, y: 8 }, { x: 22, y: 12 },
+  { x: 23, y: 2 }, { x: 23, y: 9 }, { x: 23, y: 13 },
+  { x: 5, y: 8 }, { x: 5, y: 10 }, { x: 6, y: 7 },
+  { x: 18, y: 6 }, { x: 18, y: 9 }, { x: 21, y: 9 },
+  { x: 12, y: 2 }, { x: 13, y: 2 }, { x: 12, y: 6 },
+  { x: 14, y: 8 }, { x: 14, y: 11 }, { x: 8, y: 8 },
+  { x: 9, y: 11 }, { x: 20, y: 11 }, { x: 20, y: 9 },
 ];

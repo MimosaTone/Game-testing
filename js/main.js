@@ -37,6 +37,7 @@ try {
     }
 
     renderer.clear();
+    renderer.drawDecorativeTerrain(game.path);
     renderer.drawGrid();
     renderer.drawPath(game.path);
     renderer.drawBuildSpots(
@@ -61,6 +62,8 @@ try {
     renderer.drawProjectiles(game.combatSystem.projectiles);
     floatingTexts.draw(ctx);
     renderer.drawPhaseOverlay(game.phase, game.waveManager.waveNumber);
+
+    hud.updateStatusPanel();
 
     requestAnimationFrame(gameLoop);
   }

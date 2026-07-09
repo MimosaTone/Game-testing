@@ -13,6 +13,7 @@ import { PlacementSystem } from '../systems/PlacementSystem.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
 import { isBossWave } from '../config/waveConfig.js';
+import { ECONOMY_CONFIG } from '../config/economyConfig.js';
 
 /** Game phases. */
 export const Phase = {
@@ -520,6 +521,17 @@ export class Game {
       return;
     }
 
+    if (this.placementSystem.sellMode) {
+      const structure = this.placementSystem.occupied.get(`${gridX},${gridY}`);
+      if (structure && !structure.destroyed) {
+        this.placementSystem.sellStructure(structure);
+        this._applyPrestigeToTowers();
+        this.combatSystem.setTowers(this.placementSystem.towers);
+        this._refreshSupportEffects();
+      }
+      return;
+    }
+
     if (this.placementSystem.selectedBuildType) {
       if (this.placementSystem.tryPlace(gridX, gridY)) {
         this._applyPrestigeToTowers();
@@ -528,6 +540,17 @@ export class Game {
     } else {
       this.placementSystem.selectStructure(gridX, gridY);
     }
+  }
+
+  getEnemyCount() {
+    return this.waveManager.enemies.filter((e) => e.alive).length;
+  }
+
+  getEstimatedWaveReward() {
+    const nextWave = this.waveManager.waveNumber + 1;
+    const mods = this.prestigeManager.getModifiers();
+    const base = Math.round(ECONOMY_CONFIG.waveClearBonus(nextWave) * mods.waveBonusMult);
+    return Math.round(base * this.getChallengeRewardMult());
   }
 
   restart() {

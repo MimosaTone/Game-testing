@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from '../config/gameConfig.js';
+import { GAME_CONFIG, DECORATIVE_TILES } from '../config/gameConfig.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { Phase } from '../core/Game.js';
 
@@ -36,6 +36,61 @@ export class Renderer {
     }
   }
 
+  drawDecorativeTerrain(path) {
+    const { ctx, tileSize, colors } = this;
+    const pathCells = path.getPathCells();
+
+    for (let y = 0; y < GAME_CONFIG.gridRows; y++) {
+      for (let x = 0; x < GAME_CONFIG.gridCols; x++) {
+        const key = `${x},${y}`;
+        if (pathCells.has(key)) continue;
+        const checker = (x + y) % 2 === 0;
+        ctx.fillStyle = checker ? colors.terrainGrass : colors.terrainMeadow;
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+      }
+    }
+
+    for (const tile of DECORATIVE_TILES) {
+      const key = `${tile.x},${tile.y}`;
+      if (pathCells.has(key)) continue;
+      const px = tile.x * tileSize;
+      const py = tile.y * tileSize;
+      const cx = px + tileSize / 2;
+      const cy = py + tileSize / 2;
+
+      if (tile.type === 'flower') {
+        ctx.fillStyle = colors.terrainFlower;
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath();
+        ctx.arc(cx, cy, tileSize * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#e8a0c0';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✿', cx, cy);
+      } else if (tile.type === 'stone') {
+        ctx.fillStyle = colors.terrainStone;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, tileSize * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (tile.type === 'meadow') {
+        ctx.fillStyle = colors.terrainMeadow;
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(px + 6, py + 6, tileSize - 12, tileSize - 12);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = colors.terrainGrass;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(px + 8, py + 8, tileSize - 16, tileSize - 16);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
   drawPath(path) {
     const cells = path.getPathCells();
     const { ctx, tileSize, colors } = this;
@@ -55,14 +110,14 @@ export class Renderer {
 
     for (const [key, data] of placementSystem.destroyedSpots) {
       const [x, y] = key.split(',').map(Number);
-      ctx.fillStyle = 'rgba(80, 80, 80, 0.45)';
+      ctx.fillStyle = 'rgba(60, 50, 50, 0.5)';
       ctx.fillRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8);
       ctx.strokeStyle = '#c0392b';
       ctx.lineWidth = 2;
       ctx.setLineDash([3, 3]);
       ctx.strokeRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8);
       ctx.setLineDash([]);
-      ctx.fillStyle = '#c0392b';
+      ctx.fillStyle = '#e85d5d';
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -73,13 +128,30 @@ export class Renderer {
       const [x, y] = key.split(',').map(Number);
       const occupied = placementSystem.isOccupied(x, y);
       const hovered = hoveredCell && hoveredCell.x === x && hoveredCell.y === y;
+      const cx = x * tileSize + tileSize / 2;
+      const cy = y * tileSize + tileSize / 2;
 
       if (occupied) continue;
 
-      ctx.fillStyle = hovered ? colors.buildSpotHover : colors.buildSpot;
-      ctx.globalAlpha = 0.6;
-      ctx.fillRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8);
+      ctx.fillStyle = hovered ? colors.buildSpotFill : colors.buildSpotFill;
+      ctx.globalAlpha = hovered ? 0.55 : 0.35;
+      ctx.fillRect(x * tileSize + 5, y * tileSize + 5, tileSize - 10, tileSize - 10);
       ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = hovered ? colors.buildSpotHover : colors.buildSpotRing;
+      ctx.lineWidth = hovered ? 2.5 : 1.5;
+      ctx.setLineDash(hovered ? [] : [4, 4]);
+      ctx.strokeRect(x * tileSize + 6, y * tileSize + 6, tileSize - 12, tileSize - 12);
+      ctx.setLineDash([]);
+
+      if (!hovered) {
+        ctx.fillStyle = colors.buildSpotRing;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
 
       if (hovered && selectedBuildType) {
         ctx.strokeStyle = colors.selection;

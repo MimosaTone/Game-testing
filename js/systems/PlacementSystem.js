@@ -27,6 +27,16 @@ export class PlacementSystem {
     this.selectedStructure = null;
     this.bossesDefeated = 0;
     this.challengeFx = null;
+    this.sellMode = false;
+  }
+
+  toggleSellMode() {
+    this.sellMode = !this.sellMode;
+    if (this.sellMode) {
+      this.selectedBuildType = null;
+      this.eventBus.emit(Events.STRUCTURE_SELECTED, null);
+    }
+    return this.sellMode;
   }
 
   setChallengeEffects(fx) {
@@ -216,6 +226,81 @@ export class PlacementSystem {
     return healed > 0;
   }
 
+  repairAllDamaged() {
+    const structures = [...this.towers, ...this.farms, ...this.supports].filter(
+      (s) => !s.destroyed && s.health < s.maxHealth
+    );
+    let totalCost = 0;
+    for (const s of structures) totalCost += getRepairCost(s) || 0;
+    if (totalCost <= 0 || !this.economy.canAfford(totalCost)) return false;
+    this.economy.spend(totalCost);
+    for (const s of structures) {
+      repairStructure(s, s.maxHealth);
+      this.eventBus.emit(Events.STRUCTURE_REPAIRED, s);
+    }
+    return true;
+  }
+
+  _getSellMult(structure) {
+    let mult = this.economy.supportEffects?.global.sellValueMult ?? 1;
+    if (structure.type === 'tower' && this.economy.supportEffects) {
+      const mods = this.economy.supportEffects.getTowerMods(
+        this.supports,
+        structure.gridX,
+        structure.gridY
+      );
+      mult *= mods.sellValueMult ?? 1;
+    }
+    return mult;
+  }
+
+  getSellValue(structure) {
+    if (!structure || structure.destroyed) return 0;
+    let invested = 0;
+
+    if (structure.type === 'tower') {
+      invested = this.getBuildCost(structure.typeId) ?? TOWER_TYPES[structure.typeId].cost;
+      for (let i = 0; i < structure.upgradeTier; i++) {
+        invested += structure.upgradePath[i]?.cost ?? 0;
+      }
+    } else if (structure.type === 'farm') {
+      invested = FARM_CONFIG.cost;
+      for (let i = 0; i < structure.level - 1; i++) {
+        invested += FARM_CONFIG.upgradeCosts[i] ?? 0;
+      }
+    } else if (structure.type === 'support') {
+      invested = structure.definition.cost;
+      for (let i = 0; i < structure.level - 1; i++) {
+        invested += structure.definition.upgradeCosts[i] ?? 0;
+      }
+      if (structure.typeId === 'bank') invested += structure.storedGold;
+    }
+
+    return Math.max(1, Math.round(invested * 0.6 * this._getSellMult(structure)));
+  }
+
+  sellStructure(structure) {
+    if (!structure || structure.destroyed) return false;
+    const value = this.getSellValue(structure);
+    const key = `${structure.gridX},${structure.gridY}`;
+
+    if (structure.type === 'tower') {
+      this.towers = this.towers.filter((t) => t.id !== structure.id);
+    } else if (structure.type === 'farm') {
+      this.farms = this.farms.filter((f) => f.id !== structure.id);
+      this.economy.recalculateIncome(this.farms);
+    } else if (structure.type === 'support') {
+      this.supports = this.supports.filter((s) => s.id !== structure.id);
+    }
+
+    this.occupied.delete(key);
+    this.selectedStructure = null;
+    this.economy.earn(value, { skipMultiplier: true });
+    this.eventBus.emit(Events.STRUCTURE_SOLD, { structure, value });
+    this.eventBus.emit(Events.STRUCTURE_SELECTED, null);
+    return true;
+  }
+
   upgradeSelected(stat, branch = null) {
     const structure = this.selectedStructure;
     if (!structure || structure.destroyed) return false;
@@ -381,6 +466,7 @@ export class PlacementSystem {
     this.destroyedSpots.clear();
     this.selectedBuildType = null;
     this.selectedStructure = null;
+    this.sellMode = false;
     this.bossesDefeated = 0;
     this._applyBuildSpotLimit();
     this.economy.recalculateIncome([]);

@@ -4,6 +4,8 @@ import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES, SUPPORT_BUILD_ORDER } from '../config/supportConfig.js';
 import { RESEARCH_UPGRADES } from '../config/researchConfig.js';
 import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js';
+import { MASTER_UPGRADES } from '../config/towerMasteryConfig.js';
+import { BUILD_CATEGORIES, BUILD_CATEGORY_ORDER, getBuildItemDef } from '../config/buildCategories.js';
 import { getRepairCost } from '../entities/StructureHealth.js';
 import { REBUILD_COST_MULT } from '../config/structureHealthConfig.js';
 import { Phase } from '../core/Game.js';
@@ -21,19 +23,25 @@ import { isBossWave } from '../config/waveConfig.js';
 export class HUD {
   constructor(game) {
     this.game = game;
+    this.hotbarCategory = 'towers';
+    this.challengesExpanded = false;
     this.elements = {
       gold: document.getElementById('gold-value'),
       lives: document.getElementById('lives-value'),
       wave: document.getElementById('wave-value'),
+      enemyCount: document.getElementById('enemy-count-value'),
+      waveReward: document.getElementById('wave-reward-value'),
       income: document.getElementById('income-value'),
       incomeDetail: document.getElementById('income-detail'),
       startWave: document.getElementById('start-wave-btn'),
       buildPanel: document.getElementById('build-panel'),
       supportPanel: document.getElementById('support-panel'),
       upgradePanel: document.getElementById('upgrade-panel'),
+      selectionPlaceholder: document.getElementById('selection-placeholder'),
       upgradeTitle: document.getElementById('upgrade-title'),
       upgradeStats: document.getElementById('upgrade-stats'),
       upgradeButtons: document.getElementById('upgrade-buttons'),
+      sellBtn: document.getElementById('sell-btn'),
       waveSummary: document.getElementById('wave-summary'),
       shards: document.getElementById('shards-value'),
       crystals: document.getElementById('crystals-value'),
@@ -47,22 +55,35 @@ export class HUD {
       autoStartToggle: document.getElementById('auto-start-toggle'),
       resetSaveBtn: document.getElementById('reset-save-btn'),
       speedBtn: document.getElementById('speed-btn'),
+      repairAllBtn: document.getElementById('repair-all-btn'),
+      sellModeBtn: document.getElementById('sell-mode-btn'),
       challengeHint: document.getElementById('challenge-hint'),
       challengePresets: document.getElementById('challenge-presets'),
+      challengeActiveList: document.getElementById('challenge-active-list'),
       challengeModifiers: document.getElementById('challenge-modifiers'),
       challengeReward: document.getElementById('challenge-reward'),
+      toggleChallengesBtn: document.getElementById('toggle-challenges-btn'),
+      hotbarTabs: document.getElementById('hotbar-tabs'),
+      hotbarCards: document.getElementById('hotbar-cards'),
     };
 
     this._bindEvents();
     this._subscribe();
     this._renderBuildPanel();
     this._renderSupportPanel();
+    this._renderHotbar();
     this._renderResearchUpgrades();
     this._renderChallengePanel();
     this._renderPrestigeUpgrades();
     this._updateStartButton();
     this._updatePrestigeUI();
+    this._updateStatusPanel();
     this.elements.autoStartToggle.checked = this.game.autoStartWaves;
+  }
+
+  /** Called each frame for live wave status. */
+  updateStatusPanel() {
+    this._updateStatusPanel();
   }
 
   _bindEvents() {
@@ -133,6 +154,67 @@ export class HUD {
       }
     });
 
+    this.elements.repairAllBtn.addEventListener('click', () => {
+      if (this.game.phase !== Phase.PLANNING) return;
+      this.game.placementSystem.repairAllDamaged();
+      this._updateUpgradeButtons();
+    });
+
+    this.elements.sellModeBtn.addEventListener('click', () => {
+      const active = this.game.placementSystem.toggleSellMode();
+      this.elements.sellModeBtn.classList.toggle('active', active);
+      this.elements.sellModeBtn.textContent = active ? 'Sell Mode ON' : 'Sell Mode';
+      if (active) {
+        this._hideUpgradePanel();
+        this.game.placementSystem.clearSelection();
+      }
+      this._updateBuildSelection();
+    });
+
+    this.elements.sellBtn.addEventListener('click', () => {
+      const structure = this.game.placementSystem.selectedStructure;
+      if (!structure || structure.destroyed || this.game.phase !== Phase.PLANNING) return;
+      this.game.placementSystem.sellStructure(structure);
+      this.game._applyPrestigeToTowers();
+      this.game.combatSystem.setTowers(this.game.placementSystem.towers);
+      this.game._refreshSupportEffects();
+      this._hideUpgradePanel();
+      this._renderBuildPanel();
+      this._renderSupportPanel();
+      this._renderHotbarCards();
+    });
+
+    this.elements.toggleChallengesBtn.addEventListener('click', () => {
+      this.challengesExpanded = !this.challengesExpanded;
+      this.elements.challengeModifiers.classList.toggle('hidden', !this.challengesExpanded);
+      this.elements.toggleChallengesBtn.textContent = this.challengesExpanded
+        ? 'Hide modifiers'
+        : 'Show all modifiers';
+    });
+
+    this.elements.hotbarTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-category]');
+      if (!tab) return;
+      this.hotbarCategory = tab.dataset.category;
+      this._renderHotbar();
+    });
+
+    this.elements.hotbarCards.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-build-type]');
+      if (!card || this.game.phase !== Phase.PLANNING) return;
+      if (card.classList.contains('locked') || card.classList.contains('disabled')) return;
+
+      const type = card.dataset.buildType;
+      const current = this.game.placementSystem.selectedBuildType;
+      if (current === type) {
+        this.game.placementSystem.clearSelection();
+      } else {
+        this.game.placementSystem.setBuildType(type);
+      }
+      this._updateBuildSelection();
+      this._hideUpgradePanel();
+    });
+
     this.elements.prestigeBtn.addEventListener('click', () => {
       if (this.game.phase === Phase.WAVE) return;
       const wave = this.game.waveManager.waveNumber;
@@ -159,6 +241,7 @@ export class HUD {
       this.elements.gold.textContent = gold;
       this._updateBuildAffordability();
       this._updateUpgradeButtons();
+      this._renderHotbarCards();
     });
 
     bus.on(Events.CRYSTALS_CHANGED, (crystals) => {
@@ -217,7 +300,11 @@ export class HUD {
       this._hideUpgradePanel();
       this._hideWaveSummary();
       this.game.placementSystem.clearSelection();
+      this.game.placementSystem.sellMode = false;
+      this.elements.sellModeBtn.classList.remove('active');
+      this.elements.sellModeBtn.textContent = 'Sell Mode';
       this._updateBuildSelection();
+      this._updateStatusPanel();
     });
 
     bus.on(Events.WAVE_COMPLETED, () => {
@@ -248,11 +335,13 @@ export class HUD {
       this.elements.autoStartToggle.checked = this.game.autoStartWaves;
       this._renderBuildPanel();
       this._renderSupportPanel();
+      this._renderHotbar();
       this._renderResearchUpgrades();
       this._renderPrestigeUpgrades();
       this._updatePrestigeUI();
       this._updateStartButton();
       this._updateBuildAffordability();
+      this._updateStatusPanel();
       this.elements.crystals.textContent = this.game.economy.crystals;
       this.elements.research.textContent = `${this.game.researchManager.points} RP`;
     });
@@ -298,12 +387,113 @@ export class HUD {
     bus.on(Events.STRUCTURE_DESTROYED, () => {
       this._renderBuildPanel();
       this._renderSupportPanel();
+      this._renderHotbarCards();
+    });
+
+    bus.on(Events.STRUCTURE_SOLD, () => {
+      this._renderBuildPanel();
+      this._renderSupportPanel();
+      this._renderHotbarCards();
+      this._updateBuildAffordability();
     });
 
     bus.on(Events.SUPPORT_PLACED, () => {
       this._renderSupportPanel();
       this._updateBuildSelection();
     });
+  }
+
+  _updateStatusPanel() {
+    this.elements.enemyCount.textContent = this.game.getEnemyCount();
+    const reward = this.game.getEstimatedWaveReward();
+    this.elements.waveReward.textContent = `+${reward}g`;
+  }
+
+  _renderHotbar() {
+    this._renderHotbarTabs();
+    this._renderHotbarCards();
+  }
+
+  _renderHotbarTabs() {
+    const tabs = this.elements.hotbarTabs;
+    tabs.innerHTML = '';
+    for (const catId of BUILD_CATEGORY_ORDER) {
+      const cat = BUILD_CATEGORIES[catId];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hotbar-tab';
+      btn.dataset.category = catId;
+      btn.textContent = `${cat.icon} ${cat.name}`;
+      btn.classList.toggle('active', catId === this.hotbarCategory);
+      tabs.appendChild(btn);
+    }
+  }
+
+  _renderHotbarCards() {
+    const container = this.elements.hotbarCards;
+    container.innerHTML = '';
+    const cat = BUILD_CATEGORIES[this.hotbarCategory];
+    if (!cat) return;
+
+    const ps = this.game.placementSystem;
+    const gold = this.game.economy.gold;
+    const selected = ps.selectedBuildType;
+
+    for (const typeId of cat.items) {
+      const def = getBuildItemDef(typeId);
+      if (!def) continue;
+
+      const isSupport = def.category === 'support';
+      const unlocked = !isSupport || ps.isSupportUnlocked(typeId);
+      const cost = isSupport ? def.cost : (typeId === FARM_CONFIG.id ? def.cost : ps.getBuildCost(typeId));
+      const affordable = gold >= cost;
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'hotbar-card';
+      card.dataset.buildType = typeId;
+      if (!unlocked) card.classList.add('locked');
+      else if (!affordable) card.classList.add('unaffordable');
+      if (selected === typeId) card.classList.add('selected');
+
+      const desc = unlocked ? def.description : (def.unlockAfterWave ? `Unlocks Wave ${def.unlockAfterWave}` : def.description);
+
+      card.innerHTML = `
+        <div class="hotbar-card-top">
+          <span class="hotbar-card-icon" style="color:${def.color}">${def.icon}</span>
+          <span class="hotbar-card-name">${def.name}</span>
+        </div>
+        <span class="hotbar-card-cost">${unlocked ? `${cost}g` : '🔒'}</span>
+        <span class="hotbar-card-desc">${desc}</span>
+      `;
+      container.appendChild(card);
+    }
+  }
+
+  _renderChallengeActiveList() {
+    const cm = this.game.challengeManager;
+    const list = this.elements.challengeActiveList;
+    list.innerHTML = '';
+
+    if (cm.active.size === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'challenge-active-empty';
+      empty.textContent = 'No active modifiers';
+      list.appendChild(empty);
+      return;
+    }
+
+    for (const modId of cm.active) {
+      const mod = CHALLENGE_MODIFIERS[modId];
+      if (!mod) continue;
+      const row = document.createElement('div');
+      row.className = 'challenge-active-item';
+      row.innerHTML = `
+        <span class="challenge-active-name">${mod.name}</span>
+        <span class="challenge-active-bonus">+${Math.round(mod.rewardBonus * 100)}%</span>
+      `;
+      list.appendChild(row);
+    }
   }
 
   _renderChallengePanel() {
@@ -315,7 +505,8 @@ export class HUD {
       ? 'Stack modifiers for bigger rewards — adjust before each wave'
       : 'Modifiers can only be changed between waves';
 
-    this.elements.challengeReward.textContent = `Reward multiplier: ${state.rewardMultiplier.toFixed(1)}x`;
+    this.elements.challengeReward.textContent = `Total Bonus: ${state.rewardMultiplier.toFixed(1)}×`;
+    this._renderChallengeActiveList();
 
     const presetsEl = this.elements.challengePresets;
     presetsEl.innerHTML = '';
@@ -487,7 +678,7 @@ export class HUD {
 
   _updateBuildSelection() {
     const selected = this.game.placementSystem.selectedBuildType;
-    for (const btn of document.querySelectorAll('#build-panel .build-btn, #support-panel .build-btn')) {
+    for (const btn of document.querySelectorAll('#build-panel .build-btn, #support-panel .build-btn, .hotbar-card')) {
       btn.classList.toggle('selected', btn.dataset.buildType === selected);
     }
   }
@@ -628,6 +819,8 @@ export class HUD {
   _showUpgradePanel(structure) {
     const panel = this.elements.upgradePanel;
     panel.classList.remove('hidden');
+    this.elements.selectionPlaceholder.classList.add('hidden');
+    this._updateSellButton(structure);
 
     if (structure?.destroyed) {
       this._showDestroyedPanel(structure);
@@ -662,6 +855,37 @@ export class HUD {
 
   _hideUpgradePanel() {
     this.elements.upgradePanel.classList.add('hidden');
+    this.elements.selectionPlaceholder.classList.remove('hidden');
+    this.elements.sellBtn.classList.add('hidden');
+  }
+
+  _appendHealthStats(structure) {
+    if (!structure?.maxHealth) return '';
+    const pct = Math.round((structure.health / structure.maxHealth) * 100);
+    const damaged = structure.health < structure.maxHealth;
+    const barColor = pct > 50 ? '#4caf7a' : pct > 25 ? '#f0c040' : '#e85d5d';
+    return `
+      <div class="health-stat-block${damaged ? ' damaged' : ''}">
+        <div>Health: <strong>${Math.round(structure.health)}</strong> / ${structure.maxHealth} (${pct}%)</div>
+        ${structure.armor > 0 ? `<div>Armor: <strong>${Math.round(structure.armor * 100)}%</strong> damage reduction</div>` : ''}
+        <div class="health-bar-ui">
+          <div class="health-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        ${damaged ? '<div style="font-size:12px;color:#e85d5d;margin-top:4px">⚠ Structure damaged — repair recommended</div>' : ''}
+      </div>
+    `;
+  }
+
+  _updateSellButton(structure) {
+    const btn = this.elements.sellBtn;
+    if (!structure || structure.destroyed || this.game.phase !== Phase.PLANNING) {
+      btn.classList.add('hidden');
+      return;
+    }
+    const value = this.game.placementSystem.getSellValue(structure);
+    btn.classList.remove('hidden');
+    btn.textContent = `Sell (+${value}g)`;
+    btn.disabled = false;
   }
 
   _showTowerUpgrades(tower) {
@@ -688,9 +912,10 @@ export class HUD {
 
     let statsHtml = `
       ${masteryHtml}
+      ${this._appendHealthStats(tower)}
       <div>Damage: <strong>${stats.damage}</strong></div>
       <div>Range: <strong>${stats.range.toFixed(1)}</strong></div>
-      <div>Speed: <strong>${stats.attackSpeed.toFixed(2)}/s</strong></div>
+      <div>Attack Speed: <strong>${stats.attackSpeed.toFixed(2)}/s</strong></div>
     `;
 
     if (abilities.length > 0) {
@@ -740,6 +965,7 @@ export class HUD {
 
     this.elements.upgradeTitle.textContent = `${FARM_CONFIG.name} (Level ${farm.level})`;
     this.elements.upgradeStats.innerHTML = `
+      ${this._appendHealthStats(farm)}
       <div>Your share: <strong>+${share}/wave</strong></div>
       <div>Total harvest: <strong>+${totalIncome}/wave</strong></div>
       ${farm.canUpgrade()
@@ -793,7 +1019,7 @@ export class HUD {
 
     this.elements.upgradeTitle.textContent = `${def.name} (Level ${support.level})${branchLabel}`;
 
-    let statsHtml = `<div class="support-desc">${def.description}</div>`;
+    let statsHtml = `${this._appendHealthStats(support)}<div class="support-desc">${def.description}</div>`;
 
     if (support.typeId === 'bank') {
       const bankStats = this.game.supportEffects.getBankStats(support);
