@@ -1,4 +1,4 @@
-import { Game, Phase } from './core/Game.js';
+import { Game } from './core/Game.js';
 import { Renderer } from './render/Renderer.js';
 import { FloatingTextManager } from './render/FloatingTextManager.js';
 import { HUD } from './ui/HUD.js';
@@ -8,87 +8,109 @@ import { GAME_CONFIG } from './config/gameConfig.js';
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
-const game = new Game();
-const renderer = new Renderer(ctx);
-const floatingTexts = new FloatingTextManager();
-const hud = new HUD(game);
+let game;
+let renderer;
+let hud;
+let startModal;
 
-canvas.width = GAME_CONFIG.canvasWidth;
-canvas.height = GAME_CONFIG.canvasHeight;
+try {
+  game = new Game();
+  renderer = new Renderer(ctx);
+  hud = new HUD(game);
 
-let gameLoopStarted = false;
-let lastFrameTime = performance.now();
+  canvas.width = GAME_CONFIG.canvasWidth;
+  canvas.height = GAME_CONFIG.canvasHeight;
 
-function beginGame() {
-  if (gameLoopStarted) return;
-  gameLoopStarted = true;
-  game.start();
-  requestAnimationFrame(gameLoop);
-}
+  let floatingTexts = new FloatingTextManager();
+  let lastFrameTime = performance.now();
 
-const startModal = new StartModal(game, beginGame);
+  function gameLoop(time) {
+    const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
+    lastFrameTime = time;
 
-if (game.hasSavedRun()) {
-  startModal.show(game.getSavedRunSummary());
-} else {
-  beginGame();
-}
+    game.update(time);
+    floatingTexts.update(dt);
 
-canvas.addEventListener('mousemove', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const px = (e.clientX - rect.left) * scaleX;
-  const py = (e.clientY - rect.top) * scaleY;
-  const grid = game.path.pixelToGrid(px, py);
-  game.setHoveredCell(grid.x, grid.y);
-});
+    for (const effect of game.consumeHarvestEffects()) {
+      floatingTexts.add(effect.x, effect.y, effect.text, '#2e7d4f', 20);
+    }
 
-canvas.addEventListener('mouseleave', () => {
-  game.clearHoveredCell();
-});
+    renderer.clear();
+    renderer.drawGrid();
+    renderer.drawPath(game.path);
+    renderer.drawBuildSpots(
+      game.placementSystem,
+      game.hoveredCell,
+      game.placementSystem.selectedBuildType
+    );
+    renderer.drawFarms(
+      game.placementSystem.farms,
+      game.placementSystem.selectedStructure
+    );
+    renderer.drawTowers(
+      game.placementSystem.towers,
+      game.placementSystem.selectedStructure
+    );
+    renderer.drawEnemies(game.waveManager.enemies);
+    renderer.drawProjectiles(game.combatSystem.projectiles);
+    floatingTexts.draw(ctx);
+    renderer.drawPhaseOverlay(game.phase, game.waveManager.waveNumber);
 
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const px = (e.clientX - rect.left) * scaleX;
-  const py = (e.clientY - rect.top) * scaleY;
-  const grid = game.path.pixelToGrid(px, py);
-  game.handleClick(grid.x, grid.y);
-});
-
-function gameLoop(time) {
-  const dt = Math.min((time - lastFrameTime) / 1000, 0.1);
-  lastFrameTime = time;
-
-  game.update(time);
-  floatingTexts.update(dt);
-
-  for (const effect of game.consumeHarvestEffects()) {
-    floatingTexts.add(effect.x, effect.y, effect.text, '#2e7d4f', 20);
+    requestAnimationFrame(gameLoop);
   }
 
-  renderer.clear();
-  renderer.drawGrid();
-  renderer.drawPath(game.path);
-  renderer.drawBuildSpots(
-    game.placementSystem,
-    game.hoveredCell,
-    game.placementSystem.selectedBuildType
-  );
-  renderer.drawFarms(
-    game.placementSystem.farms,
-    game.placementSystem.selectedStructure
-  );
-  renderer.drawTowers(
-    game.placementSystem.towers,
-    game.placementSystem.selectedStructure
-  );
-  renderer.drawEnemies(game.waveManager.enemies);
-  renderer.drawProjectiles(game.combatSystem.projectiles);
-  floatingTexts.draw(ctx);
-  renderer.drawPhaseOverlay(game.phase, game.waveManager.waveNumber);
+  function beginGame() {
+    game.start();
+    requestAnimationFrame(gameLoop);
+  }
 
-  requestAnimationFrame(gameLoop);
+  startModal = new StartModal(game, () => {
+    /* modal resolved — game already running */
+  });
+
+  // Always start rendering immediately so the canvas is never blank
+  beginGame();
+
+  // Offer to continue a saved run via overlay
+  if (game.hasSavedRun()) {
+    const summary = game.getSavedRunSummary();
+    if (summary) {
+      startModal.show(summary);
+    }
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const px = (e.clientX - rect.left) * scaleX;
+    const py = (e.clientY - rect.top) * scaleY;
+    const grid = game.path.pixelToGrid(px, py);
+    game.setHoveredCell(grid.x, grid.y);
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    game.clearHoveredCell();
+  });
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const px = (e.clientX - rect.left) * scaleX;
+    const py = (e.clientY - rect.top) * scaleY;
+    const grid = game.path.pixelToGrid(px, py);
+    game.handleClick(grid.x, grid.y);
+  });
+} catch (err) {
+  console.error('Meadow Defense failed to start:', err);
+  document.body.innerHTML = `
+    <div style="padding:40px;font-family:sans-serif;text-align:center;color:#2d3436;">
+      <h2>Failed to load Meadow Defense</h2>
+      <p style="color:#636e72;margin:12px 0;">${err.message}</p>
+      <button onclick="localStorage.clear();location.reload()" style="padding:10px 20px;font-size:16px;cursor:pointer;">
+        Clear save &amp; reload
+      </button>
+    </div>
+  `;
 }

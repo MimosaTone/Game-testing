@@ -1,5 +1,3 @@
-import { Events } from './EventBus.js';
-
 /**
  * Launch screen — continue saved run or start fresh.
  */

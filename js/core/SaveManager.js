@@ -1,6 +1,4 @@
 import { SAVE_CONFIG } from '../config/saveConfig.js';
-import { PRESTIGE_CONFIG } from '../config/prestigeConfig.js';
-import { Phase } from './Game.js';
 
 const DEFAULT_META = {
   shards: 0,
@@ -10,6 +8,15 @@ const DEFAULT_META = {
   settings: { autoStartWaves: false },
 };
 
+/** Validate saved run payload before use. */
+function isValidRun(run) {
+  if (!run || typeof run !== 'object') return false;
+  if (typeof run.wave !== 'number' || typeof run.gold !== 'number' || typeof run.lives !== 'number') return false;
+  if (!Array.isArray(run.towers) || !Array.isArray(run.farms)) return false;
+  if (run.lives <= 0) return false;
+  return true;
+}
+
 /**
  * Serializes and persists game state to localStorage.
  * Only saves run data during the planning phase (between waves).
@@ -17,6 +24,10 @@ const DEFAULT_META = {
 export class SaveManager {
   constructor() {
     this._data = this._loadOrCreate();
+    if (this._data.run && !isValidRun(this._data.run)) {
+      this._data.run = null;
+      this._write(this._data);
+    }
   }
 
   _loadOrCreate() {
@@ -31,7 +42,11 @@ export class SaveManager {
     const migrated = this._migrateLegacy();
     if (migrated) return migrated;
 
-    return { version: SAVE_CONFIG.version, meta: { ...DEFAULT_META, settings: { ...DEFAULT_META.settings } }, run: null };
+    return {
+      version: SAVE_CONFIG.version,
+      meta: { ...DEFAULT_META, settings: { ...DEFAULT_META.settings } },
+      run: null,
+    };
   }
 
   _migrateLegacy() {
@@ -54,7 +69,9 @@ export class SaveManager {
 
   _write(data) {
     this._data = data;
-    localStorage.setItem(SAVE_CONFIG.storageKey, JSON.stringify(data));
+    try {
+      localStorage.setItem(SAVE_CONFIG.storageKey, JSON.stringify(data));
+    } catch { /* storage full or unavailable */ }
   }
 
   get meta() {
@@ -67,12 +84,12 @@ export class SaveManager {
   }
 
   hasContinuableRun() {
-    return this._data.run !== null && this._data.run.lives > 0;
+    return isValidRun(this._data.run);
   }
 
   getRunSummary() {
     const run = this._data.run;
-    if (!run) return null;
+    if (!isValidRun(run)) return null;
     return {
       wave: run.wave,
       gold: run.gold,
@@ -84,7 +101,7 @@ export class SaveManager {
 
   /** Serialize current game state. Returns null if run should not be saved. */
   serializeRun(game) {
-    if (game.phase !== Phase.PLANNING || game.lives <= 0) return null;
+    if (game.phase !== 'planning' || game.lives <= 0) return null;
 
     const hasProgress =
       game.waveManager.waveNumber > 0 ||
@@ -139,7 +156,7 @@ export class SaveManager {
   }
 
   getRunData() {
-    return this._data.run;
+    return isValidRun(this._data.run) ? this._data.run : null;
   }
 
   clearRun() {
@@ -154,7 +171,9 @@ export class SaveManager {
       run: null,
     };
     this._write(this._data);
-    localStorage.removeItem(SAVE_CONFIG.legacyPrestigeKey);
-    localStorage.removeItem(SAVE_CONFIG.legacySettingsKey);
+    try {
+      localStorage.removeItem(SAVE_CONFIG.legacyPrestigeKey);
+      localStorage.removeItem(SAVE_CONFIG.legacySettingsKey);
+    } catch { /* ignore */ }
   }
 }
