@@ -61,6 +61,8 @@ function migrateSave(data) {
   return data;
 }
 
+export { isValidRun, migrateSave };
+
 /**
  * Serializes and persists game state to localStorage.
  * Only saves run data during the planning phase (between waves).
@@ -248,5 +250,41 @@ export class SaveManager {
       localStorage.removeItem(SAVE_CONFIG.legacyPrestigeKey);
       localStorage.removeItem(SAVE_CONFIG.legacySettingsKey);
     } catch { /* ignore */ }
+  }
+
+  /** Build a portable save-code payload from the current game state. */
+  buildExportPayload(game) {
+    const meta = this.serializeMeta(game);
+    const run = this.serializeRun(game);
+    const hasMetaProgress =
+      meta.shards > 0 ||
+      meta.totalPrestiges > 0 ||
+      Object.keys(meta.upgrades || {}).length > 0;
+
+    if (!run && !hasMetaProgress) {
+      return { ok: false, error: 'Nothing to export yet. Play a wave or earn prestige progress first.' };
+    }
+
+    return {
+      ok: true,
+      payload: {
+        format: SAVE_CONFIG.saveCodeFormat,
+        version: SAVE_CONFIG.version,
+        exportedAt: Date.now(),
+        meta,
+        run,
+      },
+    };
+  }
+
+  /** Write imported payload into local storage. */
+  persistImport(payload) {
+    this._data = {
+      version: SAVE_CONFIG.version,
+      meta: payload.meta,
+      run: payload.run,
+      savedAt: Date.now(),
+    };
+    this._write(this._data);
   }
 }

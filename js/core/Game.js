@@ -3,6 +3,7 @@ import { Economy } from './Economy.js';
 import { WaveManager } from './WaveManager.js';
 import { PrestigeManager } from './PrestigeManager.js';
 import { SaveManager } from './SaveManager.js';
+import { SaveCodeManager } from './SaveCodeManager.js';
 import { ResearchManager } from './ResearchManager.js';
 import { ChallengeManager } from './ChallengeManager.js';
 import { SpeedController } from './SpeedController.js';
@@ -32,6 +33,7 @@ export class Game {
   constructor() {
     this.eventBus = new EventBus();
     this.saveManager = new SaveManager();
+    this.saveCodeManager = new SaveCodeManager(this.saveManager);
     this.path = new Path();
     this.prestigeManager = new PrestigeManager(this.eventBus);
     this.prestigeManager.loadFromMeta(this.saveManager.meta);
@@ -245,8 +247,39 @@ export class Game {
   loadSavedRun() {
     const run = this.saveManager.getRunData();
     if (!run) return false;
+    return this._applyRunState(run, this.saveManager.meta);
+  }
 
+  applySaveCodePayload(payload) {
     this._clearAutoStartTimer();
+    this.saveManager.persistImport(payload);
+
+    if (payload.run && payload.run.lives > 0) {
+      return this._applyRunState(payload.run, payload.meta);
+    }
+
+    this.prestigeManager.loadFromMeta(payload.meta);
+    this.autoStartWaves = payload.meta.settings?.autoStartWaves ?? false;
+    this.speedController.loadFromSettings(payload.meta.settings);
+    this.resetRun();
+    this._emitFullState();
+    this.eventBus.emit(Events.SAVE_LOADED);
+    return true;
+  }
+
+  exportSaveCode() {
+    return this.saveCodeManager.exportCode(this);
+  }
+
+  importSaveCode(rawCode) {
+    return this.saveCodeManager.importCode(this, rawCode);
+  }
+
+  _applyRunState(run, meta) {
+    this._clearAutoStartTimer();
+    this.prestigeManager.loadFromMeta(meta);
+    this.autoStartWaves = meta.settings?.autoStartWaves ?? false;
+
     this.phase = Phase.PLANNING;
     this.lives = run.lives;
     this.economy.gold = run.gold;
@@ -270,8 +303,9 @@ export class Game {
       run.bossesDefeated || 0,
       run.destroyed || []
     );
-    this.speedController.loadFromSettings(this.saveManager.meta.settings);
+    this.speedController.loadFromSettings(meta.settings);
     this.placementSystem.clearSelection();
+    this.placementSystem.sellMode = false;
     this._refreshSupportEffects();
     this._applyPrestigeToTowers();
     this.combatSystem.setTowers(this.placementSystem.towers);

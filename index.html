@@ -111,6 +111,10 @@
             <button type="button" id="repair-all-btn" class="secondary-btn">Repair All</button>
             <button type="button" id="sell-mode-btn" class="secondary-btn">Sell Mode</button>
           </div>
+          <div class="control-row action-row">
+            <button type="button" id="export-save-btn" class="secondary-btn">Export Save Code</button>
+            <button type="button" id="import-save-btn" class="secondary-btn">Import Save Code</button>
+          </div>
         </section>
       </aside>
 
@@ -174,6 +178,34 @@
       <div class="modal-actions">
         <button id="continue-btn" class="primary-btn">Continue Run</button>
         <button id="new-game-btn" class="secondary-btn">New Run</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="export-save-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-wide">
+      <h2>Export Save Code</h2>
+      <p class="modal-subtitle">Copy this code to back up or transfer your progress.</p>
+      <div id="export-save-error" class="modal-error hidden"></div>
+      <div id="export-save-summary" class="start-summary"></div>
+      <textarea id="export-save-code" class="save-code-textarea" readonly rows="6" spellcheck="false"></textarea>
+      <div class="modal-actions modal-actions-row">
+        <button type="button" id="copy-save-code-btn" class="primary-btn">Copy Code</button>
+        <button type="button" id="close-export-save-btn" class="secondary-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="import-save-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-wide">
+      <h2>Import Save Code</h2>
+      <p class="modal-subtitle">Paste a save code to restore your progress. Only available between waves.</p>
+      <div id="import-save-error" class="modal-error hidden"></div>
+      <div id="import-save-summary" class="start-summary"></div>
+      <textarea id="import-save-input" class="save-code-textarea" rows="6" spellcheck="false" placeholder="Paste your MDSAVE: code here..."></textarea>
+      <div class="modal-actions modal-actions-row">
+        <button type="button" id="confirm-import-save-btn" class="primary-btn">Import Save</button>
+        <button type="button" id="cancel-import-save-btn" class="secondary-btn">Cancel</button>
       </div>
     </div>
   </div>

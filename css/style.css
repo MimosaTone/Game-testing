@@ -1109,6 +1109,57 @@ body {
   gap: 10px;
 }
 
+.modal-actions-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.modal-actions-row .primary-btn,
+.modal-actions-row .secondary-btn {
+  flex: 1;
+  min-width: 140px;
+}
+
+.modal-card-wide {
+  max-width: 560px;
+  text-align: left;
+}
+
+.modal-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(201, 74, 74, 0.15);
+  border: 1px solid rgba(201, 74, 74, 0.45);
+  color: #ff8a8a;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.modal-error.hidden {
+  display: none;
+}
+
+.save-code-textarea {
+  width: 100%;
+  margin: 12px 0 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.35);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.save-code-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* ── Responsive ── */
 @media (max-width: 1300px) {
   :root {

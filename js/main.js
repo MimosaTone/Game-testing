@@ -1,8 +1,10 @@
 import { Game } from './core/Game.js';
+import { Events } from './core/EventBus.js';
 import { Renderer } from './render/Renderer.js';
 import { FloatingTextManager } from './render/FloatingTextManager.js';
 import { HUD } from './ui/HUD.js';
 import { StartModal } from './ui/StartModal.js';
+import { SaveCodeModal } from './ui/SaveCodeModal.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -12,11 +14,18 @@ let game;
 let renderer;
 let hud;
 let startModal;
+let saveCodeModal;
 
 try {
   game = new Game();
   renderer = new Renderer(ctx);
   hud = new HUD(game);
+  saveCodeModal = new SaveCodeModal(game, hud);
+  saveCodeModal.updateButtons();
+
+  for (const evt of [Events.WAVE_STARTED, Events.WAVE_COMPLETED, Events.GAME_OVER, Events.SAVE_LOADED, Events.SAVE_CLEARED]) {
+    game.eventBus.on(evt, () => saveCodeModal.updateButtons());
+  }
 
   canvas.width = GAME_CONFIG.canvasWidth;
   canvas.height = GAME_CONFIG.canvasHeight;
