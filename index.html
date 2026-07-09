@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harvest Defense</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="hud">
+      <div class="hud-stat"><span class="label">Gold</span><span id="gold">0</span></div>
+      <div class="hud-stat"><span class="label">Lives</span><span id="lives">20</span></div>
+      <div class="hud-stat"><span class="label">Wave</span><span id="wave">0</span></div>
+      <div class="hud-stat"><span class="label">Income / Wave</span><span id="income">0</span></div>
+    </header>
+
+    <main class="game-area">
+      <canvas id="game-canvas" width="960" height="576"></canvas>
+
+      <aside class="sidebar">
+        <section class="panel" id="build-panel">
+          <h2>Build</h2>
+          <div id="build-buttons"></div>
+        </section>
+
+        <section class="panel" id="selection-panel" hidden>
+          <h2 id="selection-title">Selected</h2>
+          <div id="selection-info"></div>
+          <div id="upgrade-buttons"></div>
+        </section>
+
+        <section class="panel wave-panel">
+          <button id="start-wave-btn" class="primary-btn">Start Wave</button>
+          <p id="phase-hint" class="hint">Plan your defenses — take all the time you need.</p>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

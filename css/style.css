@@ -1,0 +1,223 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #e8f4fc;
+  --panel: #ffffff;
+  --accent: #5b9fd4;
+  --accent-dark: #3d7eb5;
+  --text: #2c3e50;
+  --muted: #7f8c8d;
+  --gold: #f1c40f;
+  --success: #2ecc71;
+  --danger: #e74c3c;
+  --shadow: 0 2px 8px rgba(44, 62, 80, 0.12);
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: linear-gradient(160deg, #d4ecfa 0%, #e8f4fc 40%, #f5e6d3 100%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+#app {
+  width: 100%;
+  max-width: 1240px;
+}
+
+.hud {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.hud-stat {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 18px;
+  box-shadow: var(--shadow);
+  min-width: 120px;
+}
+
+.hud-stat .label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.hud-stat span:last-child {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+#gold { color: #d4a017; }
+#lives { color: var(--danger); }
+#wave { color: var(--accent-dark); }
+#income { color: var(--success); }
+
+.game-area {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+#game-canvas {
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: #a8d5a2;
+  cursor: crosshair;
+  flex-shrink: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.panel h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.build-btn,
+.upgrade-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #f0f6fb;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+}
+
+.build-btn:hover,
+.upgrade-btn:hover {
+  background: #e3eef8;
+  border-color: var(--accent);
+}
+
+.build-btn.active {
+  border-color: var(--accent-dark);
+  background: #d6e9f7;
+}
+
+.build-btn.disabled,
+.upgrade-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.build-btn .icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.build-btn .details {
+  flex: 1;
+}
+
+.build-btn .name {
+  font-weight: 600;
+  display: block;
+}
+
+.build-btn .cost {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.selection-stat {
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.selection-stat strong {
+  color: var(--text);
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.primary-btn:hover {
+  background: var(--accent-dark);
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.upgrade-btn {
+  justify-content: space-between;
+}
+
+@media (max-width: 1100px) {
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-width: 960px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .panel {
+    flex: 1;
+    min-width: 200px;
+  }
+}
