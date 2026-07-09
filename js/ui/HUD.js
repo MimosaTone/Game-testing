@@ -251,33 +251,51 @@ export class HUD {
   _showTowerUpgrades(tower) {
     const def = tower.definition;
     const stats = tower.getStats();
+    const abilities = tower.getAbilityLabels();
+    const next = tower.getNextUpgrade();
+    const maxTier = tower.upgradePath.length;
 
-    this.elements.upgradeTitle.textContent = def.name;
-    this.elements.upgradeStats.innerHTML = `
-      <div>Damage: <strong>${Math.round(stats.damage)}</strong></div>
+    this.elements.upgradeTitle.textContent = `${def.name} · Tier ${tower.upgradeTier}/${maxTier}`;
+
+    let statsHtml = `
+      <div>Damage: <strong>${stats.damage}</strong></div>
       <div>Range: <strong>${stats.range.toFixed(1)}</strong></div>
       <div>Speed: <strong>${stats.attackSpeed.toFixed(2)}/s</strong></div>
     `;
 
-    const buttons = [
-      { stat: 'damage', label: '↑ Damage' },
-      { stat: 'range', label: '↑ Range' },
-      { stat: 'attackSpeed', label: '↑ Speed' },
-    ];
+    if (abilities.length > 0) {
+      statsHtml += `<div class="ability-tags">${abilities.map((a) => `<span class="ability-tag">${a}</span>`).join('')}</div>`;
+    }
+
+    if (tower.upgradeTier > 0) {
+      const purchased = tower.upgradePath
+        .slice(0, tower.upgradeTier)
+        .map((t) => `<span class="tier-chip">${t.name}</span>`)
+        .join('');
+      statsHtml += `<div class="tier-history">${purchased}</div>`;
+    }
+
+    this.elements.upgradeStats.innerHTML = statsHtml;
 
     this.elements.upgradeButtons.innerHTML = '';
-    for (const { stat, label } of buttons) {
-      const cost = this.game.economy.getUpgradeCost(tower, stat);
+
+    if (next) {
+      const cost = next.cost;
       const btn = document.createElement('button');
       btn.className = 'upgrade-btn';
-      btn.textContent = cost !== null ? `${label} (${cost}g)` : `${label} (MAX)`;
-      btn.disabled = cost === null || !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
+      btn.innerHTML = `<span class="upgrade-btn-name">↑ ${next.name}</span><span class="upgrade-btn-detail">${next.description} · ${cost}g</span>`;
+      btn.disabled = !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
       btn.addEventListener('click', () => {
-        if (this.game.placementSystem.upgradeSelected(stat)) {
+        if (this.game.placementSystem.upgradeSelected('path')) {
           this._showTowerUpgrades(tower);
         }
       });
       this.elements.upgradeButtons.appendChild(btn);
+    } else {
+      const max = document.createElement('div');
+      max.className = 'upgrade-maxed';
+      max.textContent = '★ Fully upgraded — peak performance';
+      this.elements.upgradeButtons.appendChild(max);
     }
   }
 

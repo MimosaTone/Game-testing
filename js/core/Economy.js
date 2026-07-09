@@ -75,10 +75,12 @@ export class Economy {
       return FARM_CONFIG.upgradeCosts[level - 1];
     }
 
-    const towerDef = structure.definition;
-    const upgradeLevel = structure.upgrades[stat];
-    if (upgradeLevel >= towerDef.maxUpgradeLevel) return null;
-    return towerDef.upgradeCosts[stat][upgradeLevel];
+    if (structure.type === 'tower') {
+      const next = structure.getNextUpgrade();
+      return next ? next.cost : null;
+    }
+
+    return null;
   }
 
   getSunpatchPayback(cost, projectedIncome) {

@@ -39,4 +39,28 @@ export const ENEMY_TYPES = {
     goldReward: 70,
     size: 21,
   },
+
+  /** Late-game armored invader — rewards armor-piercing upgrades. */
+  ward: {
+    id: 'ward',
+    name: 'Ward',
+    color: '#546e7a',
+    baseHealth: 55,
+    speed: 1.4,
+    goldReward: 35,
+    size: 15,
+    innateArmor: 0.2,
+  },
+
+  /** Late-game regenerator — rewards burst damage and focus fire. */
+  rime: {
+    id: 'rime',
+    name: 'Rime',
+    color: '#4fc3f7',
+    baseHealth: 120,
+    speed: 0.85,
+    goldReward: 45,
+    size: 16,
+    innateRegen: 3,
+  },
 };

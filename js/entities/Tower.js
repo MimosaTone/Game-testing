@@ -1,9 +1,14 @@
 import { TOWER_TYPES } from '../config/towerTypes.js';
+import {
+  TOWER_UPGRADE_PATHS,
+  computeTowerStats,
+  getTowerAbilityLabels,
+} from '../config/towerUpgradePaths.js';
 
 let nextTowerId = 1;
 
 /**
- * Tower entity with upgradeable stats.
+ * Tower entity with a sequential upgrade path.
  */
 export class Tower {
   constructor(typeId, gridX, gridY) {
@@ -14,50 +19,38 @@ export class Tower {
     this.type = 'tower';
     this.typeId = typeId;
     this.definition = def;
+    this.upgradePath = TOWER_UPGRADE_PATHS[typeId] || [];
+    this.upgradeTier = 0;
     this.gridX = gridX;
     this.gridY = gridY;
-    this.upgrades = { damage: 0, range: 0, attackSpeed: 0 };
     this.cooldown = 0;
     this.target = null;
     this.angle = 0;
   }
 
   getStats() {
-    const def = this.definition;
-    const base = def.baseStats;
-
-    let damage = base.damage;
-    let range = base.range;
-    let attackSpeed = base.attackSpeed;
-
-    for (let i = 0; i < this.upgrades.damage; i++) {
-      damage *= def.upgradeMultipliers.damage;
-    }
-    for (let i = 0; i < this.upgrades.range; i++) {
-      range *= def.upgradeMultipliers.range;
-    }
-    for (let i = 0; i < this.upgrades.attackSpeed; i++) {
-      attackSpeed *= def.upgradeMultipliers.attackSpeed;
-    }
-
-    const splashRadius = base.splashRadius
-      ? base.splashRadius + this.upgrades.damage * (def.splashRadiusGrowth || 0)
-      : 0;
-
-    return { damage, range, attackSpeed, splashRadius };
+    return computeTowerStats(this.definition, this.upgradeTier, this.upgradePath);
   }
 
-  getRangePixels() {
-    return this.getStats().range * 40;
+  getAbilityLabels() {
+    return getTowerAbilityLabels(this.getStats());
   }
 
-  canUpgrade(stat) {
-    return this.upgrades[stat] < this.definition.maxUpgradeLevel;
+  getRangePixels(tileSize = 40) {
+    return this.getStats().range * tileSize;
   }
 
-  upgrade(stat) {
-    if (!this.canUpgrade(stat)) return false;
-    this.upgrades[stat]++;
+  canUpgrade() {
+    return this.upgradeTier < this.upgradePath.length;
+  }
+
+  getNextUpgrade() {
+    return this.canUpgrade() ? this.upgradePath[this.upgradeTier] : null;
+  }
+
+  upgrade() {
+    if (!this.canUpgrade()) return false;
+    this.upgradeTier++;
     return true;
   }
 

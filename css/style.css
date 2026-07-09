@@ -102,7 +102,7 @@ body {
 }
 
 #sidebar {
-  width: 250px;
+  width: 270px;
   padding: 16px;
   background: #d5dbd8;
   border-left: 2px solid #b8c4bf;
@@ -245,6 +245,45 @@ body {
 
 .upgrade-btn-farm:hover:not(:disabled) {
   background: #9a7209;
+}
+
+.upgrade-maxed {
+  font-size: 14px;
+  font-weight: 600;
+  color: #b8860b;
+  text-align: center;
+  padding: 8px;
+}
+
+.ability-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ability-tag {
+  font-size: 11px;
+  background: #d5dbd8;
+  color: #3a6d9c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.tier-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.tier-chip {
+  font-size: 10px;
+  background: #7d6b9e;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 #upgrade-stats {

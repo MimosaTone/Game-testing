@@ -121,6 +121,16 @@ export class Renderer {
     ctx.moveTo(x, y);
     ctx.lineTo(x + Math.cos(tower.angle) * barrelLen, y + Math.sin(tower.angle) * barrelLen);
     ctx.stroke();
+
+    if (tower.upgradeTier > 0) {
+      ctx.fillStyle = '#2d3436';
+      ctx.beginPath();
+      ctx.arc(x + 12, y - 12, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(String(tower.upgradeTier), x + 12, y - 11);
+    }
   }
 
   drawFarms(farms, selectedStructure) {
@@ -188,7 +198,7 @@ export class Renderer {
       ctx.lineTo(enemy.x + size, enemy.y + size * 0.6);
       ctx.lineTo(enemy.x - size, enemy.y + size * 0.6);
       ctx.closePath();
-    } else if (enemy.typeId === 'husk') {
+    } else if (enemy.typeId === 'husk' || enemy.typeId === 'ward') {
       ctx.rect(enemy.x - size, enemy.y - size, size * 2, size * 2);
     } else if (enemy.typeId === 'titan') {
       const s = size * 1.1;
@@ -197,12 +207,36 @@ export class Renderer {
       ctx.lineTo(enemy.x, enemy.y + s);
       ctx.lineTo(enemy.x - s, enemy.y);
       ctx.closePath();
+    } else if (enemy.typeId === 'rime') {
+      const s = size;
+      ctx.moveTo(enemy.x, enemy.y - s);
+      ctx.lineTo(enemy.x + s * 0.7, enemy.y);
+      ctx.lineTo(enemy.x, enemy.y + s);
+      ctx.lineTo(enemy.x - s * 0.7, enemy.y);
+      ctx.closePath();
     } else {
       ctx.arc(enemy.x, enemy.y, size, 0, Math.PI * 2);
     }
 
     ctx.fill();
-    ctx.stroke();
+
+    if (enemy.armor > 0.1) {
+      ctx.strokeStyle = '#90a4ae';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    if (enemy.isSlowed) {
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, size + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(79, 195, 247, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     const barWidth = size * 2;
     const barHeight = 4;
@@ -228,9 +262,9 @@ export class Renderer {
     const { ctx } = this;
 
     if (phase === Phase.PLANNING && waveNumber === 0) {
-      this._drawCenterMessage('Place a tower for defense, Sunpatches for long-term gold', '#3498db');
+      this._drawCenterMessage('Place a tower for defense, Sunpatches for long-term gold', '#3a6d9c');
     } else if (phase === Phase.PLANNING) {
-      this._drawCenterMessage(`Wave ${waveNumber} cleared — invest, upgrade, or start the next wave`, '#27ae60');
+      this._drawCenterMessage(`Wave ${waveNumber} cleared — invest, upgrade, or start the next wave`, '#2e7d4f');
     } else if (phase === Phase.GAME_OVER) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, GAME_CONFIG.canvasWidth, GAME_CONFIG.canvasHeight);

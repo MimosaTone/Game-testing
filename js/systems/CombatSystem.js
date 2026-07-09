@@ -45,11 +45,11 @@ export class CombatSystem {
     const rangePx = stats.range * GAME_CONFIG.tileSize;
 
     if (!tower.target || !tower.target.alive) {
-      tower.target = this._findTarget(pos, rangePx, enemies);
+      tower.target = this._findTarget(pos, rangePx, enemies, stats);
     } else {
       const dist = Math.hypot(tower.target.x - pos.x, tower.target.y - pos.y);
       if (dist > rangePx) {
-        tower.target = this._findTarget(pos, rangePx, enemies);
+        tower.target = this._findTarget(pos, rangePx, enemies, stats);
       }
     }
 
@@ -59,21 +59,29 @@ export class CombatSystem {
 
     if (tower.cooldown <= 0 && tower.target) {
       tower.cooldown = 1 / stats.attackSpeed;
-      this.projectiles.push(
-        new Projectile(tower, tower.target, stats.damage, stats.splashRadius)
-      );
+      const count = stats.projectileCount || 1;
+      for (let i = 0; i < count; i++) {
+        this.projectiles.push(new Projectile(tower, tower.target, stats));
+      }
     }
   }
 
-  _findTarget(pos, rangePx, enemies) {
+  _findTarget(pos, rangePx, enemies, stats) {
     let best = null;
-    let bestDist = Infinity;
+    let bestScore = -Infinity;
 
     for (const enemy of enemies) {
       if (!enemy.alive) continue;
       const dist = Math.hypot(enemy.x - pos.x, enemy.y - pos.y);
-      if (dist <= rangePx && dist < bestDist) {
-        bestDist = dist;
+      if (dist > rangePx) continue;
+
+      let score = -dist;
+      if (enemy.regenPerSec > 0) score += 40;
+      if (enemy.typeId === 'drift' || enemy.typeId === 'rime') score += 20;
+      if (enemy.health / enemy.maxHealth < 0.35) score += 30;
+
+      if (score > bestScore) {
+        bestScore = score;
         best = enemy;
       }
     }

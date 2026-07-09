@@ -97,8 +97,8 @@ export class PlacementSystem {
     if (structure.type === 'farm') {
       structure.upgrade();
       this.economy.recalculateIncome(this.farms);
-    } else {
-      structure.upgrade(stat);
+    } else if (structure.type === 'tower') {
+      structure.upgrade();
     }
 
     this.eventBus.emit(Events.STRUCTURE_SELECTED, structure);

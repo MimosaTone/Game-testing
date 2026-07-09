@@ -44,7 +44,18 @@ All mechanics, visuals, towers, enemies, and UI are original meadow-themed desig
 - **Economy:** Sunpatch (passive harvest)
 - **Invaders:** Mote, Drift, Husk, Titan
 
-## Architecture
+## Tower Upgrade Paths
+
+Each tower has a **5-tier sequential upgrade path** with unique power spikes:
+
+| Tower | Path highlights |
+|-------|----------------|
+| **Needle Post** | Damage → Speed → Twin shot → Pierce → Needle Storm |
+| **Boulder Pit** | Damage → Splash radius → Shrapnel → Slow → Avalanche |
+| **Prism Spire** | Range/damage → Speed → Slow → Chain → Prism Cascade |
+
+Late waves (10+) introduce **Ward** (armored) and **Rime** (regenerating) invaders, plus scaling armor and regen on all foes. Smart Sunpatch investment and tower upgrades are both required to survive.
+
 
 ```
 js/
