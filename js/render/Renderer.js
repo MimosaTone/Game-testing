@@ -109,7 +109,7 @@ export class Renderer {
     ctx.stroke();
 
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px sans-serif';
+    ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(def.icon, x, y);
@@ -157,13 +157,13 @@ export class Renderer {
     ctx.strokeRect(x - 14, y - 14, 28, 28);
 
     ctx.fillStyle = '#27ae60';
-    ctx.font = 'bold 16px sans-serif';
+    ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(def.icon, x, y - 2);
 
     ctx.fillStyle = '#2c3e50';
-    ctx.font = '10px sans-serif';
+    ctx.font = '12px sans-serif';
     ctx.fillText(`L${farm.level}`, x, y + 12);
   }
 
@@ -241,7 +241,7 @@ export class Renderer {
   _drawCenterMessage(text, color) {
     const { ctx } = this;
     ctx.fillStyle = color;
-    ctx.font = 'bold 17px sans-serif';
+    ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, GAME_CONFIG.canvasWidth / 2, GAME_CONFIG.canvasHeight - 30);

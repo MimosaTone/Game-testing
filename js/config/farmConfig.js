@@ -4,7 +4,7 @@ export const FARM_CONFIG = {
   name: 'Sunpatch',
   description: 'Harvests gold each wave. Great long-term investment.',
   cost: 50,
-  color: '#ffc857',
+  color: '#d4a84b',
   icon: '✿',
 
   /** Base income per wave at each level (index 0 = level 1). */

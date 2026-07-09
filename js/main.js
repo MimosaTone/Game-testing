@@ -51,7 +51,7 @@ function gameLoop(time) {
   floatingTexts.update(dt);
 
   for (const effect of game.consumeHarvestEffects()) {
-    floatingTexts.add(effect.x, effect.y, effect.text, '#27ae60', 18);
+    floatingTexts.add(effect.x, effect.y, effect.text, '#2e7d4f', 20);
   }
 
   renderer.clear();

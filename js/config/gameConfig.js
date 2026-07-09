@@ -15,22 +15,22 @@ export const GAME_CONFIG = {
   /** Milliseconds between combat ticks. */
   combatTickMs: 50,
 
-  /** Colors for bright, clean visuals. */
+  /** Muted meadow palette — easy on the eyes. */
   colors: {
-    background: '#e8f4f8',
-    path: '#d4a574',
-    pathBorder: '#b8895a',
-    buildSpot: '#c8e6c9',
-    buildSpotHover: '#a5d6a7',
-    gridLine: '#dceef2',
+    background: '#b8c9c3',
+    path: '#a08060',
+    pathBorder: '#7d6348',
+    buildSpot: '#8faa96',
+    buildSpotHover: '#7a9a86',
+    gridLine: '#a8bab4',
     text: '#2c3e50',
-    gold: '#f1c40f',
-    lives: '#e74c3c',
-    wave: '#3498db',
-    income: '#27ae60',
-    selection: '#9b59b6',
-    enemy: '#e67e22',
-    projectile: '#f39c12',
+    gold: '#c9a227',
+    lives: '#c0392b',
+    wave: '#4a7ba7',
+    income: '#3d8c5a',
+    selection: '#7d6b9e',
+    enemy: '#c06030',
+    projectile: '#c08028',
   },
 };
 

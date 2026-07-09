@@ -8,18 +8,18 @@
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #a8e6cf 0%, #dcedc1 50%, #ffd3b6 100%);
+  background: linear-gradient(135deg, #5a6b64 0%, #4a5854 50%, #5c5348 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2c3e50;
+  color: #dfe6e9;
 }
 
 #game-container {
-  background: #fff;
+  background: #e4e8e6;
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   max-width: 1200px;
   width: 100%;
@@ -30,8 +30,8 @@ body {
   align-items: center;
   gap: 24px;
   padding: 16px 24px;
-  background: #f8f9fa;
-  border-bottom: 2px solid #e9ecef;
+  background: #d5dbd8;
+  border-bottom: 2px solid #b8c4bf;
 }
 
 .stat {
@@ -41,26 +41,26 @@ body {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #7f8c8d;
+  color: #636e72;
   font-weight: 600;
 }
 
 .stat-value {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
 }
 
-.stat-value.gold { color: #f39c12; }
-.stat-value.lives { color: #e74c3c; }
-.stat-value.wave { color: #3498db; }
-.stat-value.income { color: #27ae60; }
+.stat-value.gold { color: #b8860b; }
+.stat-value.lives { color: #a93226; }
+.stat-value.wave { color: #3a6d9c; }
+.stat-value.income { color: #2e7d4f; }
 
 .stat-sub {
-  font-size: 10px;
-  color: #95a5a6;
+  font-size: 12px;
+  color: #7f8c8d;
   font-weight: 500;
 }
 
@@ -70,24 +70,24 @@ body {
 
 .primary-btn {
   margin-left: auto;
-  padding: 10px 24px;
-  font-size: 15px;
+  padding: 11px 26px;
+  font-size: 17px;
   font-weight: 600;
   border: none;
   border-radius: 8px;
-  background: #3498db;
+  background: #4a7ba7;
   color: #fff;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
 }
 
 .primary-btn:hover:not(:disabled) {
-  background: #2980b9;
+  background: #3a6589;
   transform: translateY(-1px);
 }
 
 .primary-btn:disabled {
-  background: #bdc3c7;
+  background: #95a5a6;
   cursor: not-allowed;
 }
 
@@ -104,18 +104,18 @@ body {
 #sidebar {
   width: 250px;
   padding: 16px;
-  background: #f8f9fa;
-  border-left: 2px solid #e9ecef;
+  background: #d5dbd8;
+  border-left: 2px solid #b8c4bf;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 #sidebar h2 {
-  font-size: 14px;
+  font-size: 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #7f8c8d;
+  color: #636e72;
   margin-bottom: 8px;
 }
 
@@ -129,10 +129,10 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
-  border: 2px solid #e9ecef;
+  padding: 11px 13px;
+  border: 2px solid #b8c4bf;
   border-radius: 8px;
-  background: #fff;
+  background: #e8ecea;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   text-align: left;
@@ -148,20 +148,20 @@ body {
 }
 
 .build-hint {
-  font-size: 10px;
-  color: #95a5a6;
+  font-size: 12px;
+  color: #7f8c8d;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .build-btn:hover {
-  border-color: #3498db;
-  background: #ebf5fb;
+  border-color: #4a7ba7;
+  background: #d8e4e8;
 }
 
 .build-btn.selected {
-  border-color: #9b59b6;
-  background: #f5eef8;
+  border-color: #7d6b9e;
+  background: #ddd4e4;
 }
 
 .build-btn.unaffordable {
@@ -169,25 +169,25 @@ body {
 }
 
 .build-icon {
-  font-size: 18px;
-  width: 24px;
+  font-size: 20px;
+  width: 26px;
   text-align: center;
 }
 
 .build-name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .build-cost {
-  font-size: 12px;
-  color: #f39c12;
+  font-size: 14px;
+  color: #b8860b;
   font-weight: 600;
 }
 
 #upgrade-panel {
   padding-top: 8px;
-  border-top: 2px solid #e9ecef;
+  border-top: 2px solid #b8c4bf;
 }
 
 #upgrade-panel.hidden {
@@ -196,9 +196,9 @@ body {
 
 #wave-summary {
   padding: 12px;
-  background: linear-gradient(135deg, #fff9e6 0%, #e8f8f0 100%);
+  background: linear-gradient(135deg, #e8e2d0 0%, #d4e0d8 100%);
   border-radius: 10px;
-  border: 2px solid #f1c40f;
+  border: 2px solid #b8a060;
 }
 
 #wave-summary.hidden {
@@ -206,9 +206,9 @@ body {
 }
 
 .summary-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  color: #2c3e50;
+  color: #2d3436;
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -218,37 +218,37 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
-  color: #636e72;
+  color: #4a5560;
 }
 
 .summary-row.summary-total {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid #dfe6e9;
+  border-top: 1px solid #b8c4bf;
   font-weight: 700;
-  color: #2c3e50;
+  color: #2d3436;
 }
 
-.gold-text { color: #f39c12; font-weight: 600; }
-.income-text { color: #27ae60; font-weight: 600; }
-.wave-text { color: #3498db; font-weight: 600; }
+.gold-text { color: #b8860b; font-weight: 600; }
+.income-text { color: #2e7d4f; font-weight: 600; }
+.wave-text { color: #3a6d9c; font-weight: 600; }
 
 .upgrade-btn-farm {
-  background: #f39c12;
+  background: #b8860b;
 }
 
 .upgrade-btn-farm:hover:not(:disabled) {
-  background: #e67e22;
+  background: #9a7209;
 }
 
 #upgrade-stats {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.8;
   margin-bottom: 12px;
 }
@@ -260,32 +260,32 @@ body {
 }
 
 .upgrade-btn {
-  padding: 8px 12px;
+  padding: 9px 13px;
   border: none;
   border-radius: 6px;
-  background: #9b59b6;
+  background: #7d6b9e;
   color: #fff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .upgrade-btn:hover:not(:disabled) {
-  background: #8e44ad;
+  background: #6a5a87;
 }
 
 .upgrade-btn:disabled {
-  background: #bdc3c7;
+  background: #95a5a6;
   cursor: not-allowed;
 }
 
 #instructions {
   padding: 12px 24px;
-  background: #f8f9fa;
-  border-top: 2px solid #e9ecef;
-  font-size: 13px;
-  color: #7f8c8d;
+  background: #d5dbd8;
+  border-top: 2px solid #b8c4bf;
+  font-size: 15px;
+  color: #636e72;
   text-align: center;
 }
 
@@ -297,7 +297,7 @@ body {
   #sidebar {
     width: 100%;
     border-left: none;
-    border-top: 2px solid #e9ecef;
+    border-top: 2px solid #b8c4bf;
   }
 
   #build-panel {
