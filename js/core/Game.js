@@ -412,11 +412,6 @@ export class Game {
 
     const rewardMult = this.getChallengeRewardMult();
 
-    const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult);
-    if (rpGain > 0) {
-      this.researchManager.addPoints(rpGain);
-    }
-
     let crystalGain = 0;
     for (const s of this.placementSystem.supports) {
       if (s.typeId !== 'crystal_extractor' || s.destroyed) continue;
@@ -444,6 +439,12 @@ export class Game {
     this.phase = Phase.PLANNING;
     this.economy.setWaveNumber(wave);
     this._refreshSupportEffects();
+
+    const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult);
+    if (rpGain > 0) {
+      this.researchManager.addPoints(rpGain);
+    }
+
     this.saveGame();
 
     this.eventBus.emit(Events.WAVE_COMPLETED, wave);

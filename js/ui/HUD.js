@@ -305,12 +305,14 @@ export class HUD {
       this.elements.sellModeBtn.textContent = 'Sell Mode';
       this._updateBuildSelection();
       this._updateStatusPanel();
+      this._renderResearchUpgrades();
     });
 
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
       this._refreshBuildPanelHints();
       this._updatePrestigeUI();
+      this._renderResearchUpgrades();
     });
 
     bus.on(Events.GAME_OVER, () => {
@@ -597,11 +599,22 @@ export class HUD {
 
       if (!maxed) {
         const buyBtn = document.createElement('button');
+        buyBtn.type = 'button';
         buyBtn.className = 'research-upgrade-btn';
         buyBtn.textContent = `${upgrade.cost} RP`;
-        buyBtn.disabled = !rm.canPurchase(upgrade.id) || this.game.phase === Phase.WAVE;
+        const canBuy = rm.canPurchase(upgrade.id) && this.game.phase === Phase.PLANNING;
+        buyBtn.disabled = !canBuy;
+        buyBtn.title = this.game.phase !== Phase.PLANNING
+          ? 'Research upgrades can only be purchased between waves'
+          : rm.points < upgrade.cost
+            ? `Need ${upgrade.cost} RP (you have ${rm.points})`
+            : `Purchase ${upgrade.name}`;
         buyBtn.addEventListener('click', () => {
+          if (this.game.phase !== Phase.PLANNING) return;
           if (rm.purchase(upgrade.id)) {
+            if (upgrade.id === 'golden_harvest' && upgrade.effects.bonusStartingGold) {
+              this.game.economy.earn(upgrade.effects.bonusStartingGold, { skipMultiplier: true });
+            }
             this.game._refreshSupportEffects();
             this.game._applyPrestigeToTowers();
             this._renderResearchUpgrades();

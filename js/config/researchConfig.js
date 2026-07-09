@@ -43,7 +43,7 @@ export const RESEARCH_UPGRADES = {
   golden_harvest: {
     id: 'golden_harvest',
     name: 'Golden Harvest',
-    description: '+15 starting gold',
+    description: '+15 gold immediately and on future runs',
     cost: 8,
     maxLevel: 3,
     effects: { bonusStartingGold: 15 },
