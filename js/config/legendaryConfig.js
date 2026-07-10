@@ -6,9 +6,9 @@ export const LEGENDARY_UPGRADES = {
     id: 'needle_legendary',
     towerType: 'needle',
     name: 'Arrow Storm',
-    description: 'Fires 3 arrows; each ricochets to 2 nearby foes.',
+    description: 'Fires 2 darts per volley; each can Expose and chain once.',
     cost: 1200,
-    effects: { projectileCount: 3, chainCount: 2, damageMult: 1.15 },
+    effects: { projectileCount: 2, chainCount: 1, chainDamageMult: 0.55, exposedChance: 0.1 },
   },
   boulder: {
     id: 'boulder_legendary',

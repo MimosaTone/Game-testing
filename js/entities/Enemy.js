@@ -42,6 +42,9 @@ export class Enemy {
     this.burnDPS = 0;
     this.burnTimer = 0;
     this.burnIgnoresArmor = 0;
+    this.exposedTimer = 0;
+    this.exposedDamageBonus = 0;
+    this.exposedArmorReduction = 0;
     this.x = path.waypoints[0].x;
     this.y = path.waypoints[0].y;
 
@@ -136,6 +139,15 @@ export class Enemy {
       }
     }
 
+    if (this.exposedTimer > 0) {
+      this.exposedTimer -= dt;
+      if (this.exposedTimer <= 0) {
+        this.exposedTimer = 0;
+        this.exposedDamageBonus = 0;
+        this.exposedArmorReduction = 0;
+      }
+    }
+
     const surgeMult = this.surgeActive ? 1.75 : 1;
     const enrageMult = this.enraged ? 1.35 : 1;
     this.speed = this.baseSpeed * this.slowFactor * surgeMult * enrageMult;
@@ -200,6 +212,16 @@ export class Enemy {
     this.y = pos.y;
   }
 
+  applyExposed(duration, damageBonus = 0.08, armorReduction = 0.05) {
+    this.exposedTimer = Math.max(this.exposedTimer, duration);
+    this.exposedDamageBonus = Math.max(this.exposedDamageBonus, damageBonus);
+    this.exposedArmorReduction = Math.max(this.exposedArmorReduction, armorReduction);
+  }
+
+  get isExposed() {
+    return this.exposedTimer > 0;
+  }
+
   takeDamage(amount, armorPen = 0) {
     if (!this.alive) return false;
 
@@ -208,8 +230,12 @@ export class Enemy {
     }
 
     const healthBefore = this.health;
-    const effectiveArmor = Math.max(0, this.armor - armorPen);
-    const actual = amount * (1 - effectiveArmor);
+    const exposedArmorCut = this.isExposed ? this.exposedArmorReduction : 0;
+    const effectiveArmor = Math.max(0, this.armor - armorPen - exposedArmorCut);
+    let actual = amount * (1 - effectiveArmor);
+    if (this.isExposed && this.exposedDamageBonus > 0) {
+      actual *= 1 + this.exposedDamageBonus;
+    }
     this.health -= actual;
 
     if (this.definition.bossAbility === 'spawn_minions' && this.eventBus) {

@@ -439,6 +439,16 @@ export class Renderer {
       ctx.fill();
     }
 
+    if (enemy.isExposed) {
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, size + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 214, 102, 0.65)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     if (enemy.isBoss) {
       ctx.beginPath();
       ctx.arc(enemy.x, enemy.y, size + 6, 0, Math.PI * 2);
@@ -470,10 +480,27 @@ export class Renderer {
   drawProjectiles(projectiles) {
     const { ctx } = this;
     for (const proj of projectiles) {
+      const radius = proj.size || 4;
       ctx.fillStyle = proj.color;
       ctx.beginPath();
-      ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+      ctx.arc(proj.x, proj.y, radius, 0, Math.PI * 2);
       ctx.fill();
+
+      if (proj.isCrit) {
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, radius + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 235, 120, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      if (proj.isExecutionShot) {
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, radius + 2, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 90, 120, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
   }
 

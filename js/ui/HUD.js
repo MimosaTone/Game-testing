@@ -15,6 +15,7 @@ import {
 import { isBossWave } from '../config/waveConfig.js?v=20260710c';
 import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
+import { NEEDLE_BRANCHES } from '../config/towerUpgradePaths.js';
 
 /**
  * HUD and build panel UI controller.
@@ -790,7 +791,7 @@ export class HUD {
     const stats = tower.getStats();
     const abilities = tower.getAbilityLabels();
     const next = tower.getNextUpgrade();
-    const maxTier = tower.upgradePath.length;
+    const maxTier = tower.getMaxUpgradeTier();
 
     const progress = tower.getMasteryProgress();
     let masteryHtml = '';
@@ -805,7 +806,10 @@ export class HUD {
       `;
     }
 
-    this.elements.upgradeTitle.textContent = `${def.name} · Tier ${tower.upgradeTier}/${maxTier}`;
+    const branchLabel = tower.upgradeBranch && NEEDLE_BRANCHES[tower.upgradeBranch]
+      ? ` · ${NEEDLE_BRANCHES[tower.upgradeBranch].name}`
+      : '';
+    this.elements.upgradeTitle.textContent = `${def.name} · Tier ${tower.upgradeTier}/${maxTier}${branchLabel}`;
 
     let statsHtml = `
       ${masteryHtml}
@@ -820,9 +824,8 @@ export class HUD {
     }
 
     if (tower.upgradeTier > 0) {
-      const purchased = tower.upgradePath
-        .slice(0, tower.upgradeTier)
-        .map((t) => `<span class="tier-chip">${t.name}</span>`)
+      const purchased = tower.getPurchasedTierNames()
+        .map((name) => `<span class="tier-chip">${name}</span>`)
         .join('');
       statsHtml += `<div class="tier-history">${purchased}</div>`;
     }
@@ -831,7 +834,31 @@ export class HUD {
 
     this.elements.upgradeButtons.innerHTML = '';
 
-    if (next) {
+    if (tower.needsBranchChoice()) {
+      const header = document.createElement('div');
+      header.className = 'upgrade-section-label';
+      header.textContent = 'Choose specialization path';
+      this.elements.upgradeButtons.appendChild(header);
+
+      for (const [key, branch] of Object.entries(NEEDLE_BRANCHES)) {
+        const entry = branch.tiers[0];
+        const cost = this.game.economy._adjustUpgradeCost(
+          entry.cost,
+          tower.gridX,
+          tower.gridY
+        );
+        const btn = document.createElement('button');
+        btn.className = 'upgrade-btn branch-btn';
+        btn.innerHTML = `<span class="upgrade-btn-name">${branch.name}</span><span class="upgrade-btn-detail">${entry.description} · ${cost}g</span>`;
+        btn.disabled = !this.game.economy.canAfford(cost) || this.game.phase !== Phase.PLANNING;
+        btn.addEventListener('click', () => {
+          if (this.game.placementSystem.upgradeSelected('path', key)) {
+            this._showTowerUpgrades(tower);
+          }
+        });
+        this.elements.upgradeButtons.appendChild(btn);
+      }
+    } else if (next) {
       const cost = this.game.economy.getUpgradeCost(tower, 'path');
       const btn = document.createElement('button');
       btn.className = 'upgrade-btn';

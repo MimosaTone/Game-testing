@@ -3,10 +3,10 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 let nextProjectileId = 1;
 
 /**
- * Projectile with support for splash, pierce, chain, and slow effects.
+ * Projectile with support for splash, pierce, chain, crit, and needle specialization.
  */
 export class Projectile {
-  constructor(tower, target, combatStats, combatSystem = null) {
+  constructor(tower, target, combatStats, combatSystem = null, options = {}) {
     this.id = nextProjectileId++;
     this.tower = tower;
     this.target = target;
@@ -31,10 +31,18 @@ export class Projectile {
     this.critChance = combatStats.critChance || 0;
     this.critDamageMult = combatStats.critDamageMult || 1.5;
     this.armorPen = combatStats.armorPen || 0;
+    this.swarmDamageMult = combatStats.swarmDamageMult || 1;
     this.groundBurn = combatStats.groundBurn || false;
     this.combatSystem = combatSystem;
-    this.color = tower.definition.projectileColor;
+    this.color = combatStats.projectileColor || tower.definition.projectileColor;
     this.alive = true;
+
+    this.forceCrit = options.forceCrit || false;
+    this.ignoreArmor = options.ignoreArmor || false;
+    this.damageMult = options.damageMult || 1;
+    this.isExecutionShot = options.isExecutionShot || false;
+    this.isCrit = false;
+    this.size = options.isExecutionShot ? 6 : 4;
 
     const pos = tower.getPixelPosition(GAME_CONFIG.tileSize);
     this.x = pos.x;
@@ -97,6 +105,7 @@ export class Projectile {
   _resolveHit(primaryTarget, enemies) {
     const killed = [];
     const hitEnemies = [primaryTarget];
+    const stats = this.tower.getStats();
 
     this.hitIds.add(primaryTarget.id);
 
@@ -115,9 +124,10 @@ export class Projectile {
     }
 
     const unique = [...new Map(hitEnemies.map((e) => [e.id, e])).values()];
+    const focusMods = this.combatSystem?.getNeedleFocusMods(this.tower, stats) || null;
 
     for (const enemy of unique) {
-      let dmg = this.damage;
+      let dmg = this.damage * this.damageMult;
       if (enemy.id !== primaryTarget.id) {
         if (this.chainCount > 0) {
           dmg *= this.chainDamageMult;
@@ -129,12 +139,30 @@ export class Projectile {
         }
       }
 
-      dmg *= this._rollCrit();
+      let armorPen = this.armorPen;
+      let critChance = this.critChance;
+      if (focusMods) {
+        dmg *= focusMods.damageMult;
+        critChance += focusMods.critChance;
+        armorPen += focusMods.armorPen;
+      }
 
-      if (enemy.isBoss && this.tower.getStats().bossDamageMult) {
-        dmg *= this.tower.getStats().bossDamageMult;
-      } else if (this._isElite(enemy) && this.tower.getStats().eliteDamageMult) {
-        dmg *= this.tower.getStats().eliteDamageMult;
+      const critMult = this._rollCrit(critChance);
+      dmg *= critMult;
+      if (critMult > 1) this.isCrit = true;
+
+      if (this._isSwarm(enemy) && this.swarmDamageMult > 1) {
+        dmg *= this.swarmDamageMult;
+      }
+
+      if (enemy.isBoss && stats.bossDamageMult) {
+        dmg *= stats.bossDamageMult;
+      } else if (this._isElite(enemy) && stats.eliteDamageMult) {
+        dmg *= stats.eliteDamageMult;
+      }
+
+      if (this.isExecutionShot && (enemy.isBoss || this._isElite(enemy))) {
+        dmg *= stats.executionShotDamageMult || 1;
       }
 
       if (this.slowPercent > 0) {
@@ -145,9 +173,22 @@ export class Projectile {
         enemy.applyBurn(this.burnDPS, this.burnDuration, this.burnIgnoresArmor);
       }
 
-      if (enemy.alive && enemy.takeDamage(dmg, this.armorPen)) {
+      if (this.tower.typeId === 'needle' && stats.exposedChance > 0 && Math.random() < stats.exposedChance) {
+        enemy.applyExposed(
+          stats.exposedDuration || 3,
+          stats.exposedDamageBonus || 0.08,
+          stats.exposedArmorReduction || 0.05
+        );
+      }
+
+      const pen = this.ignoreArmor ? 1 : armorPen;
+      if (enemy.alive && enemy.takeDamage(dmg, pen)) {
         killed.push(enemy);
       }
+    }
+
+    if (this.tower.typeId === 'needle' && stats.focusComboEnabled && primaryTarget.alive) {
+      this.combatSystem?.addNeedleFocusStack(this.tower, stats);
     }
 
     if (this.burnSpread > 0 && this.burnDPS > 0) {
@@ -181,15 +222,21 @@ export class Projectile {
     return killed;
   }
 
-  _rollCrit() {
-    if (this.critChance <= 0) return 1;
-    if (Math.random() < this.critChance) return this.critDamageMult;
+  _rollCrit(extraChance = 0) {
+    const chance = this.critChance + extraChance;
+    if (this.forceCrit) return this.critDamageMult;
+    if (chance <= 0) return 1;
+    if (Math.random() < chance) return this.critDamageMult;
     return 1;
   }
 
   _isElite(enemy) {
     if (enemy.isLegendary || enemy.isAncient) return true;
     return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan', 'ancient_rime', 'legendary_titan'].includes(enemy.typeId);
+  }
+
+  _isSwarm(enemy) {
+    return enemy.definition?.faction === 'swarm';
   }
 
   _findChainTargets(origin, enemies, count) {

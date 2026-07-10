@@ -4,6 +4,11 @@ import {
   computeTowerStats,
   applyExternalMods,
   getTowerAbilityLabels,
+  NEEDLE_BRANCHES,
+  NEEDLE_MAX_UPGRADE_TIER,
+  getNeedleNextUpgrade,
+  getNeedleBranchEntryUpgrade,
+  getNeedlePurchasedTierNames,
 } from '../config/towerUpgradePaths.js';
 import {
   getMasteryLevel,
@@ -11,6 +16,8 @@ import {
   getMasteryProgress,
   MASTERY_CONFIG,
   MASTER_UPGRADES,
+  NEEDLE_MASTER_UPGRADES,
+  getNeedleMasterUpgrade,
 } from '../config/towerMasteryConfig.js';
 import { initStructureHealth } from './StructureHealth.js';
 
@@ -30,6 +37,8 @@ export class Tower {
     this.definition = def;
     this.upgradePath = TOWER_UPGRADE_PATHS[typeId] || [];
     this.upgradeTier = 0;
+    /** Needle specialization: rapid_fire | marksman | hunter */
+    this.upgradeBranch = null;
     this.gridX = gridX;
     this.gridY = gridY;
     this.cooldown = 0;
@@ -42,6 +51,11 @@ export class Tower {
     this.masteryXP = 0;
     this.masterUnlocked = false;
     this.shotsFired = 0;
+    this.focusTargetId = null;
+    this.focusStacks = 0;
+    this.needleStormCooldown = 0;
+    this.needleStormActive = 0;
+    this.executionShotCooldown = 0;
     initStructureHealth(this, 'tower');
   }
 
@@ -69,10 +83,16 @@ export class Tower {
       this.definition,
       this.upgradeTier,
       this.upgradePath,
-      this.prestigeMods
+      this.prestigeMods,
+      this.upgradeBranch
     );
 
-    const masteryMods = getMasteryModifiers(this.masteryLevel, this.masterUnlocked, this.typeId);
+    const masteryMods = getMasteryModifiers(
+      this.masteryLevel,
+      this.masterUnlocked,
+      this.typeId,
+      this.upgradeBranch
+    );
     const prestigeCombat = this._getPrestigeCombatMods();
     const combined = {
       ...masteryMods,
@@ -106,8 +126,16 @@ export class Tower {
     if (this.masteryLevel > 0) {
       labels.unshift(`Mastery Lv${this.masteryLevel}`);
     }
-    if (this.masterUnlocked && MASTER_UPGRADES[this.typeId]) {
-      labels.push(`★ ${MASTER_UPGRADES[this.typeId].name}`);
+    if (this.masterUnlocked) {
+      if (this.typeId === 'needle' && this.upgradeBranch) {
+        const master = getNeedleMasterUpgrade(this.upgradeBranch);
+        if (master) labels.push(`★ ${master.name}`);
+      } else if (MASTER_UPGRADES[this.typeId]) {
+        labels.push(`★ ${MASTER_UPGRADES[this.typeId].name}`);
+      }
+    }
+    if (this.typeId === 'needle' && this.upgradeBranch && NEEDLE_BRANCHES[this.upgradeBranch]) {
+      labels.unshift(NEEDLE_BRANCHES[this.upgradeBranch].name);
     }
     return labels;
   }
@@ -117,17 +145,74 @@ export class Tower {
   }
 
   canUpgrade() {
+    if (this.typeId === 'needle') {
+      return this.upgradeTier < NEEDLE_MAX_UPGRADE_TIER;
+    }
     return this.upgradeTier < this.upgradePath.length;
   }
 
-  getNextUpgrade() {
-    return this.canUpgrade() ? this.upgradePath[this.upgradeTier] : null;
+  needsBranchChoice() {
+    return this.typeId === 'needle' && this.upgradeTier === 1 && !this.upgradeBranch;
   }
 
-  upgrade() {
+  getNextUpgrade() {
+    if (!this.canUpgrade()) return null;
+    if (this.typeId === 'needle') {
+      return getNeedleNextUpgrade(this.upgradeTier, this.upgradeBranch);
+    }
+    return this.upgradePath[this.upgradeTier];
+  }
+
+  getMaxUpgradeTier() {
+    if (this.typeId === 'needle') return NEEDLE_MAX_UPGRADE_TIER;
+    return this.upgradePath.length;
+  }
+
+  getPurchasedTierNames() {
+    if (this.typeId === 'needle') {
+      return getNeedlePurchasedTierNames(this.upgradeTier, this.upgradeBranch);
+    }
+    return this.upgradePath.slice(0, this.upgradeTier).map((t) => t.name);
+  }
+
+  upgrade(branch = null) {
     if (!this.canUpgrade()) return false;
+
+    if (this.typeId === 'needle') {
+      if (this.needsBranchChoice()) {
+        if (!branch || !NEEDLE_BRANCHES[branch]) return false;
+        this.upgradeBranch = branch;
+        this.upgradeTier++;
+        return true;
+      }
+      if (this.upgradeTier >= 1 && !this.upgradeBranch) return false;
+      this.upgradeTier++;
+      return true;
+    }
+
     this.upgradeTier++;
     return true;
+  }
+
+  getBranchEntryCost(branch) {
+    const entry = getNeedleBranchEntryUpgrade(branch);
+    return entry?.cost ?? null;
+  }
+
+  resetFocusCombo() {
+    this.focusTargetId = null;
+    this.focusStacks = 0;
+  }
+
+  syncFocusTarget(targetId) {
+    if (targetId !== this.focusTargetId) {
+      this.focusTargetId = targetId;
+      this.focusStacks = 0;
+    }
+  }
+
+  addFocusStack(maxStacks) {
+    this.focusStacks = Math.min(maxStacks, this.focusStacks + 1);
   }
 
   getPixelPosition(tileSize) {

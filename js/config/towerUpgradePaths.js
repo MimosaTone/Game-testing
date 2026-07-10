@@ -2,44 +2,176 @@
  * Sequential upgrade paths per tower type.
  * Each tier is a meaningful power spike — not just minor stat bumps.
  */
+/** Needle Tower — shared opener then one of three specialization paths. */
+export const NEEDLE_SHARED_TIERS = [
+  {
+    id: 'calibrated',
+    name: 'Calibrated Needles',
+    cost: 45,
+    description: '+20% damage; 18% chance to Expose foes',
+    effects: {
+      damageMult: 1.2,
+      exposedChance: 0.18,
+      exposedDuration: 3,
+      exposedDamageBonus: 0.08,
+      exposedArmorReduction: 0.05,
+      focusComboEnabled: true,
+    },
+  },
+];
+
+export const NEEDLE_BRANCHES = {
+  rapid_fire: {
+    id: 'rapid_fire',
+    name: 'Rapid Fire',
+    description: 'High attack speed and crit chance — excels vs swarms.',
+    projectileColor: '#5dffc8',
+    tiers: [
+      {
+        id: 'rapid_cadence',
+        name: 'Rapid Cadence',
+        cost: 70,
+        description: '+50% attack speed, slight damage trade-off',
+        effects: { attackSpeedMult: 1.5, damageMult: 0.92, projectileSpeedMult: 1.15 },
+      },
+      {
+        id: 'swift_darts',
+        name: 'Swift Darts',
+        cost: 110,
+        description: '+35% speed & +8% crit chance',
+        effects: { attackSpeedMult: 1.35, critChance: 0.08, projectileSpeedMult: 1.1 },
+      },
+      {
+        id: 'needle_flurry',
+        name: 'Needle Flurry',
+        cost: 170,
+        description: '+25% speed, +10% crit; +22% vs swarm foes',
+        effects: { attackSpeedMult: 1.25, critChance: 0.1, swarmDamageMult: 1.22 },
+      },
+      {
+        id: 'storm_ready',
+        name: 'Storm Readiness',
+        cost: 260,
+        description: 'Capstone: +15% crit & faster projectiles',
+        effects: { critChance: 0.07, critDamageMult: 0.25, projectileSpeedMult: 1.2, attackSpeedMult: 1.1 },
+      },
+    ],
+  },
+  marksman: {
+    id: 'marksman',
+    name: 'Marksman',
+    description: 'Long-range precision with armor penetration vs elites.',
+    projectileColor: '#ffd166',
+    tiers: [
+      {
+        id: 'long_sight',
+        name: 'Long Sight',
+        cost: 70,
+        description: '+28% range & +12% crit damage',
+        effects: { rangeMult: 1.28, critDamageMult: 0.35, projectileSpeedMult: 1.2 },
+      },
+      {
+        id: 'armor_breach',
+        name: 'Armor Breach',
+        cost: 110,
+        description: '+10% armor pen & +18% elite damage',
+        effects: { armorPen: 0.1, eliteDamageMult: 1.18, exposedChance: 0.06 },
+      },
+      {
+        id: 'deadly_aim',
+        name: 'Deadly Aim',
+        cost: 170,
+        description: '+20% range, +15% crit damage, +8% armor pen',
+        effects: { rangeMult: 1.2, critDamageMult: 0.4, armorPen: 0.08, exposedDamageBonus: 0.04 },
+      },
+      {
+        id: 'deadeye_ready',
+        name: 'Deadeye Training',
+        cost: 260,
+        description: 'Capstone: +25% elite damage & sharper crits',
+        effects: { eliteDamageMult: 1.25, critDamageMult: 0.35, armorPen: 0.06, rangeMult: 1.1 },
+      },
+    ],
+  },
+  hunter: {
+    id: 'hunter',
+    name: 'Hunter',
+    description: 'Boss specialist with heavy single-target damage.',
+    projectileColor: '#ff6b8a',
+    tiers: [
+      {
+        id: 'big_game',
+        name: 'Big Game',
+        cost: 70,
+        description: '+22% boss damage & faster bolts',
+        effects: { bossDamageMult: 1.22, projectileSpeedMult: 1.25, damageMult: 1.08 },
+      },
+      {
+        id: 'vital_strike',
+        name: 'Vital Strike',
+        cost: 110,
+        description: '+18% boss damage & +12% single-target damage',
+        effects: { bossDamageMult: 1.18, damageMult: 1.12, eliteDamageMult: 1.1 },
+      },
+      {
+        id: 'predator_focus',
+        name: 'Predator Focus',
+        cost: 170,
+        description: '+25% boss damage; focus stacks +1 max',
+        effects: { bossDamageMult: 1.25, focusComboMaxBonus: 2, armorPen: 0.06 },
+      },
+      {
+        id: 'execution_ready',
+        name: 'Execution Ready',
+        cost: 260,
+        description: 'Capstone: +30% boss/elite damage & piercing shots',
+        effects: { bossDamageMult: 1.3, eliteDamageMult: 1.2, damageMult: 1.1, projectileSpeedMult: 1.15 },
+      },
+    ],
+  },
+};
+
+export const NEEDLE_MAX_UPGRADE_TIER = 5;
+
+export function getNeedleResolvedTiers(upgradeTier, branch) {
+  const tiers = [];
+  if (upgradeTier >= 1) tiers.push(NEEDLE_SHARED_TIERS[0]);
+  if (upgradeTier >= 2 && branch && NEEDLE_BRANCHES[branch]) {
+    const branchTiers = NEEDLE_BRANCHES[branch].tiers;
+    const branchCount = Math.min(upgradeTier - 1, branchTiers.length);
+    tiers.push(...branchTiers.slice(0, branchCount));
+  }
+  return tiers;
+}
+
+export function getNeedleNextUpgrade(upgradeTier, branch) {
+  if (upgradeTier >= NEEDLE_MAX_UPGRADE_TIER) return null;
+  if (upgradeTier === 0) return NEEDLE_SHARED_TIERS[0];
+  if (upgradeTier === 1 && !branch) return null;
+  if (!branch) return null;
+  const branchTiers = NEEDLE_BRANCHES[branch]?.tiers;
+  if (!branchTiers) return null;
+  const nextIndex = upgradeTier - 1;
+  return nextIndex < branchTiers.length ? branchTiers[nextIndex] : null;
+}
+
+export function getNeedleBranchEntryUpgrade(branch) {
+  return NEEDLE_BRANCHES[branch]?.tiers[0] ?? null;
+}
+
+export function getNeedlePurchasedTierNames(upgradeTier, branch) {
+  const names = [];
+  if (upgradeTier >= 1) names.push(NEEDLE_SHARED_TIERS[0].name);
+  if (branch && upgradeTier >= 2) {
+    const branchTiers = NEEDLE_BRANCHES[branch].tiers;
+    const count = Math.min(upgradeTier - 1, branchTiers.length);
+    for (let i = 0; i < count; i++) names.push(branchTiers[i].name);
+  }
+  return names;
+}
+
 export const TOWER_UPGRADE_PATHS = {
-  needle: [
-    {
-      id: 'sharpened',
-      name: 'Sharpened Tips',
-      cost: 45,
-      description: '+60% damage',
-      effects: { damageMult: 1.6 },
-    },
-    {
-      id: 'rapid',
-      name: 'Rapid Fire',
-      cost: 70,
-      description: '+50% attack speed',
-      effects: { attackSpeedMult: 1.5 },
-    },
-    {
-      id: 'twin',
-      name: 'Twin Needles',
-      cost: 110,
-      description: 'Fires 2 darts per volley',
-      effects: { projectileCount: 2 },
-    },
-    {
-      id: 'pierce',
-      name: 'Piercing Volley',
-      cost: 170,
-      description: 'Darts pierce through 3 enemies',
-      effects: { pierce: 3 },
-    },
-    {
-      id: 'storm',
-      name: 'Needle Storm',
-      cost: 260,
-      description: 'Capstone: +100% damage & +40% speed',
-      effects: { damageMult: 2.0, attackSpeedMult: 1.4 },
-    },
-  ],
+  needle: [],
 
   boulder: [
     {
@@ -282,8 +414,59 @@ export const TOWER_UPGRADE_PATHS = {
   ],
 };
 
+function applyTierEffects(combat, fx, towerDef) {
+  if (fx.damageMult) combat.damage *= fx.damageMult;
+  if (fx.rangeMult) combat.range *= fx.rangeMult;
+  if (fx.attackSpeedMult) combat.attackSpeed *= fx.attackSpeedMult;
+  if (fx.splashRadiusMult) combat.splashRadius *= fx.splashRadiusMult;
+  if (fx.projectileCount) combat.projectileCount = fx.projectileCount;
+  if (fx.pierce) combat.pierce += fx.pierce;
+  if (fx.chainCount) combat.chainCount = fx.chainCount;
+  if (fx.chainDamageMult) combat.chainDamageMult = fx.chainDamageMult;
+  if (fx.chainRange) combat.chainRange = fx.chainRange;
+  if (fx.slowPercent) combat.slowPercent = Math.max(combat.slowPercent, fx.slowPercent);
+  if (fx.slowDuration) combat.slowDuration = Math.max(combat.slowDuration, fx.slowDuration);
+  if (fx.splashFalloff !== undefined) combat.splashFalloff = fx.splashFalloff;
+  if (fx.auraSlowMult) combat.auraSlow *= fx.auraSlowMult;
+  if (fx.auraSlowAdd) combat.auraSlow += fx.auraSlowAdd;
+  if (fx.burnDPSMult) combat.burnDPS *= fx.burnDPSMult;
+  if (fx.burnDuration) combat.burnDuration = fx.burnDuration;
+  if (fx.burnSpread) combat.burnSpread = fx.burnSpread;
+  if (fx.burnSpreadCount) combat.burnSpreadCount = fx.burnSpreadCount;
+  if (fx.burnIgnoresArmor) combat.burnIgnoresArmor = fx.burnIgnoresArmor;
+  if (fx.knockbackPulse) combat.knockbackPulse = fx.knockbackPulse;
+  if (fx.knockbackInterval) combat.knockbackInterval = fx.knockbackInterval;
+  if (fx.armorPen) combat.armorPen += fx.armorPen;
+  if (fx.bossDamageMult) combat.bossDamageMult *= fx.bossDamageMult;
+  if (fx.eliteDamageMult) combat.eliteDamageMult *= fx.eliteDamageMult;
+  if (fx.critChance) combat.critChance += fx.critChance;
+  if (fx.critDamageMult) combat.critDamageMult += fx.critDamageMult;
+  if (fx.frostPulseSlow) combat.frostPulseSlow = Math.max(combat.frostPulseSlow, fx.frostPulseSlow);
+  if (fx.frostPulseInterval) combat.frostPulseInterval = fx.frostPulseInterval;
+  if (fx.frostPulseDuration) combat.frostPulseDuration = fx.frostPulseDuration;
+  if (fx.projectileSpeedMult) {
+    combat.projectileSpeedMult = (combat.projectileSpeedMult || 1) * fx.projectileSpeedMult;
+  }
+  if (fx.projectileColor) combat.projectileColor = fx.projectileColor;
+  if (fx.exposedChance) combat.exposedChance = (combat.exposedChance || 0) + fx.exposedChance;
+  if (fx.exposedDuration) combat.exposedDuration = Math.max(combat.exposedDuration || 0, fx.exposedDuration);
+  if (fx.exposedDamageBonus) combat.exposedDamageBonus = (combat.exposedDamageBonus || 0) + fx.exposedDamageBonus;
+  if (fx.exposedArmorReduction) {
+    combat.exposedArmorReduction = (combat.exposedArmorReduction || 0) + fx.exposedArmorReduction;
+  }
+  if (fx.swarmDamageMult) combat.swarmDamageMult = (combat.swarmDamageMult || 1) * fx.swarmDamageMult;
+  if (fx.focusComboEnabled) combat.focusComboEnabled = true;
+  if (fx.focusComboMaxBonus) combat.focusComboMax = (combat.focusComboMax || 5) + fx.focusComboMaxBonus;
+  if (fx.needleStormCooldown) combat.needleStormCooldown = fx.needleStormCooldown;
+  if (fx.needleStormDuration) combat.needleStormDuration = fx.needleStormDuration;
+  if (fx.needleStormSpeedMult) combat.needleStormSpeedMult = fx.needleStormSpeedMult;
+  if (fx.deadeyeInterval) combat.deadeyeInterval = fx.deadeyeInterval;
+  if (fx.executionShotInterval) combat.executionShotInterval = fx.executionShotInterval;
+  if (fx.executionShotDamageMult) combat.executionShotDamageMult = fx.executionShotDamageMult;
+}
+
 /** Merge all purchased tier effects into combat stats. */
-export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = null) {
+export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = null, branch = null) {
   const base = towerDef.baseStats;
   let damage = base.damage;
   let range = base.range;
@@ -320,42 +503,24 @@ export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = nu
     frostPulseInterval: 0,
     frostPulseDuration: 0,
     isAuraTower: towerDef.isAuraTower || false,
+    focusComboMax: 5,
+    focusComboDamagePerStack: 0.03,
+    focusComboCritPerStack: 0.02,
+    focusComboArmorPenPerStack: 0.01,
+    projectileColor: towerDef.projectileColor,
   };
 
-  for (let i = 0; i < upgradeTier; i++) {
-    const tier = path[i];
-    if (!tier) continue;
-    const fx = tier.effects;
+  const tiers = towerDef.id === 'needle'
+    ? getNeedleResolvedTiers(upgradeTier, branch)
+    : path.slice(0, upgradeTier);
 
-    if (fx.damageMult) combat.damage *= fx.damageMult;
-    if (fx.rangeMult) combat.range *= fx.rangeMult;
-    if (fx.attackSpeedMult) combat.attackSpeed *= fx.attackSpeedMult;
-    if (fx.splashRadiusMult) combat.splashRadius *= fx.splashRadiusMult;
-    if (fx.projectileCount) combat.projectileCount = fx.projectileCount;
-    if (fx.pierce) combat.pierce += fx.pierce;
-    if (fx.chainCount) combat.chainCount = fx.chainCount;
-    if (fx.chainDamageMult) combat.chainDamageMult = fx.chainDamageMult;
-    if (fx.chainRange) combat.chainRange = fx.chainRange;
-    if (fx.slowPercent) combat.slowPercent = Math.max(combat.slowPercent, fx.slowPercent);
-    if (fx.slowDuration) combat.slowDuration = Math.max(combat.slowDuration, fx.slowDuration);
-    if (fx.splashFalloff !== undefined) combat.splashFalloff = fx.splashFalloff;
-    if (fx.auraSlowMult) combat.auraSlow *= fx.auraSlowMult;
-    if (fx.auraSlowAdd) combat.auraSlow += fx.auraSlowAdd;
-    if (fx.burnDPSMult) combat.burnDPS *= fx.burnDPSMult;
-    if (fx.burnDuration) combat.burnDuration = fx.burnDuration;
-    if (fx.burnSpread) combat.burnSpread = fx.burnSpread;
-    if (fx.burnSpreadCount) combat.burnSpreadCount = fx.burnSpreadCount;
-    if (fx.burnIgnoresArmor) combat.burnIgnoresArmor = fx.burnIgnoresArmor;
-    if (fx.knockbackPulse) combat.knockbackPulse = fx.knockbackPulse;
-    if (fx.knockbackInterval) combat.knockbackInterval = fx.knockbackInterval;
-    if (fx.armorPen) combat.armorPen += fx.armorPen;
-    if (fx.bossDamageMult) combat.bossDamageMult *= fx.bossDamageMult;
-    if (fx.eliteDamageMult) combat.eliteDamageMult *= fx.eliteDamageMult;
-    if (fx.critChance) combat.critChance += fx.critChance;
-    if (fx.critDamageMult) combat.critDamageMult += fx.critDamageMult;
-    if (fx.frostPulseSlow) combat.frostPulseSlow = Math.max(combat.frostPulseSlow, fx.frostPulseSlow);
-    if (fx.frostPulseInterval) combat.frostPulseInterval = fx.frostPulseInterval;
-    if (fx.frostPulseDuration) combat.frostPulseDuration = fx.frostPulseDuration;
+  for (const tier of tiers) {
+    if (!tier?.effects) continue;
+    applyTierEffects(combat, tier.effects, towerDef);
+  }
+
+  if (branch && towerDef.id === 'needle' && NEEDLE_BRANCHES[branch]?.projectileColor) {
+    combat.projectileColor = NEEDLE_BRANCHES[branch].projectileColor;
   }
 
   if (prestigeMods?.towerDamageMult) {
@@ -406,6 +571,15 @@ export function applyExternalMods(combat, mods) {
   if (mods.frostPulseSlow) combat.frostPulseSlow = Math.max(combat.frostPulseSlow ?? 0, mods.frostPulseSlow);
   if (mods.frostPulseInterval) combat.frostPulseInterval = mods.frostPulseInterval;
   if (mods.frostPulseDuration) combat.frostPulseDuration = mods.frostPulseDuration;
+  if (mods.exposedChance) combat.exposedChance = (combat.exposedChance || 0) + mods.exposedChance;
+  if (mods.swarmDamageMult) combat.swarmDamageMult = (combat.swarmDamageMult || 1) * mods.swarmDamageMult;
+  if (mods.needleStormCooldown) combat.needleStormCooldown = mods.needleStormCooldown;
+  if (mods.needleStormDuration) combat.needleStormDuration = mods.needleStormDuration;
+  if (mods.needleStormSpeedMult) combat.needleStormSpeedMult = mods.needleStormSpeedMult;
+  if (mods.deadeyeInterval) combat.deadeyeInterval = mods.deadeyeInterval;
+  if (mods.executionShotInterval) combat.executionShotInterval = mods.executionShotInterval;
+  if (mods.executionShotDamageMult) combat.executionShotDamageMult = mods.executionShotDamageMult;
+  if (mods.exposedChance) combat.exposedChance = (combat.exposedChance || 0) + mods.exposedChance;
 
   return finalizeCombatStats(combat);
 }
@@ -438,5 +612,11 @@ export function getTowerAbilityLabels(stats) {
   if (stats.eliteDamageMult > 1) labels.push(`Elite dmg ×${stats.eliteDamageMult.toFixed(2)}`);
   if (stats.critChance > 0) labels.push(`Crit ${Math.round(stats.critChance * 100)}%`);
   if (stats.frostPulseSlow > 0) labels.push('Frost pulse');
+  if (stats.exposedChance > 0) labels.push(`Expose ${Math.round(stats.exposedChance * 100)}%`);
+  if (stats.focusComboEnabled) labels.push('Focus combo');
+  if (stats.swarmDamageMult > 1) labels.push(`Swarm ×${stats.swarmDamageMult.toFixed(2)}`);
+  if (stats.needleStormCooldown) labels.push('Needle Storm');
+  if (stats.deadeyeInterval) labels.push('Deadeye');
+  if (stats.executionShotInterval) labels.push('Execution Shot');
   return labels;
 }

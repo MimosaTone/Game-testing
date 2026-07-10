@@ -15,13 +15,28 @@ export const MASTERY_CONFIG = {
   },
 };
 
+/** Path-specific Needle master upgrades — unlocked at max mastery. */
+export const NEEDLE_MASTER_UPGRADES = {
+  rapid_fire: {
+    name: 'Needle Storm',
+    description: 'Every 16s, attack speed doubles for 4 seconds.',
+    effects: { needleStormCooldown: 16, needleStormDuration: 4, needleStormSpeedMult: 2 },
+  },
+  marksman: {
+    name: 'Deadeye',
+    description: 'Every 6th shot is a guaranteed crit that ignores armor.',
+    effects: { deadeyeInterval: 6 },
+  },
+  hunter: {
+    name: 'Execution Shot',
+    description: 'Every 10s, fires a devastating shot vs bosses and elites.',
+    effects: { executionShotInterval: 10, executionShotDamageMult: 4.5 },
+  },
+};
+
 /** Unique Master Upgrade unlocked at max mastery level per tower type. */
 export const MASTER_UPGRADES = {
-  needle: {
-    name: 'Storm Needle',
-    description: 'Every 5th shot fires a bonus dart at full damage.',
-    effects: { bonusShotInterval: 5 },
-  },
+  needle: null,
   boulder: {
     name: 'Cataclysm',
     description: 'Splash damage no longer falls off at range.',
@@ -87,7 +102,7 @@ export function getMasteryProgress(xp) {
   return { level, maxLevel, current, needed, pct: current / needed };
 }
 
-export function getMasteryModifiers(level, masterUnlocked, typeId) {
+export function getMasteryModifiers(level, masterUnlocked, typeId, branch = null) {
   const bonus = MASTERY_CONFIG.perLevelBonus;
   const mods = {
     damageMult: 1 + level * bonus.damageMult,
@@ -95,9 +110,15 @@ export function getMasteryModifiers(level, masterUnlocked, typeId) {
     attackSpeedMult: 1 + level * bonus.attackSpeedMult,
   };
 
-  if (masterUnlocked && MASTER_UPGRADES[typeId]) {
+  if (masterUnlocked && typeId === 'needle' && branch && NEEDLE_MASTER_UPGRADES[branch]) {
+    Object.assign(mods, NEEDLE_MASTER_UPGRADES[branch].effects);
+  } else if (masterUnlocked && MASTER_UPGRADES[typeId]) {
     Object.assign(mods, MASTER_UPGRADES[typeId].effects);
   }
 
   return mods;
+}
+
+export function getNeedleMasterUpgrade(branch) {
+  return NEEDLE_MASTER_UPGRADES[branch] || null;
 }

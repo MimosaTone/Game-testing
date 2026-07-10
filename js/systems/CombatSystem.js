@@ -44,6 +44,23 @@ export class CombatSystem {
     }
   }
 
+  getNeedleFocusMods(tower, stats) {
+    if (!stats.focusComboEnabled || tower.focusStacks <= 0) {
+      return { damageMult: 1, critChance: 0, armorPen: 0 };
+    }
+    const stacks = tower.focusStacks;
+    return {
+      damageMult: 1 + stacks * (stats.focusComboDamagePerStack || 0.03),
+      critChance: stacks * (stats.focusComboCritPerStack || 0.02),
+      armorPen: stacks * (stats.focusComboArmorPenPerStack || 0.01),
+    };
+  }
+
+  addNeedleFocusStack(tower, stats) {
+    const maxStacks = stats.focusComboMax || 5;
+    tower.addFocusStack(maxStacks);
+  }
+
   _updateAuras(dt, enemies) {
     for (const tower of this.towers) {
       const stats = tower.getStats();
@@ -109,12 +126,31 @@ export class CombatSystem {
     return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan', 'ancient_rime', 'legendary_titan'].includes(enemy.typeId);
   }
 
+  _updateNeedleStorm(tower, stats, dt) {
+    if (!stats.needleStormCooldown) return 1;
+
+    tower.needleStormCooldown = (tower.needleStormCooldown || 0) - dt;
+    tower.needleStormActive = Math.max(0, (tower.needleStormActive || 0) - dt);
+
+    if (tower.needleStormActive <= 0 && tower.needleStormCooldown <= 0) {
+      tower.needleStormActive = stats.needleStormDuration || 4;
+      tower.needleStormCooldown = stats.needleStormCooldown;
+    }
+
+    if (tower.needleStormActive > 0) {
+      return stats.needleStormSpeedMult || 2;
+    }
+    return 1;
+  }
+
   _updateTower(tower, dt, enemies) {
     tower.cooldown -= dt;
 
     const stats = tower.getStats();
     const pos = tower.getPixelPosition(GAME_CONFIG.tileSize);
     const rangePx = stats.range * GAME_CONFIG.tileSize;
+
+    const prevTargetId = tower.target?.id ?? null;
 
     if (!tower.target || !tower.target.alive) {
       tower.target = this._findTarget(pos, rangePx, enemies);
@@ -125,22 +161,60 @@ export class CombatSystem {
       }
     }
 
+    if (tower.typeId === 'needle' && tower.target) {
+      if (prevTargetId !== tower.target.id) {
+        tower.syncFocusTarget(tower.target.id);
+      }
+    } else if (tower.typeId === 'needle' && !tower.target) {
+      tower.resetFocusCombo();
+    }
+
     if (tower.target) {
       tower.angle = Math.atan2(tower.target.y - pos.y, tower.target.x - pos.x);
     }
 
+    if (tower.typeId === 'needle' && stats.executionShotInterval) {
+      tower.executionShotCooldown = (tower.executionShotCooldown ?? stats.executionShotInterval) - dt;
+    }
+
     if (tower.cooldown <= 0 && tower.target) {
-      tower.cooldown = 1 / stats.attackSpeed;
+      let attackSpeed = stats.attackSpeed;
+      if (tower.typeId === 'needle') {
+        attackSpeed *= this._updateNeedleStorm(tower, stats, dt);
+      }
+
+      tower.cooldown = 1 / attackSpeed;
       tower.shotsFired = (tower.shotsFired || 0) + 1;
+
+      const shotOptions = {};
+      if (tower.typeId === 'needle' && stats.deadeyeInterval && tower.shotsFired % stats.deadeyeInterval === 0) {
+        shotOptions.forceCrit = true;
+        shotOptions.ignoreArmor = true;
+      }
 
       const count = stats.projectileCount || 1;
       for (let i = 0; i < count; i++) {
-        this.projectiles.push(new Projectile(tower, tower.target, stats, this));
+        this.projectiles.push(new Projectile(tower, tower.target, stats, this, shotOptions));
       }
 
       if (stats.bonusShotInterval && tower.shotsFired % stats.bonusShotInterval === 0) {
         this.projectiles.push(new Projectile(tower, tower.target, stats, this));
       }
+
+      if (
+        tower.typeId === 'needle'
+        && stats.executionShotInterval
+        && tower.executionShotCooldown <= 0
+      ) {
+        this.projectiles.push(new Projectile(tower, tower.target, stats, this, {
+          isExecutionShot: true,
+          forceCrit: true,
+          ignoreArmor: true,
+        }));
+        tower.executionShotCooldown = stats.executionShotInterval;
+      }
+    } else if (tower.typeId === 'needle' && stats.needleStormCooldown) {
+      this._updateNeedleStorm(tower, stats, dt);
     }
   }
 
@@ -158,6 +232,7 @@ export class CombatSystem {
       if (enemy.regenPerSec > 0) score += 40;
       if (enemy.typeId === 'drift' || enemy.typeId === 'rime') score += 20;
       if (enemy.health / enemy.maxHealth < 0.35) score += 30;
+      if (enemy.isExposed) score += 25;
 
       if (score > bestScore) {
         bestScore = score;

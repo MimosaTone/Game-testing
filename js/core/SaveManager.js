@@ -217,6 +217,7 @@ export class SaveManager {
         gridX: t.gridX,
         gridY: t.gridY,
         upgradeTier: t.upgradeTier,
+        upgradeBranch: t.upgradeBranch || null,
         masteryXP: t.masteryXP,
         masterUnlocked: t.masterUnlocked,
         health: t.health,

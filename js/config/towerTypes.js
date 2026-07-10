@@ -3,7 +3,7 @@ export const TOWER_TYPES = {
   needle: {
     id: 'needle',
     name: 'Needle Post',
-    description: 'Rapid shots — reliable early defense.',
+    description: 'Precision darts — specialize into rapid fire, marksman, or hunter paths.',
     cost: 40,
     category: 'military',
     color: '#3d9970',

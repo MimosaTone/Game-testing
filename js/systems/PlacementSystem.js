@@ -1,5 +1,6 @@
 import { BUILD_SPOTS } from '../config/gameConfig.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
+import { getNeedleResolvedTiers } from '../config/towerUpgradePaths.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES } from '../config/supportConfig.js';
 import { REBUILD_COST_MULT } from '../config/structureHealthConfig.js';
@@ -165,6 +166,7 @@ export class PlacementSystem {
     if (data.structureType === 'tower') {
       structure = new Tower(data.typeId, gridX, gridY);
       structure.upgradeTier = data.upgradeTier || 0;
+      structure.upgradeBranch = data.upgradeBranch || null;
       structure.masteryXP = data.masteryXP || 0;
       structure.masterUnlocked = data.masterUnlocked || false;
       this.towers.push(structure);
@@ -288,8 +290,14 @@ export class PlacementSystem {
 
     if (structure.type === 'tower') {
       invested = this.getBuildCost(structure.typeId) ?? TOWER_TYPES[structure.typeId].cost;
-      for (let i = 0; i < structure.upgradeTier; i++) {
-        invested += structure.upgradePath[i]?.cost ?? 0;
+      if (structure.typeId === 'needle') {
+        for (const tier of getNeedleResolvedTiers(structure.upgradeTier, structure.upgradeBranch)) {
+          invested += tier.cost ?? 0;
+        }
+      } else {
+        for (let i = 0; i < structure.upgradeTier; i++) {
+          invested += structure.upgradePath[i]?.cost ?? 0;
+        }
       }
     } else if (structure.type === 'farm') {
       invested = FARM_CONFIG.cost;
@@ -333,14 +341,22 @@ export class PlacementSystem {
     const structure = this.selectedStructure;
     if (!structure || structure.destroyed) return false;
 
-    const cost = this.economy.getUpgradeCost(structure, stat);
+    let cost;
+    if (structure.type === 'tower' && structure.needsBranchChoice() && branch) {
+      const entry = structure.getBranchEntryCost?.(branch);
+      if (entry === null) return false;
+      cost = this.economy._adjustUpgradeCost(entry, structure.gridX, structure.gridY);
+    } else {
+      cost = this.economy.getUpgradeCost(structure, stat);
+    }
     if (cost === null || !this.economy.spend(cost)) return false;
 
     if (structure.type === 'farm') {
       structure.upgrade();
       this.economy.recalculateIncome(this.farms);
     } else if (structure.type === 'tower') {
-      structure.upgrade();
+      if (structure.needsBranchChoice() && !branch) return false;
+      structure.upgrade(branch);
     } else if (structure.type === 'support') {
       if (structure.needsBranchChoice() && !branch) return false;
       structure.upgrade(branch);
@@ -390,6 +406,7 @@ export class PlacementSystem {
       gridX: structure.gridX,
       gridY: structure.gridY,
       upgradeTier: structure.upgradeTier,
+      upgradeBranch: structure.upgradeBranch,
       masteryXP: structure.masteryXP,
       masterUnlocked: structure.masterUnlocked,
       level: structure.level,
@@ -417,6 +434,7 @@ export class PlacementSystem {
           gridX: t.gridX,
           gridY: t.gridY,
           upgradeTier: t.upgradeTier,
+          upgradeBranch: t.upgradeBranch,
           masteryXP: t.masteryXP,
           masterUnlocked: t.masterUnlocked,
         });
@@ -425,6 +443,10 @@ export class PlacementSystem {
       if (!TOWER_TYPES[t.typeId]) continue;
       const tower = new Tower(t.typeId, t.gridX, t.gridY);
       tower.upgradeTier = t.upgradeTier || 0;
+      tower.upgradeBranch = t.upgradeBranch || null;
+      if (t.typeId === 'needle' && tower.upgradeTier >= 2 && !tower.upgradeBranch) {
+        tower.upgradeBranch = 'rapid_fire';
+      }
       tower.masteryXP = t.masteryXP || 0;
       tower.masterUnlocked = t.masterUnlocked || false;
       restoreStructureHealth(tower, t.health, t.maxHealth, false);
