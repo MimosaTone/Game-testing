@@ -195,6 +195,7 @@ export const CHALLENGE_PRESETS = {
   pain_lover: {
     id: 'pain_lover',
     name: 'You Really Like Pain, Huh?',
+    shortName: 'Pain Lover?',
     description: 'Apocalypse, but worse — max-tier misery for max-tier rewards',
     modifiers: [
       'reinforced_4',

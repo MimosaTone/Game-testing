@@ -2,7 +2,7 @@ import { Events } from '../core/EventBus.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES, SUPPORT_BUILD_ORDER } from '../config/supportConfig.js';
-import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710e';
+import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710f';
 import { MASTER_UPGRADES } from '../config/towerMasteryConfig.js';
 import { BUILD_CATEGORIES, BUILD_CATEGORY_ORDER, getBuildItemDef } from '../config/buildCategories.js';
 import { getRepairCost } from '../entities/StructureHealth.js';
@@ -298,6 +298,7 @@ export class HUD {
 
     bus.on(Events.WAVE_STARTED, () => {
       this._updateStartButton();
+      this._renderChallengePanel();
       this._hideFactionPreview();
       this._hideUpgradePanel();
       this._hideWaveSummary();
@@ -312,6 +313,7 @@ export class HUD {
 
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
+      this._renderChallengePanel();
       this._updateFactionPreview();
       this._refreshBuildPanelHints();
       this._updatePrestigeSummary();
@@ -320,6 +322,7 @@ export class HUD {
 
     bus.on(Events.GAME_OVER, () => {
       this._updateStartButton();
+      this._renderChallengePanel();
       this._hideFactionPreview();
       this._updatePrestigeSummary();
     });
@@ -341,6 +344,7 @@ export class HUD {
       this._updatePrestigeSummary();
       this._updateFactionPreview();
       this._updateStartButton();
+      this._renderChallengePanel();
       this._updateBuildAffordability();
       this._updateStatusPanel();
       this.elements.crystals.textContent = this.game.economy.crystals;
@@ -523,12 +527,15 @@ export class HUD {
 
   _renderChallengePanel() {
     const cm = this.game.challengeManager;
-    const canEdit = cm.canEdit(this.game.phase === Phase.PLANNING);
+    const inPlanning = this.game.phase === Phase.PLANNING;
+    const canEdit = cm.canEdit(inPlanning);
     const state = cm.getState();
 
     this.elements.challengeHint.textContent = canEdit
-      ? 'Stack modifiers for bigger rewards — adjust before each wave'
-      : 'Modifiers can only be changed between waves';
+      ? 'Stack modifiers for bigger rewards — pick a preset between waves'
+      : inPlanning && cm.locked
+        ? 'Challenge locked for this run'
+        : 'Finish the wave first — then you can switch presets';
 
     this.elements.challengeReward.textContent = `Total Bonus: ${state.rewardMultiplier.toFixed(1)}×`;
     this._renderChallengeActiveList();
@@ -538,13 +545,13 @@ export class HUD {
     for (const preset of Object.values(CHALLENGE_PRESETS)) {
       const btn = document.createElement('button');
       btn.className = 'challenge-preset-btn';
-      btn.textContent = preset.name;
-      btn.title = preset.description;
+      btn.textContent = preset.shortName ?? preset.name;
+      btn.title = preset.name + (preset.description ? ` — ${preset.description}` : '');
       btn.classList.toggle('active', state.presetId === preset.id);
       btn.disabled = !canEdit;
-      if (canEdit) {
-        btn.addEventListener('click', () => this.game.challengeManager.applyPreset(preset.id));
-      }
+      btn.addEventListener('click', () => {
+        if (!cm.applyPreset(preset.id, this.game.phase === Phase.PLANNING)) return;
+      });
       presetsEl.appendChild(btn);
     }
 
@@ -560,11 +567,9 @@ export class HUD {
         <span class="challenge-mod-diff">${mod.difficulty}</span>
         <span class="challenge-mod-bonus">+${Math.round(mod.rewardBonus * 100)}%</span>
       `;
-      if (canEdit) {
-        row.querySelector('input').addEventListener('change', () => {
-          this.game.challengeManager.toggleModifier(mod.id);
-        });
-      }
+      row.querySelector('input').addEventListener('change', () => {
+        cm.toggleModifier(mod.id, this.game.phase === Phase.PLANNING);
+      });
       modsEl.appendChild(row);
     }
   }

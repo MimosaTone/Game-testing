@@ -1,4 +1,4 @@
-import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710e';
+import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710f';
 import { Events } from './EventBus.js';
 
 /**
@@ -40,11 +40,11 @@ export class ChallengeManager {
   }
 
   canEdit(phasePlanning = true) {
-    return phasePlanning;
+    return phasePlanning && !this.locked;
   }
 
-  applyPreset(presetId) {
-    if (!this.canEdit()) return false;
+  applyPreset(presetId, phasePlanning = true) {
+    if (!this.canEdit(phasePlanning)) return false;
     const preset = CHALLENGE_PRESETS[presetId];
     if (!preset) return false;
     this.active.clear();
@@ -54,8 +54,8 @@ export class ChallengeManager {
     return true;
   }
 
-  toggleModifier(id) {
-    if (!this.canEdit()) return false;
+  toggleModifier(id, phasePlanning = true) {
+    if (!this.canEdit(phasePlanning)) return false;
     const mod = CHALLENGE_MODIFIERS[id];
     if (!mod) return false;
 
