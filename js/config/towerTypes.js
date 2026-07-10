@@ -124,7 +124,7 @@ export const TOWER_TYPES = {
     cost: 58,
     unlockWave: 20,
     category: 'magic',
-    color: '#29b6f6',
+    color: '#9eb8c8',
     icon: '❄',
     baseStats: {
       damage: 5,
@@ -134,7 +134,7 @@ export const TOWER_TYPES = {
       slowPercent: 0.38,
       slowDuration: 2.2,
     },
-    projectileColor: '#81d4fa',
+    projectileColor: '#c5d9e6',
     projectileSpeed: 9,
     isAuraTower: true,
   },

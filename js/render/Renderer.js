@@ -188,13 +188,22 @@ export class Renderer {
     }
 
     if (stats.auraSlow > 0) {
+      const isFrost = tower.typeId === 'frost';
       ctx.beginPath();
       ctx.arc(x, y, rangePx, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(77, 182, 172, 0.08)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(77, 182, 172, 0.25)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([6, 6]);
+      if (isFrost) {
+        ctx.fillStyle = 'rgba(200, 220, 232, 0.035)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(210, 228, 238, 0.14)';
+        ctx.lineWidth = 0.75;
+        ctx.setLineDash([8, 10]);
+      } else {
+        ctx.fillStyle = 'rgba(77, 182, 172, 0.08)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(77, 182, 172, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([6, 6]);
+      }
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -426,9 +435,11 @@ export class Renderer {
 
     if (enemy.isSlowed) {
       ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, size + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(79, 195, 247, 0.7)';
-      ctx.lineWidth = 2;
+      ctx.arc(enemy.x, enemy.y, size + 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(205, 222, 234, 0.1)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(188, 208, 222, 0.45)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
 
@@ -470,10 +481,14 @@ export class Renderer {
   drawProjectiles(projectiles) {
     const { ctx } = this;
     for (const proj of projectiles) {
+      const isFrost = proj.tower?.typeId === 'frost';
+      const radius = isFrost ? 2.5 : 4;
+      ctx.globalAlpha = isFrost ? 0.65 : 1;
       ctx.fillStyle = proj.color;
       ctx.beginPath();
-      ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+      ctx.arc(proj.x, proj.y, radius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
     }
   }
 
