@@ -249,25 +249,29 @@ export const CHALLENGE_MODIFIERS = {
 export const CHALLENGE_PRESETS = {
   normal: {
     id: 'normal',
-    name: 'Normal',
+    name: '🌿 Warm Up',
+    traditionalName: 'Normal',
     description: 'Standard meadow defense — no bonus rewards',
     modifiers: [],
   },
   veteran: {
     id: 'veteran',
-    name: 'Veteran',
+    name: "⚔ Let's Get Started",
+    traditionalName: 'Veteran',
     description: 'Tougher foes with modest reward bonuses',
     modifiers: ['reinforced_1', 'swift_assault'],
   },
   expert: {
     id: 'expert',
-    name: 'Expert',
+    name: "🔥 You're Playing the Actual Game Now",
+    traditionalName: 'Expert',
     description: 'Serious pressure for experienced commanders',
     modifiers: ['reinforced_2', 'elite_forces', 'endless_horde'],
   },
   nightmare: {
     id: 'nightmare',
-    name: 'Nightmare',
+    name: "🏋️ Let's Add Some More Weight",
+    traditionalName: 'Nightmare',
     description: 'Extreme challenge — massive rewards',
     modifiers: [
       'reinforced_3',
@@ -280,7 +284,8 @@ export const CHALLENGE_PRESETS = {
   },
   apocalypse: {
     id: 'apocalypse',
-    name: 'Apocalypse',
+    name: '💪 Do You Even Lift?',
+    traditionalName: 'Apocalypse',
     description: 'Nightmare plus every remaining modifier — the meadow fights back',
     modifiers: [
       'reinforced_3',
@@ -297,8 +302,8 @@ export const CHALLENGE_PRESETS = {
   },
   pain_lover: {
     id: 'pain_lover',
-    name: 'You Really Like Pain, Huh?',
-    shortName: 'Pain Lover?',
+    name: '😈 Pain Lover?',
+    traditionalName: 'Insanity',
     description: 'Apocalypse, but worse — max-tier misery for max-tier rewards',
     modifiers: [
       'reinforced_4',
@@ -315,8 +320,8 @@ export const CHALLENGE_PRESETS = {
   },
   who_hurt_you: {
     id: 'who_hurt_you',
-    name: 'Who Hurt You?',
-    shortName: 'Who Hurt You?',
+    name: '💔 Who Hurt You?',
+    traditionalName: 'Impossible',
     description: 'Pain Lover was not enough — absolute meadow cruelty for ~8× rewards',
     modifiers: [
       'reinforced_5',
@@ -332,6 +337,45 @@ export const CHALLENGE_PRESETS = {
     ],
   },
 };
+
+/** Resolve display labels for built-in or saved custom presets. */
+export function getPresetDisplay(presetId, customPresets = []) {
+  const builtin = CHALLENGE_PRESETS[presetId];
+  if (builtin) {
+    return {
+      title: builtin.name,
+      traditional: builtin.traditionalName ?? null,
+      description: builtin.description ?? '',
+      isBuiltin: true,
+    };
+  }
+
+  const custom = customPresets.find((p) => p.id === presetId);
+  if (custom) {
+    return {
+      title: custom.name,
+      traditional: null,
+      description: 'Your saved custom modifier mix',
+      isBuiltin: false,
+    };
+  }
+
+  if (presetId === 'custom') {
+    return {
+      title: 'Custom Mix',
+      traditional: null,
+      description: 'Hand-picked modifiers — not matching a built-in preset',
+      isBuiltin: false,
+    };
+  }
+
+  return {
+    title: 'Custom',
+    traditional: null,
+    description: '',
+    isBuiltin: false,
+  };
+}
 
 /** Group modifiers by category for the Custom Game Editor UI. */
 export function getModifiersByCategory() {

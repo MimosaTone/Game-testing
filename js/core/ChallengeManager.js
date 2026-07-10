@@ -1,7 +1,8 @@
 import {
   CHALLENGE_MODIFIERS,
   CHALLENGE_PRESETS,
-} from '../config/challengeConfig.js?v=20260710j';
+  getPresetDisplay,
+} from '../config/challengeConfig.js?v=20260710k';
 import { Events } from './EventBus.js';
 
 /**
@@ -104,10 +105,11 @@ export class ChallengeManager {
   }
 
   getPresetDisplayName(customPresets = []) {
-    const builtin = CHALLENGE_PRESETS[this.presetId];
-    if (builtin) return builtin.name;
-    const custom = customPresets.find((p) => p.id === this.presetId);
-    return custom?.name ?? 'Custom';
+    return this.getPresetDisplay(customPresets).title;
+  }
+
+  getPresetDisplay(customPresets = []) {
+    return getPresetDisplay(this.presetId, customPresets);
   }
 
   getEffects() {

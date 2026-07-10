@@ -762,6 +762,27 @@ body {
   white-space: nowrap;
 }
 
+.cge-preset-meta {
+  margin: -4px 0 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(120, 140, 160, 0.18);
+  border-radius: 6px;
+}
+
+.cge-preset-meta-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cge-preset-desc {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
 .cge-modifier-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -866,6 +887,27 @@ body {
   font-weight: 700;
   color: var(--text-primary);
   text-align: right;
+}
+
+.challenge-preset-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  line-height: 1.25;
+}
+
+.preset-title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.preset-traditional {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  opacity: 0.75;
+  letter-spacing: 0.02em;
 }
 
 .challenge-summary-value[data-tier='moderate'] { color: #8ecae6; }

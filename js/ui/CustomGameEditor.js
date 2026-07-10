@@ -5,7 +5,8 @@ import {
   CHALLENGE_MODIFIER_CATEGORIES,
   CHALLENGE_MODIFIER_CATEGORY_ORDER,
   getModifiersByCategory,
-} from '../config/challengeConfig.js?v=20260710j';
+  getPresetDisplay,
+} from '../config/challengeConfig.js?v=20260710k';
 
 /**
  * Bottom-dock Custom Game Editor — presets and challenge modifier toggles.
@@ -52,6 +53,13 @@ export class CustomGameEditor {
         <button type="button" id="cge-delete-preset-btn" class="secondary-btn cge-toolbar-btn" disabled>Delete</button>
         <button type="button" id="cge-clear-btn" class="secondary-btn cge-toolbar-btn">Clear All</button>
       </div>
+      <div id="cge-preset-meta" class="cge-preset-meta hidden">
+        <div class="cge-preset-meta-titles">
+          <span class="preset-title" id="cge-preset-title"></span>
+          <span class="preset-traditional" id="cge-preset-traditional"></span>
+        </div>
+        <p class="cge-preset-desc" id="cge-preset-desc"></p>
+      </div>
       <div id="cge-modifier-groups" class="cge-modifier-groups"></div>
     `;
 
@@ -61,6 +69,10 @@ export class CustomGameEditor {
       difficulty: document.getElementById('cge-difficulty'),
       difficultyScore: document.getElementById('cge-difficulty-score'),
       presetSelect: document.getElementById('cge-preset-select'),
+      presetMeta: document.getElementById('cge-preset-meta'),
+      presetTitle: document.getElementById('cge-preset-title'),
+      presetTraditional: document.getElementById('cge-preset-traditional'),
+      presetDesc: document.getElementById('cge-preset-desc'),
       savePresetBtn: document.getElementById('cge-save-preset-btn'),
       deletePresetBtn: document.getElementById('cge-delete-preset-btn'),
       clearBtn: document.getElementById('cge-clear-btn'),
@@ -116,6 +128,7 @@ export class CustomGameEditor {
 
   render() {
     this._renderPresetSelect();
+    this._renderPresetMeta();
     this._renderModifierGroups();
     this._renderStats();
     this._renderEditState();
@@ -161,6 +174,9 @@ export class CustomGameEditor {
       const opt = document.createElement('option');
       opt.value = preset.id;
       opt.textContent = preset.name;
+      opt.title = preset.traditionalName
+        ? `${preset.name} (${preset.traditionalName})`
+        : preset.name;
       builtinGroup.appendChild(opt);
     }
     select.appendChild(builtinGroup);
@@ -189,6 +205,19 @@ export class CustomGameEditor {
     } else {
       select.value = 'normal';
     }
+  }
+
+  _renderPresetMeta() {
+    const cm = this.game.challengeManager;
+    const customPresets = this._getCustomPresets();
+    const display = getPresetDisplay(cm.presetId, customPresets);
+    const meta = this.elements.presetMeta;
+
+    this.elements.presetTitle.textContent = display.title;
+    this.elements.presetTraditional.textContent = display.traditional ?? '';
+    this.elements.presetTraditional.classList.toggle('hidden', !display.traditional);
+    this.elements.presetDesc.textContent = display.description ?? '';
+    meta.classList.toggle('hidden', !display.title && !display.description);
   }
 
   _renderModifierGroups() {

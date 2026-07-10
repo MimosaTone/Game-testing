@@ -492,8 +492,14 @@ export class HUD {
     const cm = this.game.challengeManager;
     const state = cm.getState();
     const customPresets = this.game.prestigeManager.getCustomChallengePresets();
+    const preset = cm.getPresetDisplay(customPresets);
 
-    this.elements.challengePresetName.textContent = cm.getPresetDisplayName(customPresets);
+    const presetEl = this.elements.challengePresetName;
+    presetEl.innerHTML = `
+      <span class="preset-title">${preset.title}</span>
+      ${preset.traditional ? `<span class="preset-traditional">${preset.traditional}</span>` : ''}
+    `;
+
     this.elements.challengeReward.textContent = `${state.rewardMultiplier.toFixed(1)}×`;
     this.elements.challengeDifficulty.textContent = `${state.difficulty.label} (${state.difficulty.score})`;
     this.elements.challengeDifficulty.dataset.tier = state.difficulty.label.toLowerCase();
