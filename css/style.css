@@ -723,6 +723,7 @@ body {
 .cge-stat-value.cge-difficulty[data-tier='hard'] { color: #ffb347; }
 .cge-stat-value.cge-difficulty[data-tier='brutal'] { color: #ff7b7b; }
 .cge-stat-value.cge-difficulty[data-tier='extreme'] { color: #ff4d6d; }
+.cge-stat-value.cge-difficulty[data-tier='unhinged'] { color: #c77dff; }
 
 .cge-toolbar {
   display: flex;
@@ -871,6 +872,7 @@ body {
 .challenge-summary-value[data-tier='hard'] { color: #ffb347; }
 .challenge-summary-value[data-tier='brutal'] { color: #ff7b7b; }
 .challenge-summary-value[data-tier='extreme'] { color: #ff4d6d; }
+.challenge-summary-value[data-tier='unhinged'] { color: #c77dff; }
 
 .hotbar-tabs {
   display: flex;

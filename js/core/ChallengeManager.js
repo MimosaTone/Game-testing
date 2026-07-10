@@ -1,7 +1,7 @@
 import {
   CHALLENGE_MODIFIERS,
   CHALLENGE_PRESETS,
-} from '../config/challengeConfig.js?v=20260710h';
+} from '../config/challengeConfig.js?v=20260710j';
 import { Events } from './EventBus.js';
 
 /**
@@ -175,7 +175,8 @@ export class ChallengeManager {
 
     const rounded = Math.round(score);
     let label = 'Relaxed';
-    if (rounded >= 90) label = 'Extreme';
+    if (rounded >= 110) label = 'Unhinged';
+    else if (rounded >= 90) label = 'Extreme';
     else if (rounded >= 65) label = 'Brutal';
     else if (rounded >= 40) label = 'Hard';
     else if (rounded >= 18) label = 'Moderate';

@@ -5,7 +5,7 @@ import {
   CHALLENGE_MODIFIER_CATEGORIES,
   CHALLENGE_MODIFIER_CATEGORY_ORDER,
   getModifiersByCategory,
-} from '../config/challengeConfig.js?v=20260710h';
+} from '../config/challengeConfig.js?v=20260710j';
 
 /**
  * Bottom-dock Custom Game Editor — presets and challenge modifier toggles.

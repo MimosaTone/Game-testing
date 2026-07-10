@@ -9,7 +9,7 @@ import { SaveCodeModal } from './ui/SaveCodeModal.js';
 import { InvestmentPanel } from './ui/InvestmentPanel.js';
 import { PrestigeMenu } from './ui/PrestigeMenu.js';
 import { ResearchMenu } from './ui/ResearchMenu.js';
-import { GAME_CONFIG, BUILD_VERSION } from './config/gameConfig.js?v=20260710h';
+import { GAME_CONFIG, BUILD_VERSION } from './config/gameConfig.js?v=20260710j';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
