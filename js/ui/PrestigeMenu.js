@@ -376,7 +376,7 @@ export class PrestigeMenu {
       for (const node of nodes.sort((a, b) => a.row - b.row || a.col - b.col)) {
         const rank = pm.getTreeRank(node.id);
         const state = pm.getNodeState(node.id);
-        const affordable = pm.data.shards >= node.cost;
+        const canBuy = pm.canPurchaseTreeNode(node.id);
         html += `
           <div class="prestige-tree-node state-${state}" style="--row:${node.row};--col:${node.col}">
             <div class="node-header">
@@ -387,7 +387,7 @@ export class PrestigeMenu {
             ${node.prerequisites.length ? `<p class="node-prereq">Requires: ${node.prerequisites.map((p) => PRESTIGE_TREE_NODES[p]?.name || p).join(', ')}</p>` : ''}
             ${state !== 'maxed' && state !== 'locked'
               ? `<button type="button" class="node-buy-btn" data-prestige-action="buy-tree" data-id="${node.id}"
-                  ${state === 'available' && affordable ? '' : 'disabled'}>${node.cost} ✿</button>`
+                  ${canBuy ? '' : 'disabled'}>${node.cost} ✿</button>`
               : `<span class="node-status">${state === 'maxed' ? 'MAX' : 'LOCKED'}</span>`}
           </div>`;
       }
