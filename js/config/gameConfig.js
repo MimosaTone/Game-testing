@@ -123,4 +123,4 @@ export const BUILD_EXPANSION_POOL = [
 ];
 
 /** Shown in UI — bump when shipping gameplay/config changes. */
-export const BUILD_VERSION = '2026.07.10d';
+export const BUILD_VERSION = '2026.07.10e';
