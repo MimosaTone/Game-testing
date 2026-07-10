@@ -29,6 +29,7 @@ function normalizeMeta(meta) {
     settings: {
       autoStartWaves: false,
       preferredSpeed: 1,
+      customChallengePresets: [],
     },
   };
   if (!meta) return base;

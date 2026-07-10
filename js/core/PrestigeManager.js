@@ -39,7 +39,7 @@ const DEFAULT_DATA = {
   worldEvents: { unlocked: [], active: null, wavesLeft: 0 },
 };
 
-const DEFAULT_SETTINGS = { autoStartWaves: false };
+const DEFAULT_SETTINGS = { autoStartWaves: false, customChallengePresets: [] };
 
 function mergeEffect(target, source) {
   for (const [key, val] of Object.entries(source)) {
@@ -157,6 +157,19 @@ export class PrestigeManager {
 
   set autoStartWaves(value) {
     this.settings.autoStartWaves = value;
+    this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
+  }
+
+  getCustomChallengePresets() {
+    return [...(this.settings.customChallengePresets ?? [])];
+  }
+
+  setCustomChallengePresets(presets) {
+    this.settings.customChallengePresets = presets.map((p) => ({
+      id: p.id,
+      name: p.name,
+      modifiers: [...p.modifiers],
+    }));
     this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
   }
 

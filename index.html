@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meadow Defense</title>
-  <link rel="stylesheet" href="css/style.css?v=20260710g">
+  <link rel="stylesheet" href="css/style.css?v=20260710h">
 </head>
 <body>
   <div id="game-container">
@@ -86,18 +86,28 @@
           <div id="wave-summary" class="wave-summary-box hidden"></div>
         </section>
 
-        <section class="panel-section">
+        <section class="panel-section challenge-summary-section">
           <h2 class="section-title">Challenges</h2>
-          <p class="hint-text" id="challenge-hint">Optional modifiers for bonus rewards</p>
-          <label class="challenge-preset-select-wrap" for="challenge-preset-select">
-            <span class="challenge-preset-select-label">Difficulty preset</span>
-            <select id="challenge-preset-select" class="challenge-preset-select"></select>
-          </label>
-          <div id="challenge-presets" class="challenge-presets"></div>
-          <div id="challenge-active-list" class="challenge-active-list"></div>
-          <div id="challenge-reward" class="challenge-reward-badge">Total Bonus: 1.0×</div>
-          <div id="challenge-modifiers" class="challenge-modifiers hidden"></div>
-          <button type="button" id="toggle-challenges-btn" class="text-btn">Show all modifiers</button>
+          <p class="hint-text" id="challenge-hint">Customize your run in the editor below</p>
+          <div id="challenge-summary" class="challenge-summary-card">
+            <div class="challenge-summary-row">
+              <span class="challenge-summary-label">Preset</span>
+              <span class="challenge-summary-value" id="challenge-preset-name">Normal</span>
+            </div>
+            <div class="challenge-summary-row">
+              <span class="challenge-summary-label">Reward Bonus</span>
+              <span class="challenge-summary-value gold-text" id="challenge-reward">1.0×</span>
+            </div>
+            <div class="challenge-summary-row">
+              <span class="challenge-summary-label">Difficulty</span>
+              <span class="challenge-summary-value" id="challenge-difficulty">Relaxed</span>
+            </div>
+            <div class="challenge-summary-row">
+              <span class="challenge-summary-label">Active Modifiers</span>
+              <span class="challenge-summary-value" id="challenge-mod-count">0</span>
+            </div>
+          </div>
+          <button type="button" id="open-custom-editor-btn" class="text-btn">Open Custom Game Editor ↓</button>
         </section>
 
         <section class="panel-section controls-section">
@@ -133,8 +143,15 @@
           <canvas id="game-canvas"></canvas>
         </div>
         <footer id="bottom-hotbar">
-          <div id="hotbar-tabs" class="hotbar-tabs"></div>
-          <div id="hotbar-cards" class="hotbar-cards"></div>
+          <div id="bottom-dock-tabs" class="bottom-dock-tabs">
+            <button type="button" class="bottom-dock-tab active" data-dock="build">🏗 Build</button>
+            <button type="button" class="bottom-dock-tab" data-dock="custom">⚙ Custom Game</button>
+          </div>
+          <div id="bottom-dock-build" class="bottom-dock-pane">
+            <div id="hotbar-tabs" class="hotbar-tabs"></div>
+            <div id="hotbar-cards" class="hotbar-cards"></div>
+          </div>
+          <div id="bottom-dock-custom" class="bottom-dock-pane hidden"></div>
         </footer>
       </main>
 
@@ -218,6 +235,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=20260710g"></script>
+  <script type="module" src="js/main.js?v=20260710h"></script>
 </body>
 </html>

@@ -622,13 +622,255 @@ body {
   image-rendering: crisp-edges;
 }
 
-/* ── Bottom hotbar ── */
+/* ── Bottom hotbar / dock ── */
 #bottom-hotbar {
   flex-shrink: 0;
   background: var(--panel-bg);
   border-top: 1px solid var(--panel-border);
   padding: 6px 8px 8px;
 }
+
+.bottom-dock-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.bottom-dock-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(120, 140, 160, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.bottom-dock-tab:hover {
+  background: rgba(106, 143, 199, 0.18);
+  color: var(--text-primary);
+}
+
+.bottom-dock-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.bottom-dock-pane.hidden {
+  display: none;
+}
+
+/* ── Custom Game Editor ── */
+.cge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.cge-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.cge-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cge-live-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cge-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(120, 140, 160, 0.25);
+  border-radius: 8px;
+  min-width: 88px;
+}
+
+.cge-stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.cge-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cge-stat-value.cge-reward {
+  color: #f0a040;
+}
+
+.cge-stat-value.cge-difficulty[data-tier='moderate'] { color: #8ecae6; }
+.cge-stat-value.cge-difficulty[data-tier='hard'] { color: #ffb347; }
+.cge-stat-value.cge-difficulty[data-tier='brutal'] { color: #ff7b7b; }
+.cge-stat-value.cge-difficulty[data-tier='extreme'] { color: #ff4d6d; }
+
+.cge-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cge-preset-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+  flex: 1;
+  min-width: 180px;
+}
+
+.cge-preset-select {
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid rgba(120, 140, 160, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.cge-toolbar-btn {
+  padding: 7px 12px;
+  font-size: 11px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.cge-modifier-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.cge-category {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(120, 140, 160, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.cge-category-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.cge-mod-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cge-mod-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.cge-mod-toggle:hover {
+  background: rgba(106, 143, 199, 0.12);
+  border-color: rgba(120, 140, 160, 0.2);
+}
+
+.cge-mod-toggle input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.cge-mod-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cge-mod-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cge-mod-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.cge-mod-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.cge-mod-diff { color: var(--lives); }
+.cge-mod-bonus { color: var(--income); font-weight: 700; }
+
+.challenge-summary-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(120, 140, 160, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.challenge-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 3px 0;
+}
+
+.challenge-summary-label {
+  color: var(--text-muted);
+}
+
+.challenge-summary-value {
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.challenge-summary-value[data-tier='moderate'] { color: #8ecae6; }
+.challenge-summary-value[data-tier='hard'] { color: #ffb347; }
+.challenge-summary-value[data-tier='brutal'] { color: #ff7b7b; }
+.challenge-summary-value[data-tier='extreme'] { color: #ff4d6d; }
 
 .hotbar-tabs {
   display: flex;

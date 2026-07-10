@@ -1,4 +1,7 @@
-import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710g';
+import {
+  CHALLENGE_MODIFIERS,
+  CHALLENGE_PRESETS,
+} from '../config/challengeConfig.js?v=20260710h';
 import { Events } from './EventBus.js';
 
 /**
@@ -47,8 +50,19 @@ export class ChallengeManager {
     if (!this.canEdit(gamePhase)) return false;
     const preset = CHALLENGE_PRESETS[presetId];
     if (!preset) return false;
+    return this._setActiveModifiers(preset.modifiers, presetId);
+  }
+
+  applyCustomPreset(modifiers, presetId = 'custom', gamePhase = 'planning') {
+    if (!this.canEdit(gamePhase)) return false;
+    return this._setActiveModifiers(modifiers, presetId);
+  }
+
+  _setActiveModifiers(modifierIds, presetId) {
     this.active.clear();
-    for (const id of preset.modifiers) this.active.add(id);
+    for (const id of modifierIds) {
+      if (CHALLENGE_MODIFIERS[id]) this.active.add(id);
+    }
     this.presetId = presetId;
     this._emit();
     return true;
@@ -71,12 +85,12 @@ export class ChallengeManager {
       this.active.add(id);
     }
 
-    this.presetId = this._detectPreset() ?? 'custom';
+    this.presetId = this._detectBuiltinPreset() ?? 'custom';
     this._emit();
     return true;
   }
 
-  _detectPreset() {
+  _detectBuiltinPreset() {
     for (const [id, preset] of Object.entries(CHALLENGE_PRESETS)) {
       if (id === 'normal' && this.active.size === 0) return 'normal';
       if (
@@ -87,6 +101,13 @@ export class ChallengeManager {
       }
     }
     return null;
+  }
+
+  getPresetDisplayName(customPresets = []) {
+    const builtin = CHALLENGE_PRESETS[this.presetId];
+    if (builtin) return builtin.name;
+    const custom = customPresets.find((p) => p.id === this.presetId);
+    return custom?.name ?? 'Custom';
   }
 
   getEffects() {
@@ -138,6 +159,30 @@ export class ChallengeManager {
     return bonus;
   }
 
+  getDifficultyRating() {
+    const fx = this.getEffects();
+    let score = 0;
+    score += Math.max(0, fx.enemyHealthMult - 1) * 40;
+    score += Math.max(0, fx.enemySpeedMult - 1) * 30;
+    score += Math.max(0, fx.enemyCountMult - 1) * 35;
+    score += this.active.size * 4;
+    score += fx.livesReduction * 3;
+    score += Math.max(0, 1 - fx.farmIncomeMult) * 25;
+    score += Math.max(0, 1 - fx.buildSpotMult) * 20;
+    if (fx.bossEmpowered) score += 15;
+    if (fx.doubleBoss) score += 20;
+    if (fx.spawnSpecialEnemies) score += 10;
+
+    const rounded = Math.round(score);
+    let label = 'Relaxed';
+    if (rounded >= 90) label = 'Extreme';
+    else if (rounded >= 65) label = 'Brutal';
+    else if (rounded >= 40) label = 'Hard';
+    else if (rounded >= 18) label = 'Moderate';
+
+    return { score: rounded, label };
+  }
+
   getActiveList() {
     return [...this.active].map((id) => CHALLENGE_MODIFIERS[id]).filter(Boolean);
   }
@@ -148,6 +193,7 @@ export class ChallengeManager {
       presetId: this.presetId,
       locked: this.locked,
       rewardMultiplier: this.getRewardMultiplier(),
+      difficulty: this.getDifficultyRating(),
       effects: this.getEffects(),
     };
   }

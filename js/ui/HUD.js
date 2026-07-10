@@ -2,7 +2,6 @@ import { Events } from '../core/EventBus.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES, SUPPORT_BUILD_ORDER } from '../config/supportConfig.js';
-import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710g';
 import { MASTER_UPGRADES } from '../config/towerMasteryConfig.js';
 import { BUILD_CATEGORIES, BUILD_CATEGORY_ORDER, getBuildItemDef } from '../config/buildCategories.js';
 import { getRepairCost } from '../entities/StructureHealth.js';
@@ -24,8 +23,6 @@ export class HUD {
   constructor(game) {
     this.game = game;
     this.hotbarCategory = 'towers';
-    this.challengesExpanded = false;
-    this._lastChallengePhase = null;
     this.elements = {
       gold: document.getElementById('gold-value'),
       lives: document.getElementById('lives-value'),
@@ -58,12 +55,10 @@ export class HUD {
       repairAllBtn: document.getElementById('repair-all-btn'),
       sellModeBtn: document.getElementById('sell-mode-btn'),
       challengeHint: document.getElementById('challenge-hint'),
-      challengePresetSelect: document.getElementById('challenge-preset-select'),
-      challengePresets: document.getElementById('challenge-presets'),
-      challengeActiveList: document.getElementById('challenge-active-list'),
-      challengeModifiers: document.getElementById('challenge-modifiers'),
+      challengePresetName: document.getElementById('challenge-preset-name'),
       challengeReward: document.getElementById('challenge-reward'),
-      toggleChallengesBtn: document.getElementById('toggle-challenges-btn'),
+      challengeDifficulty: document.getElementById('challenge-difficulty'),
+      challengeModCount: document.getElementById('challenge-mod-count'),
       hotbarTabs: document.getElementById('hotbar-tabs'),
       hotbarCards: document.getElementById('hotbar-cards'),
     };
@@ -74,7 +69,7 @@ export class HUD {
     this._renderSupportPanel();
     this._renderHotbar();
     this._renderResearchUpgrades();
-    this._renderChallengePanel();
+    this._renderChallengeSummary();
     this._updateStartButton();
     this._updatePrestigeSummary();
     this._updateFactionPreview();
@@ -84,10 +79,6 @@ export class HUD {
 
   /** Called each frame for live wave status. */
   updateStatusPanel() {
-    if (this._lastChallengePhase !== this.game.phase) {
-      this._lastChallengePhase = this.game.phase;
-      this._renderChallengePanel();
-    }
     this._updateStatusPanel();
   }
 
@@ -182,14 +173,6 @@ export class HUD {
       this._renderBuildPanel();
       this._renderSupportPanel();
       this._renderHotbarCards();
-    });
-
-    this.elements.toggleChallengesBtn.addEventListener('click', () => {
-      this.challengesExpanded = !this.challengesExpanded;
-      this.elements.challengeModifiers.classList.toggle('hidden', !this.challengesExpanded);
-      this.elements.toggleChallengesBtn.textContent = this.challengesExpanded
-        ? 'Hide modifiers'
-        : 'Show all modifiers';
     });
 
     this.elements.hotbarTabs.addEventListener('click', (e) => {
@@ -304,7 +287,7 @@ export class HUD {
 
     bus.on(Events.WAVE_STARTED, () => {
       this._updateStartButton();
-      this._renderChallengePanel();
+      this._renderChallengeSummary();
       this._hideFactionPreview();
       this._hideUpgradePanel();
       this._hideWaveSummary();
@@ -319,7 +302,7 @@ export class HUD {
 
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
-      this._renderChallengePanel();
+      this._renderChallengeSummary();
       this._updateFactionPreview();
       this._refreshBuildPanelHints();
       this._updatePrestigeSummary();
@@ -328,7 +311,7 @@ export class HUD {
 
     bus.on(Events.GAME_OVER, () => {
       this._updateStartButton();
-      this._renderChallengePanel();
+      this._renderChallengeSummary();
       this._hideFactionPreview();
       this._updatePrestigeSummary();
     });
@@ -350,7 +333,7 @@ export class HUD {
       this._updatePrestigeSummary();
       this._updateFactionPreview();
       this._updateStartButton();
-      this._renderChallengePanel();
+      this._renderChallengeSummary();
       this._updateBuildAffordability();
       this._updateStatusPanel();
       this.elements.crystals.textContent = this.game.economy.crystals;
@@ -403,7 +386,7 @@ export class HUD {
     });
 
     bus.on(Events.CHALLENGE_CHANGED, (state) => {
-      this._renderChallengePanel();
+      this._renderChallengeSummary();
       this._updateFactionPreview();
     });
 
@@ -505,92 +488,16 @@ export class HUD {
     }
   }
 
-  _renderChallengeActiveList() {
+  _renderChallengeSummary() {
     const cm = this.game.challengeManager;
-    const list = this.elements.challengeActiveList;
-    list.innerHTML = '';
-
-    if (cm.active.size === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'challenge-active-empty';
-      empty.textContent = 'No active modifiers';
-      list.appendChild(empty);
-      return;
-    }
-
-    for (const modId of cm.active) {
-      const mod = CHALLENGE_MODIFIERS[modId];
-      if (!mod) continue;
-      const row = document.createElement('div');
-      row.className = 'challenge-active-item';
-      row.innerHTML = `
-        <span class="challenge-active-name">${mod.name}</span>
-        <span class="challenge-active-bonus">+${Math.round(mod.rewardBonus * 100)}%</span>
-      `;
-      list.appendChild(row);
-    }
-  }
-
-  _renderChallengePanel() {
-    const cm = this.game.challengeManager;
-    const phase = this.game.phase;
-    const canEdit = cm.canEdit(phase);
     const state = cm.getState();
+    const customPresets = this.game.prestigeManager.getCustomChallengePresets();
 
-    this.elements.challengeHint.textContent = canEdit
-      ? 'Pick a preset anytime — auto-start pauses when you change challenges'
-      : 'Game over — restart to change challenges';
-
-    this.elements.challengeReward.textContent = `Total Bonus: ${state.rewardMultiplier.toFixed(1)}×`;
-    this._renderChallengeActiveList();
-
-    const selectEl = this.elements.challengePresetSelect;
-    selectEl.disabled = !canEdit;
-    selectEl.innerHTML = '';
-    for (const preset of Object.values(CHALLENGE_PRESETS)) {
-      const opt = document.createElement('option');
-      opt.value = preset.id;
-      opt.textContent = preset.name;
-      opt.selected = state.presetId === preset.id;
-      selectEl.appendChild(opt);
-    }
-    selectEl.onchange = () => {
-      cm.applyPreset(selectEl.value, this.game.phase);
-    };
-
-    const presetsEl = this.elements.challengePresets;
-    presetsEl.innerHTML = '';
-    for (const preset of Object.values(CHALLENGE_PRESETS)) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'challenge-preset-btn';
-      btn.textContent = preset.shortName ?? preset.name;
-      btn.title = preset.name + (preset.description ? ` — ${preset.description}` : '');
-      btn.classList.toggle('active', state.presetId === preset.id);
-      btn.disabled = !canEdit;
-      btn.addEventListener('click', () => {
-        cm.applyPreset(preset.id, this.game.phase);
-      });
-      presetsEl.appendChild(btn);
-    }
-
-    const modsEl = this.elements.challengeModifiers;
-    modsEl.innerHTML = '';
-    for (const mod of Object.values(CHALLENGE_MODIFIERS)) {
-      const row = document.createElement('label');
-      row.className = 'challenge-mod-row';
-      const active = cm.active.has(mod.id);
-      row.innerHTML = `
-        <input type="checkbox" ${active ? 'checked' : ''} ${canEdit ? '' : 'disabled'}>
-        <span class="challenge-mod-name">${mod.name}</span>
-        <span class="challenge-mod-diff">${mod.difficulty}</span>
-        <span class="challenge-mod-bonus">+${Math.round(mod.rewardBonus * 100)}%</span>
-      `;
-      row.querySelector('input').addEventListener('change', () => {
-        cm.toggleModifier(mod.id, this.game.phase);
-      });
-      modsEl.appendChild(row);
-    }
+    this.elements.challengePresetName.textContent = cm.getPresetDisplayName(customPresets);
+    this.elements.challengeReward.textContent = `${state.rewardMultiplier.toFixed(1)}×`;
+    this.elements.challengeDifficulty.textContent = `${state.difficulty.label} (${state.difficulty.score})`;
+    this.elements.challengeDifficulty.dataset.tier = state.difficulty.label.toLowerCase();
+    this.elements.challengeModCount.textContent = String(state.active.length);
   }
 
   _renderSupportPanel() {

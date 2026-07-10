@@ -5,7 +5,7 @@ const DEFAULT_META = {
   upgrades: {},
   totalPrestiges: 0,
   bestWave: 0,
-  settings: { autoStartWaves: false, preferredSpeed: 1 },
+  settings: { autoStartWaves: false, preferredSpeed: 1, customChallengePresets: [] },
 };
 
 /** Validate saved run payload before use. */
@@ -258,6 +258,7 @@ export class SaveManager {
       settings: {
         autoStartWaves: pm.autoStartWaves,
         preferredSpeed: game.speedController.preferredSpeed,
+        customChallengePresets: pm.getCustomChallengePresets(),
       },
     };
   }

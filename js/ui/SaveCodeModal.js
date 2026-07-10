@@ -119,7 +119,8 @@ export class SaveCodeModal {
     this.hud._renderSupportPanel();
     this.hud._renderHotbar();
     this.hud._renderResearchUpgrades();
-    this.hud._renderChallengePanel();
+    this.hud._renderChallengeSummary();
+    this.game.customGameEditor?.render();
     this.hud._renderPrestigeUpgrades();
     this.hud._updateStartButton();
     this.hud._updatePrestigeUI();
