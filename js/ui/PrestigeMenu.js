@@ -17,7 +17,8 @@ import {
   PRESTIGE_BRANCHES,
   PRESTIGE_BRANCH_ORDER,
   PRESTIGE_TREE_NODES,
-} from '../config/prestigeTreeConfig.js';
+} from '../config/prestigeTreeConfig.js?v=20260710c';
+import { BUILD_VERSION } from '../config/gameConfig.js?v=20260710c';
 import { WORLD_TIERS } from '../config/worldTierConfig.js';
 
 /**
@@ -333,6 +334,7 @@ export class PrestigeMenu {
           <div class="prestige-stat-card"><span class="label">Highest Wave (Run)</span><span class="value">W${wave}</span></div>
           <div class="prestige-stat-card"><span class="label">Best Wave (All Time)</span><span class="value">W${pm.bestWave}</span></div>
           <div class="prestige-stat-card"><span class="label">Reward Multiplier</span><span class="value">${rewardMult.toFixed(2)}×</span></div>
+          <div class="prestige-stat-card"><span class="label">Client Build</span><span class="value">${BUILD_VERSION}</span></div>
         </div>
         <div class="prestige-overview-panels">
           <div class="prestige-info-panel">
@@ -365,16 +367,29 @@ export class PrestigeMenu {
 
   _renderTree() {
     const pm = this.game.prestigeManager;
-    let html = '<div class="prestige-tree-scroll"><div class="prestige-tree-grid">';
+    const v2Count = Object.values(PRESTIGE_TREE_NODES).filter((n) => n.row >= 3 || n.branch === 'world').length;
+    let html = `
+      <p class="prestige-tree-intro">
+        <strong>Tier II expansion active</strong> — ${v2Count} late-game nodes.
+        Scroll right for the <strong>World</strong> branch and Tier II upgrades past each capstone.
+        <span class="build-tag">Build ${BUILD_VERSION}</span>
+      </p>
+      <div class="prestige-tree-scroll"><div class="prestige-tree-grid">`;
 
     for (const branchId of PRESTIGE_BRANCH_ORDER) {
       const branch = PRESTIGE_BRANCHES[branchId];
       const nodes = Object.values(PRESTIGE_TREE_NODES).filter((n) => n.branch === branchId);
-      html += `<div class="prestige-tree-branch" data-branch="${branchId}">
-        <h3 class="prestige-branch-title">${branch.icon} ${branch.name}</h3>
+      const branchClass = branchId === 'world' ? 'prestige-tree-branch branch-world' : 'prestige-tree-branch';
+      html += `<div class="${branchClass}" data-branch="${branchId}">
+        <h3 class="prestige-branch-title">${branch.icon} ${branch.name}${branchId === 'world' ? ' <span class="branch-new-tag">NEW</span>' : ''}</h3>
         <div class="prestige-branch-nodes">`;
 
+      let tierRowsMarked = new Set();
       for (const node of nodes.sort((a, b) => a.row - b.row || a.col - b.col)) {
+        if (node.row >= 3 && !tierRowsMarked.has(node.row)) {
+          html += `<div class="prestige-tier-divider">Tier II</div>`;
+          tierRowsMarked.add(node.row);
+        }
         const rank = pm.getTreeRank(node.id);
         const state = pm.getNodeState(node.id);
         const canBuy = pm.canPurchaseTreeNode(node.id);

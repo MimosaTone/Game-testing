@@ -4,7 +4,7 @@ import {
   getWaveFactionMeta,
   getWaveScaling,
   isBossWave,
-} from '../config/waveConfig.js';
+} from '../config/waveConfig.js?v=20260710c';
 import { Events } from './EventBus.js';
 
 /**

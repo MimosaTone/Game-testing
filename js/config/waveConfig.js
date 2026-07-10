@@ -9,7 +9,7 @@ import {
   getFactionDisplay,
   mergeFactionModifiers,
   resolveWaveFactions,
-} from './factionConfig.js';
+} from './factionConfig.js?v=20260710c';
 
 /** Boss waves occur every 15 rounds. */
 export function isBossWave(waveNumber) {

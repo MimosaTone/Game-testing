@@ -13,7 +13,7 @@ import {
   estimatePaybackWaves,
   ECONOMY_CONFIG,
 } from '../config/economyConfig.js';
-import { isBossWave } from '../config/waveConfig.js';
+import { isBossWave } from '../config/waveConfig.js?v=20260710c';
 import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
 

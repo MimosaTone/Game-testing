@@ -1,5 +1,5 @@
 import { PRESTIGE_CONFIG, PRESTIGE_UPGRADES } from '../config/prestigeConfig.js';
-import { PRESTIGE_TREE_NODES } from '../config/prestigeTreeConfig.js';
+import { PRESTIGE_TREE_NODES } from '../config/prestigeTreeConfig.js?v=20260710c';
 import { getWorldTier, getNextWorldTier } from '../config/worldTierConfig.js';
 import {
   ASCENSION_PERKS,

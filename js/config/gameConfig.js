@@ -121,3 +121,6 @@ export const BUILD_EXPANSION_POOL = [
   { x: 21, y: 8 }, { x: 21, y: 10 }, { x: 14, y: 2 },
   { x: 15, y: 3 }, { x: 18, y: 11 }, { x: 2, y: 11 },
 ];
+
+/** Shown in UI — bump when shipping gameplay/config changes. */
+export const BUILD_VERSION = '2026.07.10c';

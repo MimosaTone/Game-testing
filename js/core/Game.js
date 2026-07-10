@@ -15,7 +15,7 @@ import { CombatSystem } from '../systems/CombatSystem.js';
 import { PlacementSystem } from '../systems/PlacementSystem.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
-import { isBossWave } from '../config/waveConfig.js';
+import { isBossWave } from '../config/waveConfig.js?v=20260710c';
 import { ECONOMY_CONFIG } from '../config/economyConfig.js';
 import { STRUCTURE_REINFORCEMENTS, BUILD_EXPANSION } from '../config/investmentConfig.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';

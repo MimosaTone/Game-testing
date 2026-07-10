@@ -8,7 +8,7 @@ import { SaveCodeModal } from './ui/SaveCodeModal.js';
 import { InvestmentPanel } from './ui/InvestmentPanel.js';
 import { PrestigeMenu } from './ui/PrestigeMenu.js';
 import { ResearchMenu } from './ui/ResearchMenu.js';
-import { GAME_CONFIG } from './config/gameConfig.js';
+import { GAME_CONFIG, BUILD_VERSION } from './config/gameConfig.js?v=20260710c';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -23,6 +23,9 @@ let prestigeMenu;
 let researchMenu;
 
 try {
+  document.getElementById('build-version').textContent = `Build ${BUILD_VERSION}`;
+  document.title = `Meadow Defense (${BUILD_VERSION})`;
+
   game = new Game();
   renderer = new Renderer(ctx);
   hud = new HUD(game);

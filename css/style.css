@@ -92,6 +92,15 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
+.build-version {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
 .panel-section {
   padding: 12px 14px;
   border-bottom: 1px solid rgba(120, 140, 160, 0.15);
@@ -1589,6 +1598,49 @@ body {
 .prestige-tree-branch {
   width: 220px;
   flex-shrink: 0;
+}
+
+.prestige-tree-branch.branch-world {
+  border-left: 2px solid rgba(129, 199, 132, 0.45);
+  padding-left: 12px;
+}
+
+.prestige-tree-intro {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.build-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(212, 138, 255, 0.15);
+  color: var(--research);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.branch-new-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(129, 199, 132, 0.25);
+  color: #81c784;
+  vertical-align: middle;
+}
+
+.prestige-tier-divider {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--research);
+  margin: 8px 0 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(120, 140, 160, 0.25);
 }
 
 .prestige-branch-title {
