@@ -125,12 +125,14 @@ export class InvestmentPanel {
             maxed: true,
           }];
         }
-        return Object.values(COMMANDER_ABILITIES).map((def) => ({
-          id: def.id,
-          name: def.name,
-          description: def.description,
-          cost: def.cost > 0 ? def.cost : def.instantGold ? 0 : def.cost,
-        }));
+        return Object.values(COMMANDER_ABILITIES)
+          .filter((def) => !def.unlockWave || wave >= def.unlockWave)
+          .map((def) => ({
+            id: def.id,
+            name: def.name,
+            description: def.description,
+            cost: def.cost > 0 ? def.cost : def.instantGold ? 0 : def.cost,
+          }));
 
       case 'global':
         return Object.values(GLOBAL_UPGRADES).map((def) => {

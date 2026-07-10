@@ -285,17 +285,20 @@ export class Game {
         tower.gridY
       );
       const oc = this.investmentManager.getOverclockMods(tower.id);
+      const perm = this.investmentManager.getPermanentOverclockMods(tower);
+      const elite = this.investmentManager.getEliteOverclockMods(tower);
       let leg = this.investmentManager.getLegendaryMods(tower);
       if (tower.definition.magicTowerBonus && this.investmentManager.getPassiveMods().magicTowerBonus && !leg.chainCount) {
         leg = { ...leg, chainCount: 2 };
       }
-      tower.investmentMods = this._mergeTowerInvestmentMods(oc, leg);
+      tower.investmentMods = this._mergeTowerInvestmentMods(oc, perm, elite, leg);
+      tower.eliteOverclockTag = this.investmentManager.getEliteOverclockDef(tower)?.tag ?? null;
     }
   }
 
-  _mergeTowerInvestmentMods(overclock, legendary) {
+  _mergeTowerInvestmentMods(tempOc, permanent, elite, legendary) {
     const out = {};
-    for (const src of [overclock, legendary]) {
+    for (const src of [tempOc, permanent, elite, legendary]) {
       for (const [k, v] of Object.entries(src)) {
         if (k.includes('Mult') && k !== 'critChance' && typeof v === 'number' && v < 2 && v > 0 && v < 1) {
           out[k] = (out[k] ?? 1) * (1 + v);

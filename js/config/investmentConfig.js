@@ -155,6 +155,14 @@ export const ENDLESS_INVESTMENTS = {
     costGrowth: 1.47,
     effectPerLevel: { bossRewardMult: 0.03 },
   },
+  endless_mastery: {
+    id: 'endless_mastery',
+    name: 'Combat Drills',
+    description: '+4% tower mastery XP per level (no cap)',
+    baseCost: 280,
+    costGrowth: 1.48,
+    effectPerLevel: { masteryXpMult: 0.04 },
+  },
 };
 
 /** One-wave commander buffs purchased before starting a wave. */
@@ -208,6 +216,32 @@ export const COMMANDER_ABILITIES = {
     description: 'Repair all damaged structures now',
     cost: 60,
     repairAll: true,
+    effects: {},
+  },
+  war_council: {
+    id: 'war_council',
+    name: 'War Council',
+    description: '+35% tower damage this wave',
+    cost: 380,
+    unlockWave: 35,
+    effects: { damageMult: 0.35 },
+  },
+  emergency_fortify: {
+    id: 'emergency_fortify',
+    name: 'Emergency Fortify',
+    description: 'Repair all structures; towers gain +8% damage this wave',
+    cost: 420,
+    unlockWave: 40,
+    repairAll: true,
+    effects: { damageMult: 0.08 },
+  },
+  gold_reserves: {
+    id: 'gold_reserves',
+    name: 'Mobilize Reserves',
+    description: 'Instant +600 gold (costs 450g to mobilize)',
+    cost: 450,
+    unlockWave: 30,
+    instantGold: 600,
     effects: {},
   },
 };

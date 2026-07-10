@@ -1658,6 +1658,24 @@ body {
   background: rgba(212, 138, 255, 0.08);
 }
 
+.upgrade-btn.permanent-oc-btn {
+  border-color: rgba(129, 199, 212, 0.35);
+}
+
+.upgrade-btn.elite-oc-btn {
+  border-color: rgba(255, 183, 77, 0.5);
+  background: linear-gradient(135deg, rgba(255, 183, 77, 0.08), rgba(255, 107, 157, 0.06));
+}
+
+.permanent-oc-label {
+  color: #81c7d4;
+}
+
+.investment-active-hint.elite-oc-owned {
+  border-color: rgba(255, 183, 77, 0.35);
+  color: #ffcc80;
+}
+
 /* ── Prestige HUD button ── */
 .prestige-menu-open-btn {
   width: 100%;

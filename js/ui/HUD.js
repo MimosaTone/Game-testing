@@ -15,6 +15,11 @@ import {
 import { isBossWave } from '../config/waveConfig.js?v=20260710c';
 import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
+import {
+  PERMANENT_OVERCLOCK,
+  ELITE_TOWER_OVERCLOCKS,
+  getOverclockPathsForTower,
+} from '../config/towerOverclockConfig.js';
 
 /**
  * HUD and build panel UI controller.
@@ -851,7 +856,96 @@ export class HUD {
     }
 
     this._appendRepairButton(tower);
+    this._appendPermanentOverclockButtons(tower);
     this._appendTowerInvestmentButtons(tower);
+  }
+
+  _appendPermanentOverclockButtons(tower) {
+    const im = this.game.investmentManager;
+    const paths = getOverclockPathsForTower(tower.typeId);
+    if (!paths) return;
+
+    const maxedUpgrade = tower.upgradeTier >= tower.upgradePath.length;
+    const unlocked = im.canPermanentOverclock(tower, this.game);
+    const totalLevels = im.getPermanentOverclockTotalLevels(tower.id);
+    const hasInvestment = totalLevels > 0 || im.eliteOverclocks[tower.id];
+
+    if (!maxedUpgrade && !hasInvestment) {
+      const lock = document.createElement('div');
+      lock.className = 'investment-locked-hint';
+      lock.textContent = 'Permanent Overclock unlocks after max upgrade tier';
+      this.elements.upgradeButtons.appendChild(lock);
+      return;
+    }
+
+    if (!unlocked && !hasInvestment) {
+      const lock = document.createElement('div');
+      lock.className = 'investment-locked-hint';
+      lock.textContent = `Permanent Overclock unlocks at wave ${PERMANENT_OVERCLOCK.unlockWave}`;
+      this.elements.upgradeButtons.appendChild(lock);
+      return;
+    }
+
+    const header = document.createElement('div');
+    header.className = 'investment-section-label permanent-oc-label';
+    header.textContent = `Permanent Overclock (${totalLevels} levels invested)`;
+    this.elements.upgradeButtons.appendChild(header);
+
+    const canBuy = this.game.phase === Phase.PLANNING;
+    for (const def of Object.values(paths)) {
+      const level = im.getPermanentOverclockLevel(tower.id, def.id);
+      const maxed = level >= PERMANENT_OVERCLOCK.maxLevelPerPath;
+      const cost = im.getPermanentOverclockPathCost(tower, def.id);
+
+      if (maxed) {
+        const row = document.createElement('div');
+        row.className = 'investment-maxed-row';
+        row.textContent = `⚙ ${def.name} (${level}/${PERMANENT_OVERCLOCK.maxLevelPerPath}) — MAX`;
+        this.elements.upgradeButtons.appendChild(row);
+        continue;
+      }
+
+      if (!canBuy) continue;
+
+      const btn = document.createElement('button');
+      btn.className = 'upgrade-btn investment-btn permanent-oc-btn';
+      btn.innerHTML = `<span class="upgrade-btn-name">⚙ ${def.name}</span><span class="upgrade-btn-detail">${def.description} · ${cost}g (${level}/${PERMANENT_OVERCLOCK.maxLevelPerPath})</span>`;
+      btn.disabled = cost === null || !this.game.economy.canAfford(cost);
+      btn.addEventListener('click', () => {
+        if (im.purchasePermanentOverclock(this.game, tower, def.id)) {
+          this.game.saveGame();
+          this._showTowerUpgrades(tower);
+        }
+      });
+      this.elements.upgradeButtons.appendChild(btn);
+    }
+
+    const eliteOwned = im.getEliteOverclockDef(tower);
+    if (eliteOwned) {
+      const owned = document.createElement('div');
+      owned.className = 'investment-active-hint elite-oc-owned';
+      owned.textContent = `${eliteOwned.tag} — ${eliteOwned.name}: ${eliteOwned.description}`;
+      this.elements.upgradeButtons.appendChild(owned);
+    } else if (canBuy && im.canPurchaseEliteOverclock(tower, this.game)) {
+      const eliteCfg = ELITE_TOWER_OVERCLOCKS[tower.typeId];
+      const cost = im.getEliteOverclockCostForTower(tower);
+      const btn = document.createElement('button');
+      btn.className = 'upgrade-btn investment-btn elite-oc-btn';
+      btn.innerHTML = `<span class="upgrade-btn-name">★ ${eliteCfg.name}</span><span class="upgrade-btn-detail">${eliteCfg.description} · ${cost}g</span>`;
+      btn.disabled = !this.game.economy.canAfford(cost);
+      btn.addEventListener('click', () => {
+        if (im.purchaseEliteOverclock(this.game, tower)) {
+          this.game.saveGame();
+          this._showTowerUpgrades(tower);
+        }
+      });
+      this.elements.upgradeButtons.appendChild(btn);
+    } else if (canBuy && totalLevels > 0 && totalLevels < PERMANENT_OVERCLOCK.eliteMinTotalLevels) {
+      const hint = document.createElement('div');
+      hint.className = 'investment-locked-hint';
+      hint.textContent = `Elite Overclock at ${PERMANENT_OVERCLOCK.eliteMinTotalLevels} total levels (${totalLevels}/${PERMANENT_OVERCLOCK.eliteMinTotalLevels})`;
+      this.elements.upgradeButtons.appendChild(hint);
+    }
   }
 
   _showFarmUpgrades(farm) {
@@ -1024,7 +1118,7 @@ export class HUD {
     } else if (canBuy) {
       const header = document.createElement('div');
       header.className = 'investment-section-label';
-      header.textContent = 'Overclock (3 waves)';
+      header.textContent = 'Surge Overclock (3 waves)';
       this.elements.upgradeButtons.appendChild(header);
 
       for (const def of Object.values(TOWER_OVERCLOCKS)) {

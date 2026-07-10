@@ -109,6 +109,9 @@ export class Tower {
     if (this.masterUnlocked && MASTER_UPGRADES[this.typeId]) {
       labels.push(`★ ${MASTER_UPGRADES[this.typeId].name}`);
     }
+    if (this.eliteOverclockTag) {
+      labels.push(this.eliteOverclockTag);
+    }
     return labels;
   }
 

@@ -13,6 +13,15 @@ import {
 } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
 import { BUILD_EXPANSION_POOL } from '../config/gameConfig.js';
+import {
+  PERMANENT_OVERCLOCK,
+  ELITE_TOWER_OVERCLOCKS,
+  TOWER_OVERCLOCK_PATHS,
+  getOverclockPathsForTower,
+  getPermanentOverclockCost,
+  getEliteOverclockCost,
+  computePathEffect,
+} from '../config/towerOverclockConfig.js';
 
 function emptyMods() {
   return {
@@ -77,6 +86,8 @@ export class InvestmentManager {
     this.unlockedSpots = [];
     this.commanderBuff = null;
     this.overclocks = {};
+    this.permanentOverclocks = {};
+    this.eliteOverclocks = {};
     this.reinforcements = {};
     this.legendary = {};
     this._bonusLivesThisWave = 0;
@@ -92,6 +103,8 @@ export class InvestmentManager {
     this.unlockedSpots = [];
     this.commanderBuff = null;
     this.overclocks = {};
+    this.permanentOverclocks = {};
+    this.eliteOverclocks = {};
     this.reinforcements = {};
     this.legendary = {};
     this._bonusLivesThisWave = 0;
@@ -109,6 +122,8 @@ export class InvestmentManager {
     this.unlockedSpots = [...(d.unlockedSpots ?? [])];
     this.commanderBuff = d.commanderBuff ?? null;
     this.overclocks = { ...(d.overclocks ?? {}) };
+    this.permanentOverclocks = { ...(d.permanentOverclocks ?? {}) };
+    this.eliteOverclocks = { ...(d.eliteOverclocks ?? {}) };
     this.reinforcements = { ...(d.reinforcements ?? {}) };
     this.legendary = { ...(d.legendary ?? {}) };
     this._bonusLivesThisWave = 0;
@@ -125,6 +140,8 @@ export class InvestmentManager {
       unlockedSpots: [...this.unlockedSpots],
       commanderBuff: this.commanderBuff,
       overclocks: { ...this.overclocks },
+      permanentOverclocks: { ...this.permanentOverclocks },
+      eliteOverclocks: { ...this.eliteOverclocks },
       reinforcements: { ...this.reinforcements },
       legendary: { ...this.legendary },
     };
@@ -277,6 +294,7 @@ export class InvestmentManager {
     if (this.commanderBuff) return false;
     const def = COMMANDER_ABILITIES[id];
     if (!def) return false;
+    if (def.unlockWave && game.waveManager.waveNumber < def.unlockWave) return false;
     if (def.cost > 0 && !game.economy.spend(def.cost)) return false;
 
     if (def.instantGold) {
@@ -300,11 +318,114 @@ export class InvestmentManager {
   purchaseOverclock(game, tower, typeId) {
     const def = TOWER_OVERCLOCKS[typeId];
     if (!def || !tower || tower.destroyed) return false;
+    if (this.overclocks[tower.id]) return false;
     if (!game.economy.spend(def.cost)) return false;
     this.overclocks[tower.id] = { type: typeId, wavesLeft: def.waves };
     this._emit();
     game._refreshInvestmentEffects();
     return true;
+  }
+
+  _permanentKey(towerId, pathId) {
+    return `${towerId}:${pathId}`;
+  }
+
+  canPermanentOverclock(tower, game) {
+    if (!tower || tower.destroyed) return false;
+    if (!getOverclockPathsForTower(tower.typeId)) return false;
+    if (tower.upgradeTier < tower.upgradePath.length) return false;
+    return game.waveManager.waveNumber >= PERMANENT_OVERCLOCK.unlockWave;
+  }
+
+  getPermanentOverclockLevel(towerId, pathId) {
+    return this.permanentOverclocks[this._permanentKey(towerId, pathId)] || 0;
+  }
+
+  getPermanentOverclockTotalLevels(towerId) {
+    let total = 0;
+    for (const [key, level] of Object.entries(this.permanentOverclocks)) {
+      if (key.startsWith(`${towerId}:`)) total += level;
+    }
+    return total;
+  }
+
+  getPermanentOverclockPathCost(tower, pathId) {
+    const paths = getOverclockPathsForTower(tower.typeId);
+    if (!paths?.[pathId]) return null;
+    const level = this.getPermanentOverclockLevel(tower.id, pathId);
+    if (level >= PERMANENT_OVERCLOCK.maxLevelPerPath) return null;
+    const total = this.getPermanentOverclockTotalLevels(tower.id);
+    return getPermanentOverclockCost(total, level);
+  }
+
+  purchasePermanentOverclock(game, tower, pathId) {
+    if (!this.canPermanentOverclock(tower, game)) return false;
+    const paths = getOverclockPathsForTower(tower.typeId);
+    if (!paths?.[pathId]) return false;
+    const cost = this.getPermanentOverclockPathCost(tower, pathId);
+    if (cost === null || !game.economy.spend(cost)) return false;
+    const key = this._permanentKey(tower.id, pathId);
+    this.permanentOverclocks[key] = (this.permanentOverclocks[key] || 0) + 1;
+    this._emit();
+    game._refreshInvestmentEffects();
+    return true;
+  }
+
+  canPurchaseEliteOverclock(tower, game) {
+    if (!tower || tower.destroyed || this.eliteOverclocks[tower.id]) return false;
+    if (!this.canPermanentOverclock(tower, game)) return false;
+    const def = ELITE_TOWER_OVERCLOCKS[tower.typeId];
+    if (!def) return false;
+    return this.getPermanentOverclockTotalLevels(tower.id) >= PERMANENT_OVERCLOCK.eliteMinTotalLevels;
+  }
+
+  getEliteOverclockCostForTower(tower) {
+    const total = this.getPermanentOverclockTotalLevels(tower.id);
+    return getEliteOverclockCost(total);
+  }
+
+  purchaseEliteOverclock(game, tower) {
+    if (!this.canPurchaseEliteOverclock(tower, game)) return false;
+    const cost = this.getEliteOverclockCostForTower(tower);
+    if (!game.economy.spend(cost)) return false;
+    const def = ELITE_TOWER_OVERCLOCKS[tower.typeId];
+    this.eliteOverclocks[tower.id] = def.id;
+    this._emit();
+    game._refreshInvestmentEffects();
+    return true;
+  }
+
+  getPermanentOverclockMods(tower) {
+    const paths = getOverclockPathsForTower(tower.typeId);
+    if (!paths) return {};
+    const out = {};
+    for (const [pathId, pathDef] of Object.entries(paths)) {
+      const level = this.getPermanentOverclockLevel(tower.id, pathId);
+      if (level <= 0) continue;
+      const fx = computePathEffect(pathDef.effectPerLevel, level);
+      for (const [k, v] of Object.entries(fx)) {
+        if (k.includes('Mult') && k !== 'critChance' && k !== 'critDamageMult' && k !== 'bossDamageMult' && k !== 'eliteDamageMult') {
+          out[k] = (out[k] ?? 0) + v;
+        } else if (k === 'knockbackIntervalMult') {
+          out[k] = (out[k] ?? 0) + v;
+        } else {
+          out[k] = (out[k] ?? 0) + v;
+        }
+      }
+    }
+    return out;
+  }
+
+  getEliteOverclockMods(tower) {
+    const eliteId = this.eliteOverclocks[tower.id];
+    if (!eliteId) return {};
+    const def = ELITE_TOWER_OVERCLOCKS[tower.typeId];
+    return def?.effects ?? {};
+  }
+
+  getEliteOverclockDef(tower) {
+    if (!this.eliteOverclocks[tower.id]) return null;
+    return ELITE_TOWER_OVERCLOCKS[tower.typeId] ?? null;
   }
 
   purchaseReinforcement(game, structure, typeId) {
