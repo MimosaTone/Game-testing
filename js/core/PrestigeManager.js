@@ -39,7 +39,17 @@ const DEFAULT_DATA = {
   worldEvents: { unlocked: [], active: null, wavesLeft: 0 },
 };
 
-const DEFAULT_SETTINGS = { autoStartWaves: false, customChallengePresets: [] };
+const DEFAULT_SETTINGS = {
+  autoStartWaves: false,
+  customChallengePresets: [],
+  unlockedChallengePresets: [],
+  everclearStats: {
+    clears: 0,
+    bestWave: 0,
+    firstClearClaimed: false,
+  },
+  titles: [],
+};
 
 function mergeEffect(target, source) {
   for (const [key, val] of Object.entries(source)) {
@@ -90,7 +100,17 @@ export class PrestigeManager {
         wavesLeft: meta.worldEvents?.wavesLeft ?? 0,
       },
     };
-    this.settings = { ...DEFAULT_SETTINGS, ...meta.settings };
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...meta.settings,
+      customChallengePresets: [...(meta.settings?.customChallengePresets ?? [])],
+      unlockedChallengePresets: [...(meta.settings?.unlockedChallengePresets ?? [])],
+      everclearStats: {
+        ...DEFAULT_SETTINGS.everclearStats,
+        ...(meta.settings?.everclearStats ?? {}),
+      },
+      titles: [...(meta.settings?.titles ?? [])],
+    };
     this._migrateLegacyUpgrades();
     this._autoUnlockMilestones(false);
     this._applyTheme();
@@ -171,6 +191,79 @@ export class PrestigeManager {
       modifiers: [...p.modifiers],
     }));
     this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
+  }
+
+  getUnlockedChallengePresets() {
+    return [...(this.settings.unlockedChallengePresets ?? [])];
+  }
+
+  isChallengePresetUnlocked(presetId) {
+    return this.getUnlockedChallengePresets().includes(presetId);
+  }
+
+  unlockChallengePreset(presetId) {
+    if (this.isChallengePresetUnlocked(presetId)) return false;
+    this.settings.unlockedChallengePresets = [...this.getUnlockedChallengePresets(), presetId];
+    const req = presetId === 'everclear_pain'
+      ? { unlockMessage: 'Who Hurt You was only the beginning.' }
+      : null;
+    this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
+    this.eventBus.emit(Events.CHALLENGE_PRESET_UNLOCKED, {
+      presetId,
+      message: req?.unlockMessage ?? 'A new challenge has been unlocked.',
+    });
+    return true;
+  }
+
+  getEverclearStats() {
+    return {
+      clears: this.settings.everclearStats?.clears ?? 0,
+      bestWave: this.settings.everclearStats?.bestWave ?? 0,
+      firstClearClaimed: this.settings.everclearStats?.firstClearClaimed ?? false,
+    };
+  }
+
+  recordEverclearWave(wave) {
+    const stats = this.getEverclearStats();
+    if (wave <= stats.bestWave) return;
+    this.settings.everclearStats = { ...stats, bestWave: wave };
+    this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
+  }
+
+  recordEverclearClear(wave) {
+    const stats = this.getEverclearStats();
+    const clears = stats.clears + 1;
+    const bestWave = Math.max(stats.bestWave, wave);
+    const firstClear = !stats.firstClearClaimed;
+    this.settings.everclearStats = {
+      clears,
+      bestWave,
+      firstClearClaimed: true,
+    };
+    if (firstClear) {
+      this._grantPurePainArtifact();
+      if (!this.settings.titles.includes('everclear_survivor')) {
+        this.settings.titles = [...(this.settings.titles ?? []), 'everclear_survivor'];
+      }
+    }
+    this.eventBus.emit(Events.SETTINGS_CHANGED, this.settings);
+    this.eventBus.emit(Events.EVERCLEAR_CLEARED, { wave, firstClear });
+    return { firstClear };
+  }
+
+  hasTitle(titleId) {
+    return (this.settings.titles ?? []).includes(titleId);
+  }
+
+  getDisplayTitle() {
+    if (this.hasTitle('everclear_survivor')) return 'Everclear Survivor';
+    return null;
+  }
+
+  _grantPurePainArtifact() {
+    if (this.data.artifacts.owned.includes('pure_pain')) return;
+    this.data.artifacts.owned.push('pure_pain');
+    this.eventBus.emit(Events.PRESTIGE_CHANGED);
   }
 
   recordWave(wave) {
@@ -492,7 +585,7 @@ export class PrestigeManager {
 
   canPurchaseArtifact(artifactId) {
     const art = LEGACY_ARTIFACTS[artifactId];
-    if (!art || this.data.artifacts.owned.includes(artifactId)) return false;
+    if (!art || art.hidden || this.data.artifacts.owned.includes(artifactId)) return false;
     if (art.unlockMilestone && !this.data.milestones.claimed.includes(art.unlockMilestone)) {
       const ms = PRESTIGE_MILESTONES.find((m) => m.id === art.unlockMilestone);
       if (!ms || !this.isMilestoneComplete(ms)) return false;

@@ -37,9 +37,12 @@ function computeBossTierFx(waveNumber, fx) {
   if (tier.bossExtraMechanic) {
     bossTierMechanic = BOSS_TIER_MECHANICS[cycle % BOSS_TIER_MECHANICS.length];
   }
-  if (tier.bossRandomModifier) {
+  if (tier.bossRandomModifier || fx.bossContamination) {
     bossTierModifier = BOSS_TIER_MODIFIERS[(cycle + waveNumber) % BOSS_TIER_MODIFIERS.length];
     if (bossTierModifier === 'armored') bossEmpowered = true;
+  }
+  if (fx.bossContamination && cycle > 0) {
+    bossEmpowered = true;
   }
   if (tier.eliteBossChance > 0 && cycle % 3 === 2) {
     bossEmpowered = true;
@@ -281,15 +284,16 @@ export function generateBossWave(waveNumber, challengeFx = {}, factionMeta = nul
 function injectSpecialEnemies(waves, waveNumber, challengeFx) {
   const tier = challengeFx.tier ?? {};
   const offset = tier.specialWaveOffset ?? 0;
-  if (waveNumber < 6 - offset && !challengeFx.spawnSpecialEnemies) return waves;
+  const early = challengeFx.earlySpecialists ? 3 : 0;
+  if (waveNumber < 6 - offset - early && !challengeFx.spawnSpecialEnemies) return waves;
 
   const mult = challengeFx.eliteSpawnMult ?? 1;
   const extra = [];
 
-  if (waveNumber >= 6 - offset || challengeFx.spawnSpecialEnemies) {
+  if (waveNumber >= 6 - offset - early || challengeFx.spawnSpecialEnemies) {
     extra.push({ type: 'bomber', count: Math.ceil(1 * mult), spawnDelayMs: 1200 });
   }
-  if (waveNumber >= 9 - offset || challengeFx.spawnSpecialEnemies) {
+  if (waveNumber >= 9 - offset - early || challengeFx.spawnSpecialEnemies) {
     extra.push({ type: 'saboteur', count: Math.ceil(1 * mult), spawnDelayMs: 1400 });
   }
   if (waveNumber >= 12 - offset) {
@@ -300,6 +304,15 @@ function injectSpecialEnemies(waves, waveNumber, challengeFx) {
   }
 
   return [...waves, ...extra];
+}
+
+const ELITE_WAVE_TYPES = ['husk', 'drift', 'ward', 'rime', 'titan'];
+
+function ensureNoSafeWaveElites(waves, waveNumber, challengeFx) {
+  if (!challengeFx.noSafeWave || waveNumber % 5 !== 0 || isBossWave(waveNumber)) return waves;
+  const hasElite = waves.some((g) => ELITE_WAVE_TYPES.includes(g.type) && g.count > 0);
+  if (hasElite) return waves;
+  return [...waves, { type: 'husk', count: 1, spawnDelayMs: 1800 }];
 }
 
 /** Inject ancient and legendary enemies at higher world tiers (non-faction-specific). */
@@ -370,6 +383,7 @@ export function generateWave(waveNumber, challengeFx = {}, factionMeta = null) {
     waves = injectSpecialEnemies(waves, waveNumber, fx);
   }
   waves = injectTierEnemies(waves, waveNumber, fx, meta);
+  waves = ensureNoSafeWaveElites(waves, waveNumber, fx);
   waves = applyCoordinatedSpawns(waves, fx);
 
   return {

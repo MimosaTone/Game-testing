@@ -110,6 +110,14 @@ export const LEGACY_ARTIFACTS = {
     unlockMilestone: 'prestige_5',
     effect: () => ({ buildCostMult: 0.88, upgradeCostMult: 0.88 }),
   },
+  pure_pain: {
+    id: 'pure_pain',
+    name: 'Pure Pain',
+    description: '+8% challenge rewards on Extreme+ presets. Badge of Everclear survival.',
+    cost: 0,
+    hidden: true,
+    effect: () => ({ challengeRewardMult: 1.08 }),
+  },
   crown_of_ages: {
     id: 'crown_of_ages',
     name: 'Crown of Ages',

@@ -28,6 +28,8 @@ export class PlacementSystem {
     this.bossesDefeated = 0;
     this.challengeFx = null;
     this.sellMode = false;
+    this.unstableDisabled = new Set();
+    this._baseBuildSpots = null;
   }
 
   toggleSellMode() {
@@ -44,12 +46,28 @@ export class PlacementSystem {
     this._applyBuildSpotLimit();
   }
 
-  _applyBuildSpotLimit() {
+  clearUnstableDisabled() {
+    this.unstableDisabled.clear();
+    this._applyBuildSpotLimit();
+  }
+
+  rotateUnstableSpots(waveNumber) {
+    if (!this.challengeFx?.unstableBattlefield) return;
+    const base = this._getBaseBuildSpots();
+    const candidates = [...base].filter((key) => !this.occupied.has(key));
+    const count = Math.min(3, Math.max(1, Math.floor(candidates.length * 0.12)));
+    const sorted = candidates
+      .map((s, i) => ({ s, h: this._hashSpot(s, i + waveNumber * 17) }))
+      .sort((a, b) => a.h - b.h);
+    this.unstableDisabled = new Set(sorted.slice(0, count).map((x) => x.s));
+    this._applyBuildSpotLimit();
+  }
+
+  _getBaseBuildSpots() {
     const mult = this.challengeFx?.buildSpotMult ?? 1;
     const targetCount = Math.max(12, Math.round(this.allBuildSpots.length * mult));
     if (targetCount >= this.allBuildSpots.length) {
-      this.buildSpots = new Set(this.allBuildSpots);
-      return;
+      return new Set(this.allBuildSpots);
     }
     const spots = [...this.allBuildSpots];
     const seeded = spots
@@ -57,7 +75,12 @@ export class PlacementSystem {
       .sort((a, b) => a.h - b.h)
       .slice(0, targetCount)
       .map((x) => x.s);
-    this.buildSpots = new Set(seeded);
+    return new Set(seeded);
+  }
+
+  _applyBuildSpotLimit() {
+    const base = this._getBaseBuildSpots();
+    this.buildSpots = new Set([...base].filter((s) => !this.unstableDisabled.has(s)));
   }
 
   _hashSpot(key, i) {

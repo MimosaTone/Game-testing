@@ -15,7 +15,8 @@ import { CombatSystem } from '../systems/CombatSystem.js';
 import { PlacementSystem } from '../systems/PlacementSystem.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
-import { isBossWave } from '../config/waveConfig.js?v=20260710c';
+import { isBossWave } from '../config/waveConfig.js?v=20260710m';
+import { CHALLENGE_UNLOCK_REQUIREMENTS } from '../config/challengeConfig.js?v=20260710m';
 import { ECONOMY_CONFIG } from '../config/economyConfig.js';
 import { STRUCTURE_REINFORCEMENTS, BUILD_EXPANSION } from '../config/investmentConfig.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
@@ -73,6 +74,7 @@ export class Game {
     this.pendingHarvestEffects = [];
     this.autoStartTimer = null;
     this.wavesSinceRepair = 0;
+    this.everclearRun = { pressureStacks: 0, economicBurnStacks: 0 };
 
     this._setupEventHandlers();
     this._applyChallengeEffects();
@@ -81,10 +83,45 @@ export class Game {
   }
 
   _applyChallengeEffects() {
-    const fx = this.challengeManager.getEffects();
+    const fx = this._getAugmentedChallengeEffects();
     this.placementSystem.setChallengeEffects(fx);
     this.waveManager.setChallengeEffects(fx);
     this.economy.setChallengeEffects(fx, this.challengeManager.getRewardMultiplier());
+    this._applyLastBreathToTowers();
+  }
+
+  _getAugmentedChallengeEffects() {
+    const fx = { ...this.challengeManager.getEffects() };
+    if (fx.purePressure && this.everclearRun.pressureStacks > 0) {
+      const stacks = this.everclearRun.pressureStacks;
+      fx.enemyHealthMult *= 1 + stacks * 0.012;
+      fx.enemySpeedMult *= 1 + stacks * 0.008;
+    }
+    if (fx.economicBurn && this.everclearRun.economicBurnStacks > 0) {
+      const burn = this.everclearRun.economicBurnStacks;
+      fx.farmIncomeMult *= Math.max(0.45, 1 - burn * 0.04);
+    }
+    return fx;
+  }
+
+  _resetEverclearRunState() {
+    this.everclearRun = { pressureStacks: 0, economicBurnStacks: 0 };
+    this.placementSystem.clearUnstableDisabled();
+  }
+
+  _isEverclearActive() {
+    return this.challengeManager.presetId === 'everclear_pain';
+  }
+
+  _applyLastBreathToTowers() {
+    const fx = this.challengeManager.getEffects();
+    const active = fx.lastBreath && this.lives === 1;
+    for (const tower of this.placementSystem.towers) {
+      if (!tower.destroyed) {
+        tower.lastBreathActive = active;
+      }
+    }
+    this.combatSystem.setTowers(this.placementSystem.towers);
   }
 
   _applyWorldTierEffects() {
@@ -227,6 +264,13 @@ export class Game {
         tower.gridX,
         tower.gridY
       );
+      if (tower.lastBreathActive) {
+        tower.supportMods = {
+          ...(tower.supportMods || {}),
+          damageMult: (tower.supportMods?.damageMult ?? 1) * 1.18,
+          attackSpeedMult: (tower.supportMods?.attackSpeedMult ?? 1) * 1.12,
+        };
+      }
     }
 
     this._refreshFarmIncome();
@@ -408,6 +452,7 @@ export class Game {
 
     this.eventBus.on(Events.CHALLENGE_CHANGED, () => {
       this._clearAutoStartTimer();
+      this._resetEverclearRunState();
       this._applyChallengeEffects();
       this._refreshSupportEffects();
       if (this.phase === Phase.PLANNING && this.waveManager.waveNumber === 0) {
@@ -415,6 +460,11 @@ export class Game {
         this.eventBus.emit(Events.LIVES_CHANGED, this.lives);
       }
       this.saveGame();
+    });
+
+    this.eventBus.on(Events.LIVES_CHANGED, () => {
+      this._applyLastBreathToTowers();
+      this._refreshSupportEffects();
     });
 
     this.eventBus.on(Events.SETTINGS_CHANGED, () => {
@@ -716,6 +766,7 @@ export class Game {
     }
     this.prestigeManager.onRunWaveComplete();
     this.prestigeManager.trackLifetime('wavesCleared');
+    this._handleEverclearWaveComplete(wave);
 
     const rpMult = this.supportEffects.global.researchMult ?? 1;
     const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult * rpMult);
@@ -867,6 +918,7 @@ export class Game {
     this.phase = Phase.PLANNING;
     this.pendingHarvestEffects = [];
     this.wavesSinceRepair = 0;
+    this._resetEverclearRunState();
     this.waveManager.reset();
     this.combatSystem.reset();
     this.placementSystem.reset();
@@ -885,5 +937,45 @@ export class Game {
       farmCount: 0,
       waveBonus: 0,
     });
+  }
+
+  _handleEverclearWaveComplete(wave) {
+    this._checkChallengeUnlocks(wave);
+
+    const fx = this.challengeManager.getEffects();
+    if (!fx.purePressure && !fx.economicBurn && !fx.unstableBattlefield) return;
+
+    if (fx.purePressure) {
+      this.everclearRun.pressureStacks += 1;
+    }
+    if (fx.economicBurn && isBossWave(wave)) {
+      this.everclearRun.economicBurnStacks += 1;
+    }
+    if (fx.unstableBattlefield && wave > 0 && wave % 30 === 0) {
+      this.placementSystem.rotateUnstableSpots(wave);
+    }
+    this._applyChallengeEffects();
+
+    if (this._isEverclearActive()) {
+      this.prestigeManager.recordEverclearWave(wave);
+      const req = CHALLENGE_UNLOCK_REQUIREMENTS.everclear_pain;
+      if (wave >= req.clearWave && isBossWave(wave) && this.challengeManager._detectBuiltinPreset() === 'everclear_pain') {
+        this.prestigeManager.recordEverclearClear(wave);
+        this.saveManager.saveMeta(this);
+      }
+    }
+  }
+
+  _checkChallengeUnlocks(wave) {
+    const req = CHALLENGE_UNLOCK_REQUIREMENTS.everclear_pain;
+    if (!req || this.prestigeManager.isChallengePresetUnlocked('everclear_pain')) return;
+    if (wave < req.minWave) return;
+    if (req.requireBossWave && !isBossWave(wave)) return;
+    if (this.challengeManager._detectBuiltinPreset() !== req.requiresPreset) return;
+
+    const unlocked = this.prestigeManager.unlockChallengePreset('everclear_pain');
+    if (unlocked) {
+      this.saveManager.saveMeta(this);
+    }
   }
 }

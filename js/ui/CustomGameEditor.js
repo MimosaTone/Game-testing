@@ -4,9 +4,12 @@ import {
   CHALLENGE_PRESETS,
   CHALLENGE_MODIFIER_CATEGORIES,
   CHALLENGE_MODIFIER_CATEGORY_ORDER,
+  EVERCLEAR_CONFIRM,
   getModifiersByCategory,
+  getOrderedBuiltinPresets,
   getPresetDisplay,
-} from '../config/challengeConfig.js?v=20260710l';
+  isPresetUnlocked,
+} from '../config/challengeConfig.js?v=20260710m';
 
 /**
  * Bottom-dock Custom Game Editor — presets and challenge modifier toggles.
@@ -59,6 +62,17 @@ export class CustomGameEditor {
           <span class="preset-traditional" id="cge-preset-traditional"></span>
         </div>
         <p class="cge-preset-desc" id="cge-preset-desc"></p>
+        <div id="cge-everclear-stats" class="cge-everclear-stats hidden"></div>
+      </div>
+      <div id="cge-confirm-modal" class="cge-confirm-modal hidden" role="dialog" aria-modal="true">
+        <div class="cge-confirm-card">
+          <h4 id="cge-confirm-title"></h4>
+          <p id="cge-confirm-body"></p>
+          <div class="cge-confirm-actions">
+            <button type="button" id="cge-confirm-enter" class="primary-btn"></button>
+            <button type="button" id="cge-confirm-cancel" class="secondary-btn"></button>
+          </div>
+        </div>
       </div>
       <div id="cge-modifier-groups" class="cge-modifier-groups"></div>
     `;
@@ -73,16 +87,26 @@ export class CustomGameEditor {
       presetTitle: document.getElementById('cge-preset-title'),
       presetTraditional: document.getElementById('cge-preset-traditional'),
       presetDesc: document.getElementById('cge-preset-desc'),
+      everclearStats: document.getElementById('cge-everclear-stats'),
+      confirmModal: document.getElementById('cge-confirm-modal'),
+      confirmTitle: document.getElementById('cge-confirm-title'),
+      confirmBody: document.getElementById('cge-confirm-body'),
+      confirmEnter: document.getElementById('cge-confirm-enter'),
+      confirmCancel: document.getElementById('cge-confirm-cancel'),
       savePresetBtn: document.getElementById('cge-save-preset-btn'),
       deletePresetBtn: document.getElementById('cge-delete-preset-btn'),
       clearBtn: document.getElementById('cge-clear-btn'),
       modifierGroups: document.getElementById('cge-modifier-groups'),
     };
 
+    this._pendingPresetId = null;
+
     this.elements.presetSelect.addEventListener('change', () => this._onPresetChange());
     this.elements.savePresetBtn.addEventListener('click', () => this._saveCustomPreset());
     this.elements.deletePresetBtn.addEventListener('click', () => this._deleteCustomPreset());
     this.elements.clearBtn.addEventListener('click', () => this._clearModifiers());
+    this.elements.confirmEnter.addEventListener('click', () => this._confirmPendingPreset());
+    this.elements.confirmCancel.addEventListener('click', () => this._cancelPendingPreset());
   }
 
   _bindDockTabs() {
@@ -104,7 +128,18 @@ export class CustomGameEditor {
     this.game.eventBus.on(Events.SAVE_LOADED, () => this.render());
     this.game.eventBus.on(Events.WAVE_STARTED, () => this.render());
     this.game.eventBus.on(Events.WAVE_COMPLETED, () => this.render());
-    this.game.eventBus.on(Events.GAME_OVER, () => this.render());
+    this.game.eventBus.on(Events.CHALLENGE_PRESET_UNLOCKED, (data) => this._onPresetUnlocked(data));
+  }
+
+  _onPresetUnlocked(data) {
+    this.render();
+    if (data?.message) {
+      this.elements.hint.textContent = data.message;
+    }
+  }
+
+  _getUnlockedSecrets() {
+    return this.game.prestigeManager.getUnlockedChallengePresets();
   }
 
   setDock(dock) {
@@ -165,18 +200,26 @@ export class CustomGameEditor {
     const cm = this.game.challengeManager;
     const current = cm.presetId;
     const select = this.elements.presetSelect;
-    const prev = select.value;
+    const unlocked = this._getUnlockedSecrets();
     select.innerHTML = '';
 
     const builtinGroup = document.createElement('optgroup');
     builtinGroup.label = 'Built-in';
-    for (const preset of Object.values(CHALLENGE_PRESETS)) {
+    for (const preset of getOrderedBuiltinPresets()) {
+      const unlockedPreset = isPresetUnlocked(preset, unlocked);
       const opt = document.createElement('option');
       opt.value = preset.id;
-      opt.textContent = preset.name;
-      opt.title = preset.traditionalName
-        ? `${preset.name} (${preset.traditionalName})`
-        : preset.name;
+      if (unlockedPreset) {
+        opt.textContent = preset.name;
+        opt.title = preset.traditionalName
+          ? `${preset.name} (${preset.traditionalName})`
+          : preset.name;
+        if (preset.secret) opt.className = 'cge-everclear-option';
+      } else {
+        opt.textContent = '???';
+        opt.disabled = true;
+        opt.dataset.lockedSecret = 'true';
+      }
       builtinGroup.appendChild(opt);
     }
     select.appendChild(builtinGroup);
@@ -210,14 +253,33 @@ export class CustomGameEditor {
   _renderPresetMeta() {
     const cm = this.game.challengeManager;
     const customPresets = this._getCustomPresets();
-    const display = getPresetDisplay(cm.presetId, customPresets);
+    const unlocked = this._getUnlockedSecrets();
+    const display = getPresetDisplay(cm.presetId, customPresets, unlocked);
     const meta = this.elements.presetMeta;
+    const preset = CHALLENGE_PRESETS[cm.presetId];
 
+    meta.classList.toggle('cge-preset-meta--everclear', preset?.secret && unlocked.includes(preset.id));
     this.elements.presetTitle.textContent = display.title;
     this.elements.presetTraditional.textContent = display.traditional ?? '';
     this.elements.presetTraditional.classList.toggle('hidden', !display.traditional);
     this.elements.presetDesc.textContent = display.description ?? '';
     meta.classList.toggle('hidden', !display.title && !display.description);
+
+    const statsEl = this.elements.everclearStats;
+    if (preset?.id === 'everclear_pain' && unlocked.includes('everclear_pain')) {
+      const stats = this.game.prestigeManager.getEverclearStats();
+      const state = cm.getState();
+      statsEl.innerHTML = `
+        <div class="cge-everclear-stat"><span>Reward</span><strong>${state.rewardMultiplier.toFixed(1)}×</strong></div>
+        <div class="cge-everclear-stat"><span>First-clear</span><strong>${preset.firstClearReward ?? 'Pure Pain Artifact'}</strong></div>
+        <div class="cge-everclear-stat"><span>Best wave</span><strong>${stats.bestWave || '—'}</strong></div>
+        <div class="cge-everclear-stat"><span>Clears</span><strong>${stats.clears}</strong></div>
+      `;
+      statsEl.classList.remove('hidden');
+    } else {
+      statsEl.classList.add('hidden');
+      statsEl.innerHTML = '';
+    }
   }
 
   _renderModifierGroups() {
@@ -270,6 +332,12 @@ export class CustomGameEditor {
     if (id === 'custom') return;
     const cm = this.game.challengeManager;
     const builtin = CHALLENGE_PRESETS[id];
+    if (builtin?.secret && id === 'everclear_pain' && cm.presetId !== id) {
+      this._pendingPresetId = id;
+      this._showEverclearConfirm();
+      this.elements.presetSelect.value = cm.presetId;
+      return;
+    }
     if (builtin) {
       cm.applyPreset(id, this.game.phase);
       return;
@@ -278,6 +346,31 @@ export class CustomGameEditor {
     if (custom) {
       cm.applyCustomPreset(custom.modifiers, custom.id, this.game.phase);
     }
+  }
+
+  _showEverclearConfirm() {
+    const modal = this.elements.confirmModal;
+    this.elements.confirmTitle.textContent = EVERCLEAR_CONFIRM.title;
+    this.elements.confirmBody.textContent = EVERCLEAR_CONFIRM.body;
+    this.elements.confirmEnter.textContent = EVERCLEAR_CONFIRM.confirmLabel;
+    this.elements.confirmCancel.textContent = EVERCLEAR_CONFIRM.cancelLabel;
+    modal.classList.remove('hidden');
+  }
+
+  _confirmPendingPreset() {
+    const id = this._pendingPresetId;
+    this._pendingPresetId = null;
+    this.elements.confirmModal.classList.add('hidden');
+    if (!id) return;
+    this.game.challengeManager.applyPreset(id, this.game.phase);
+    this.elements.presetSelect.value = id;
+    this.render();
+  }
+
+  _cancelPendingPreset() {
+    this._pendingPresetId = null;
+    this.elements.confirmModal.classList.add('hidden');
+    this.elements.presetSelect.value = this.game.challengeManager.presetId;
   }
 
   _saveCustomPreset() {

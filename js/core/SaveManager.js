@@ -5,7 +5,14 @@ const DEFAULT_META = {
   upgrades: {},
   totalPrestiges: 0,
   bestWave: 0,
-  settings: { autoStartWaves: false, preferredSpeed: 1, customChallengePresets: [] },
+  settings: {
+    autoStartWaves: false,
+    preferredSpeed: 1,
+    customChallengePresets: [],
+    unlockedChallengePresets: [],
+    everclearStats: { clears: 0, bestWave: 0, firstClearClaimed: false },
+    titles: [],
+  },
 };
 
 /** Validate saved run payload before use. */
@@ -95,12 +102,28 @@ function migrateV5ToV6(data) {
   return data;
 }
 
+function migrateV6ToV7(data) {
+  if (data.version !== 6) return data;
+  if (data.meta?.settings) {
+    data.meta.settings.unlockedChallengePresets = data.meta.settings.unlockedChallengePresets ?? [];
+    data.meta.settings.everclearStats = data.meta.settings.everclearStats ?? {
+      clears: 0,
+      bestWave: 0,
+      firstClearClaimed: false,
+    };
+    data.meta.settings.titles = data.meta.settings.titles ?? [];
+  }
+  data.version = 7;
+  return data;
+}
+
 function migrateSave(data) {
   if (data.version === 1) data = migrateV1ToV2(data);
   if (data.version === 2) data = migrateV2ToV3(data);
   if (data.version === 3) data = migrateV3ToV4(data);
   if (data.version === 4) data = migrateV4ToV5(data);
   if (data.version === 5) data = migrateV5ToV6(data);
+  if (data.version === 6) data = migrateV6ToV7(data);
   return data;
 }
 

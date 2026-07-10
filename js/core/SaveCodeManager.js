@@ -30,6 +30,9 @@ function normalizeMeta(meta) {
       autoStartWaves: false,
       preferredSpeed: 1,
       customChallengePresets: [],
+      unlockedChallengePresets: [],
+      everclearStats: { clears: 0, bestWave: 0, firstClearClaimed: false },
+      titles: [],
     },
   };
   if (!meta) return base;

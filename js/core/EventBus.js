@@ -60,6 +60,8 @@ export const Events = {
   MASTERY_GAINED: 'mastery_gained',
   LIVES_REPAIRED: 'lives_repaired',
   CHALLENGE_CHANGED: 'challenge_changed',
+  CHALLENGE_PRESET_UNLOCKED: 'challenge_preset_unlocked',
+  EVERCLEAR_CLEARED: 'everclear_cleared',
   SPEED_CHANGED: 'speed_changed',
   STRUCTURE_DAMAGED: 'structure_damaged',
   STRUCTURE_DESTROYED: 'structure_destroyed',

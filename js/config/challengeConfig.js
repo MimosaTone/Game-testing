@@ -244,6 +244,93 @@ export const CHALLENGE_MODIFIERS = {
     effects: { autoStartDelayMult: 0.2 },
     rewardBonus: 0.4,
   },
+  reinforced_6: {
+    id: 'reinforced_6',
+    name: 'Reinforced Enemies VI',
+    category: 'combat',
+    group: 'reinforced',
+    description: '+300% enemy health',
+    difficulty: '+300% HP',
+    effects: { enemyHealthMult: 4.0 },
+    rewardBonus: 1.2,
+  },
+  annihilation_assault: {
+    id: 'annihilation_assault',
+    name: 'Annihilation Assault',
+    category: 'combat',
+    group: 'swift',
+    description: 'Enemies move 100% faster',
+    difficulty: '+100% speed',
+    effects: { enemySpeedMult: 2.0 },
+    rewardBonus: 0.6,
+  },
+  abyssal_horde: {
+    id: 'abyssal_horde',
+    name: 'Abyssal Horde',
+    category: 'combat',
+    group: 'horde',
+    description: '200% more enemies per wave',
+    difficulty: '+200% enemies',
+    effects: { enemyCountMult: 3.0 },
+    rewardBonus: 0.9,
+  },
+  economic_nadir: {
+    id: 'economic_nadir',
+    name: 'Economic Nadir',
+    category: 'economy',
+    group: 'economy',
+    description: 'Farms earn 70% less; kills and bosses pay massively more',
+    difficulty: '-70% farm income',
+    effects: { farmIncomeMult: 0.3, killGoldMult: 3.0, bossGoldMult: 3.5 },
+    rewardBonus: 0.7,
+  },
+  barren_earth: {
+    id: 'barren_earth',
+    name: 'Barren Earth',
+    category: 'structures',
+    group: 'construction',
+    description: '65% fewer build locations available',
+    difficulty: '-65% build spots',
+    effects: { buildSpotMult: 0.35 },
+    rewardBonus: 0.5,
+  },
+  terminal_stakes: {
+    id: 'terminal_stakes',
+    name: 'Terminal Stakes',
+    category: 'survival',
+    group: 'stakes',
+    description: 'Begin with only 5 lives',
+    difficulty: '-20 lives',
+    effects: { livesReduction: 20 },
+    rewardBonus: 0.75,
+  },
+  zero_quarter: {
+    id: 'zero_quarter',
+    name: 'Zero Quarter',
+    category: 'pace',
+    group: 'pace',
+    description: 'Auto-start delay cut by 90%',
+    difficulty: 'Almost zero prep time',
+    effects: { autoStartDelayMult: 0.1 },
+    rewardBonus: 0.45,
+  },
+  everclear_core: {
+    id: 'everclear_core',
+    name: 'Everclear Core',
+    category: 'combat',
+    description: 'Unique Everclear rules — scaling pressure, boss contamination, and more',
+    difficulty: 'Transcendent rules',
+    effects: {
+      purePressure: true,
+      noSafeWave: true,
+      bossContamination: true,
+      economicBurn: true,
+      unstableBattlefield: true,
+      lastBreath: true,
+      earlySpecialists: true,
+    },
+    rewardBonus: 1.5,
+  },
 };
 
 export const CHALLENGE_PRESETS = {
@@ -336,6 +423,50 @@ export const CHALLENGE_PRESETS = {
       'scorched_land',
     ],
   },
+  everclear_pain: {
+    id: 'everclear_pain',
+    name: 'Everclear Pain',
+    traditionalName: 'Secret / Transcendent Difficulty',
+    description: 'Pain this pure should probably come with a warning label.',
+    secret: true,
+    confirmText: 'Everclear Pain is designed to be unfair-looking, not unfair.\nProceed anyway?',
+    firstClearReward: 'Pure Pain Legacy Artifact',
+    modifiers: [
+      'reinforced_6',
+      'boss_empowerment',
+      'double_boss',
+      'terminal_stakes',
+      'economic_nadir',
+      'zero_quarter',
+      'annihilation_assault',
+      'elite_forces',
+      'abyssal_horde',
+      'barren_earth',
+      'everclear_core',
+    ],
+  },
+};
+
+/** Built-in preset display order (includes hidden secrets as ??? until unlocked). */
+export const CHALLENGE_PRESET_ORDER = [
+  'normal', 'veteran', 'expert', 'nightmare', 'apocalypse', 'pain_lover', 'who_hurt_you', 'everclear_pain',
+];
+
+export const CHALLENGE_UNLOCK_REQUIREMENTS = {
+  everclear_pain: {
+    requiresPreset: 'who_hurt_you',
+    minWave: 90,
+    requireBossWave: true,
+    unlockMessage: 'Who Hurt You was only the beginning.',
+    clearWave: 90,
+  },
+};
+
+export const EVERCLEAR_CONFIRM = {
+  title: 'Everclear Pain',
+  body: 'Everclear Pain is designed to be unfair-looking, not unfair.\nProceed anyway?',
+  confirmLabel: 'Enter the Pain',
+  cancelLabel: 'I Have Reconsidered',
 };
 
 /** Resolve display labels for built-in or saved custom presets. */
@@ -348,14 +479,26 @@ export function formatFlavorQuote(description) {
   return `"${description}"`;
 }
 
-export function getPresetDisplay(presetId, customPresets = []) {
+export function getPresetDisplay(presetId, customPresets = [], unlockedSecrets = []) {
   const builtin = CHALLENGE_PRESETS[presetId];
   if (builtin) {
+    if (builtin.secret && !unlockedSecrets.includes(presetId)) {
+      return {
+        title: '???',
+        traditional: null,
+        description: '',
+        isBuiltin: true,
+        locked: true,
+        secret: true,
+      };
+    }
     return {
       title: builtin.name,
       traditional: formatTraditionalLabel(builtin.traditionalName),
       description: formatFlavorQuote(builtin.description),
       isBuiltin: true,
+      locked: false,
+      secret: !!builtin.secret,
     };
   }
 
@@ -384,6 +527,17 @@ export function getPresetDisplay(presetId, customPresets = []) {
     description: '',
     isBuiltin: false,
   };
+}
+
+export function getOrderedBuiltinPresets() {
+  return CHALLENGE_PRESET_ORDER
+    .map((id) => CHALLENGE_PRESETS[id])
+    .filter(Boolean);
+}
+
+export function isPresetUnlocked(preset, unlockedSecrets = []) {
+  if (!preset?.secret) return true;
+  return unlockedSecrets.includes(preset.id);
 }
 
 /** Group modifiers by category for the Custom Game Editor UI. */

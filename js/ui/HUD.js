@@ -300,6 +300,13 @@ export class HUD {
       this._renderResearchUpgrades();
     });
 
+    bus.on(Events.CHALLENGE_PRESET_UNLOCKED, ({ message }) => {
+      if (message && this.elements.challengeHint) {
+        this.elements.challengeHint.textContent = message;
+      }
+      this._renderChallengeSummary();
+    });
+
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
       this._renderChallengeSummary();
@@ -492,7 +499,7 @@ export class HUD {
     const cm = this.game.challengeManager;
     const state = cm.getState();
     const customPresets = this.game.prestigeManager.getCustomChallengePresets();
-    const preset = cm.getPresetDisplay(customPresets);
+    const preset = cm.getPresetDisplay(customPresets, this.game.prestigeManager.getUnlockedChallengePresets());
 
     const presetEl = this.elements.challengePresetName;
     presetEl.innerHTML = `

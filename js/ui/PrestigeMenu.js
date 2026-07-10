@@ -494,6 +494,7 @@ export class PrestigeMenu {
     html += '<div class="artifact-catalog"><h3>Artifact Collection</h3><div class="artifact-list">';
     for (const art of Object.values(LEGACY_ARTIFACTS)) {
       const owned = pm.data.artifacts.owned.includes(art.id);
+      if (art.hidden && !owned) continue;
       const ms = PRESTIGE_MILESTONES.find((m) => m.id === art.unlockMilestone);
       const msOk = !ms || pm.data.milestones.claimed.includes(art.unlockMilestone) || pm.isMilestoneComplete(ms);
       html += `

@@ -2,7 +2,7 @@ import {
   CHALLENGE_MODIFIERS,
   CHALLENGE_PRESETS,
   getPresetDisplay,
-} from '../config/challengeConfig.js?v=20260710l';
+} from '../config/challengeConfig.js?v=20260710m';
 import { Events } from './EventBus.js';
 
 /**
@@ -108,8 +108,8 @@ export class ChallengeManager {
     return this.getPresetDisplay(customPresets).title;
   }
 
-  getPresetDisplay(customPresets = []) {
-    return getPresetDisplay(this.presetId, customPresets);
+  getPresetDisplay(customPresets = [], unlockedSecrets = []) {
+    return getPresetDisplay(this.presetId, customPresets, unlockedSecrets);
   }
 
   getEffects() {
@@ -128,6 +128,13 @@ export class ChallengeManager {
       autoStartDelayMult: 1,
       eliteSpawnMult: 1,
       spawnSpecialEnemies: false,
+      purePressure: false,
+      noSafeWave: false,
+      bossContamination: false,
+      economicBurn: false,
+      unstableBattlefield: false,
+      lastBreath: false,
+      earlySpecialists: false,
     };
 
     for (const id of this.active) {
@@ -148,6 +155,13 @@ export class ChallengeManager {
       if (e.autoStartDelayMult) fx.autoStartDelayMult *= e.autoStartDelayMult;
       if (e.eliteSpawnMult) fx.eliteSpawnMult *= e.eliteSpawnMult;
       if (e.spawnSpecialEnemies) fx.spawnSpecialEnemies = true;
+      if (e.purePressure) fx.purePressure = true;
+      if (e.noSafeWave) fx.noSafeWave = true;
+      if (e.bossContamination) fx.bossContamination = true;
+      if (e.economicBurn) fx.economicBurn = true;
+      if (e.unstableBattlefield) fx.unstableBattlefield = true;
+      if (e.lastBreath) fx.lastBreath = true;
+      if (e.earlySpecialists) fx.earlySpecialists = true;
     }
 
     return fx;
@@ -177,7 +191,8 @@ export class ChallengeManager {
 
     const rounded = Math.round(score);
     let label = 'Relaxed';
-    if (rounded >= 110) label = 'Unhinged';
+    if (rounded >= 350) label = 'Transcendent';
+    else if (rounded >= 110) label = 'Unhinged';
     else if (rounded >= 90) label = 'Extreme';
     else if (rounded >= 65) label = 'Brutal';
     else if (rounded >= 40) label = 'Hard';
