@@ -192,6 +192,94 @@ export const TOWER_UPGRADE_PATHS = {
       effects: { burnDPSMult: 1.5, burnIgnoresArmor: 0.5 },
     },
   ],
+
+  thorn: [
+    {
+      id: 'barbed_tips',
+      name: 'Barbed Tips',
+      cost: 52,
+      description: '+8% armor pen; bolts pierce 1 foe',
+      effects: { armorPen: 0.08, pierce: 1 },
+    },
+    {
+      id: 'hunter_mark',
+      name: "Hunter's Mark",
+      cost: 78,
+      description: '+20% boss damage & +15% elite damage',
+      effects: { bossDamageMult: 1.2, eliteDamageMult: 1.15 },
+    },
+    {
+      id: 'heavy_draw',
+      name: 'Heavy Draw',
+      cost: 118,
+      description: '+50% bolt damage',
+      effects: { damageMult: 1.5 },
+    },
+    {
+      id: 'armor_rend',
+      name: 'Armor Rend',
+      cost: 178,
+      description: '+10% armor pen; pierce 2 more foes',
+      effects: { armorPen: 0.1, pierce: 2 },
+    },
+    {
+      id: 'thorn_capstone',
+      name: 'Bramble Lord',
+      cost: 270,
+      description: 'Capstone: +25% boss/elite damage, crits vs heavies',
+      effects: {
+        bossDamageMult: 1.25,
+        eliteDamageMult: 1.2,
+        critChance: 0.12,
+        critDamageMult: 0.5,
+        attackSpeedMult: 1.2,
+      },
+    },
+  ],
+
+  frost: [
+    {
+      id: 'deep_freeze',
+      name: 'Deep Freeze',
+      cost: 48,
+      description: '+48% slow strength & +0.8s slow duration',
+      effects: { slowPercent: 0.48, slowDuration: 2.8 },
+    },
+    {
+      id: 'winter_field',
+      name: 'Winter Field',
+      cost: 72,
+      description: '+35% aura slow & +20% range',
+      effects: { auraSlowMult: 1.35, rangeMult: 1.2 },
+    },
+    {
+      id: 'rime_coating',
+      name: 'Rime Coating',
+      cost: 110,
+      description: '+25% direct damage (still low DPS)',
+      effects: { damageMult: 1.25 },
+    },
+    {
+      id: 'permafrost',
+      name: 'Permafrost',
+      cost: 168,
+      description: '+12% aura slow; hits slow 52% for 3.2s',
+      effects: { auraSlowAdd: 0.12, slowPercent: 0.52, slowDuration: 3.2 },
+    },
+    {
+      id: 'shatter',
+      name: 'Shatter',
+      cost: 255,
+      description: 'Capstone: +58% slow, crits vs chilled foes',
+      effects: {
+        slowPercent: 0.58,
+        auraSlowAdd: 0.15,
+        critChance: 0.18,
+        critDamageMult: 0.75,
+        rangeMult: 1.15,
+      },
+    },
+  ],
 };
 
 /** Merge all purchased tier effects into combat stats. */
@@ -223,6 +311,14 @@ export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = nu
     burnIgnoresArmor: 0,
     knockbackPulse: 0,
     knockbackInterval: 0,
+    armorPen: base.armorPen || 0,
+    bossDamageMult: base.bossDamageMult || 1,
+    eliteDamageMult: base.eliteDamageMult || 1,
+    critChance: base.critChance || 0,
+    critDamageMult: base.critDamageMult || 1.5,
+    frostPulseSlow: 0,
+    frostPulseInterval: 0,
+    frostPulseDuration: 0,
     isAuraTower: towerDef.isAuraTower || false,
   };
 
@@ -236,7 +332,7 @@ export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = nu
     if (fx.attackSpeedMult) combat.attackSpeed *= fx.attackSpeedMult;
     if (fx.splashRadiusMult) combat.splashRadius *= fx.splashRadiusMult;
     if (fx.projectileCount) combat.projectileCount = fx.projectileCount;
-    if (fx.pierce) combat.pierce = fx.pierce;
+    if (fx.pierce) combat.pierce += fx.pierce;
     if (fx.chainCount) combat.chainCount = fx.chainCount;
     if (fx.chainDamageMult) combat.chainDamageMult = fx.chainDamageMult;
     if (fx.chainRange) combat.chainRange = fx.chainRange;
@@ -252,6 +348,14 @@ export function computeTowerStats(towerDef, upgradeTier, path, prestigeMods = nu
     if (fx.burnIgnoresArmor) combat.burnIgnoresArmor = fx.burnIgnoresArmor;
     if (fx.knockbackPulse) combat.knockbackPulse = fx.knockbackPulse;
     if (fx.knockbackInterval) combat.knockbackInterval = fx.knockbackInterval;
+    if (fx.armorPen) combat.armorPen += fx.armorPen;
+    if (fx.bossDamageMult) combat.bossDamageMult *= fx.bossDamageMult;
+    if (fx.eliteDamageMult) combat.eliteDamageMult *= fx.eliteDamageMult;
+    if (fx.critChance) combat.critChance += fx.critChance;
+    if (fx.critDamageMult) combat.critDamageMult += fx.critDamageMult;
+    if (fx.frostPulseSlow) combat.frostPulseSlow = Math.max(combat.frostPulseSlow, fx.frostPulseSlow);
+    if (fx.frostPulseInterval) combat.frostPulseInterval = fx.frostPulseInterval;
+    if (fx.frostPulseDuration) combat.frostPulseDuration = fx.frostPulseDuration;
   }
 
   if (prestigeMods?.towerDamageMult) {
@@ -282,6 +386,10 @@ export function applyExternalMods(combat, mods) {
   if (mods.splashRadiusMult) combat.splashRadius *= mods.splashRadiusMult;
   if (mods.splashFalloff !== undefined) combat.splashFalloff = mods.splashFalloff;
   if (mods.auraSlowMult) combat.auraSlow *= mods.auraSlowMult;
+  if (mods.auraSlowAdd) combat.auraSlow += mods.auraSlowAdd;
+  if (mods.auraSlow) combat.auraSlow = Math.max(combat.auraSlow, mods.auraSlow);
+  if (mods.slowPercent) combat.slowPercent = Math.max(combat.slowPercent, mods.slowPercent);
+  if (mods.slowDuration) combat.slowDuration = Math.max(combat.slowDuration, mods.slowDuration);
   if (mods.knockbackIntervalMult && combat.knockbackInterval > 0) {
     combat.knockbackInterval *= mods.knockbackIntervalMult;
   }
@@ -292,8 +400,12 @@ export function applyExternalMods(combat, mods) {
   if (mods.groundBurn) combat.groundBurn = mods.groundBurn;
   if (mods.burnDPS) combat.burnDPS = Math.max(combat.burnDPS, mods.burnDPS);
   if (mods.burnDuration) combat.burnDuration = Math.max(combat.burnDuration, mods.burnDuration);
-  if (mods.bossDamageMult) combat.bossDamageMult = mods.bossDamageMult;
-  if (mods.eliteDamageMult) combat.eliteDamageMult = mods.eliteDamageMult;
+  if (mods.pierce) combat.pierce = (combat.pierce || 0) + mods.pierce;
+  if (mods.bossDamageMult) combat.bossDamageMult = (combat.bossDamageMult ?? 1) * mods.bossDamageMult;
+  if (mods.eliteDamageMult) combat.eliteDamageMult = (combat.eliteDamageMult ?? 1) * mods.eliteDamageMult;
+  if (mods.frostPulseSlow) combat.frostPulseSlow = Math.max(combat.frostPulseSlow ?? 0, mods.frostPulseSlow);
+  if (mods.frostPulseInterval) combat.frostPulseInterval = mods.frostPulseInterval;
+  if (mods.frostPulseDuration) combat.frostPulseDuration = mods.frostPulseDuration;
 
   return finalizeCombatStats(combat);
 }
@@ -321,5 +433,10 @@ export function getTowerAbilityLabels(stats) {
   if (stats.knockbackPulse > 0) labels.push('Knockback pulse');
   if (stats.burnIgnoresArmor > 0) labels.push('Burn pierces armor');
   if (stats.burnSpread > 0) labels.push('Burn spreads');
+  if (stats.armorPen > 0) labels.push(`Armor pen ${Math.round(stats.armorPen * 100)}%`);
+  if (stats.bossDamageMult > 1) labels.push(`Boss dmg ×${stats.bossDamageMult.toFixed(2)}`);
+  if (stats.eliteDamageMult > 1) labels.push(`Elite dmg ×${stats.eliteDamageMult.toFixed(2)}`);
+  if (stats.critChance > 0) labels.push(`Crit ${Math.round(stats.critChance * 100)}%`);
+  if (stats.frostPulseSlow > 0) labels.push('Frost pulse');
   return labels;
 }

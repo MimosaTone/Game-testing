@@ -47,12 +47,14 @@ export class CombatSystem {
   _updateAuras(dt, enemies) {
     for (const tower of this.towers) {
       const stats = tower.getStats();
-      if (stats.auraSlow <= 0 && stats.knockbackPulse <= 0) continue;
+      if (stats.auraSlow <= 0 && stats.knockbackPulse <= 0 && stats.frostPulseSlow <= 0) continue;
 
       tower.knockbackCooldown = (tower.knockbackCooldown || 0) - dt;
+      tower.frostPulseCooldown = (tower.frostPulseCooldown || 0) - dt;
       const pos = tower.getPixelPosition(GAME_CONFIG.tileSize);
       const rangePx = stats.range * GAME_CONFIG.tileSize;
       let knocked = false;
+      let pulsed = false;
 
       for (const enemy of enemies) {
         if (!enemy.alive) continue;
@@ -69,10 +71,42 @@ export class CombatSystem {
         }
       }
 
+      if (
+        stats.frostPulseSlow > 0
+        && stats.frostPulseInterval > 0
+        && tower.frostPulseCooldown <= 0
+      ) {
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const dist = Math.hypot(enemy.x - pos.x, enemy.y - pos.y);
+          if (dist > rangePx) continue;
+
+          let slowAmt = stats.frostPulseSlow;
+          let dur = stats.frostPulseDuration || 2.5;
+          if (enemy.isBoss) {
+            slowAmt *= 0.45;
+            dur *= 0.5;
+          } else if (this._isEliteEnemy(enemy)) {
+            slowAmt *= 0.65;
+            dur *= 0.7;
+          }
+          enemy.applySlow(slowAmt, dur);
+          pulsed = true;
+        }
+      }
+
       if (knocked && stats.knockbackInterval > 0) {
         tower.knockbackCooldown = stats.knockbackInterval;
       }
+      if (pulsed && stats.frostPulseInterval > 0) {
+        tower.frostPulseCooldown = stats.frostPulseInterval;
+      }
     }
+  }
+
+  _isEliteEnemy(enemy) {
+    if (enemy.isLegendary || enemy.isAncient) return true;
+    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan', 'ancient_rime', 'legendary_titan'].includes(enemy.typeId);
   }
 
   _updateTower(tower, dt, enemies) {

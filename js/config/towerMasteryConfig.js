@@ -42,6 +42,30 @@ export const MASTER_UPGRADES = {
     description: 'Burn spreads to 3 nearby foes and ignores all armor.',
     effects: { burnSpread: 1, burnSpreadCount: 3, burnIgnoresArmor: 1 },
   },
+  thorn: {
+    name: 'Impaling Volley',
+    description: 'Every 5th shot pierces 6 foes with greatly increased boss and elite damage.',
+    effects: {
+      bonusShotInterval: 5,
+      pierce: 6,
+      bossDamageMult: 2.0,
+      eliteDamageMult: 1.85,
+      damageMult: 1.2,
+    },
+  },
+  frost: {
+    name: 'Absolute Zero',
+    description: 'Periodic frost pulse heavily slows nearby foes; bosses and elites resist.',
+    effects: {
+      frostPulseSlow: 0.72,
+      frostPulseInterval: 9,
+      frostPulseDuration: 2.8,
+      auraSlowMult: 1.25,
+      slowPercent: 0.62,
+      slowDuration: 3.5,
+      rangeMult: 1.2,
+    },
+  },
 };
 
 export function getMasteryLevel(xp) {

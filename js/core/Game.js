@@ -109,10 +109,13 @@ export class Game {
 
   isTowerUnlocked(typeId) {
     const def = TOWER_TYPES[typeId];
-    if (!def?.unlockWave) return true;
+    if (!def) return false;
     const wave = this.waveManager.waveNumber;
-    if (typeId === 'gust' && this.researchManager.hasMetaUnlock('gust_from_wave_1')) return true;
-    if (typeId === 'ember' && this.researchManager.hasMetaUnlock('ember_early')) return true;
+    if (def.unlockFlag && this.researchManager.hasMetaUnlock(def.unlockFlag)) {
+      if (def.unlockFlagBypassWave) return true;
+      return wave >= (def.unlockFlagMinWave ?? 1);
+    }
+    if (def.unlockWave == null) return true;
     return wave >= def.unlockWave;
   }
 
@@ -267,7 +270,7 @@ export class Game {
       );
       const oc = this.investmentManager.getOverclockMods(tower.id);
       let leg = this.investmentManager.getLegendaryMods(tower);
-      if (this.investmentManager.getPassiveMods().magicTowerBonus && tower.typeId === 'prism' && !leg.chainCount) {
+      if (tower.definition.magicTowerBonus && this.investmentManager.getPassiveMods().magicTowerBonus && !leg.chainCount) {
         leg = { ...leg, chainCount: 2 };
       }
       tower.investmentMods = this._mergeTowerInvestmentMods(oc, leg);

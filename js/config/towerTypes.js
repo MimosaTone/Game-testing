@@ -5,6 +5,7 @@ export const TOWER_TYPES = {
     name: 'Needle Post',
     description: 'Rapid shots — reliable early defense.',
     cost: 40,
+    category: 'military',
     color: '#3d9970',
     icon: '△',
     baseStats: {
@@ -21,6 +22,7 @@ export const TOWER_TYPES = {
     name: 'Boulder Pit',
     description: 'Slow, heavy shots that splash nearby foes.',
     cost: 70,
+    category: 'military',
     color: '#c0392b',
     icon: '◆',
     baseStats: {
@@ -38,6 +40,8 @@ export const TOWER_TYPES = {
     name: 'Prism Spire',
     description: 'Long reach and steady arcane damage.',
     cost: 55,
+    category: 'magic',
+    magicTowerBonus: true,
     color: '#6c5ce7',
     icon: '◇',
     baseStats: {
@@ -55,6 +59,9 @@ export const TOWER_TYPES = {
     description: 'Slows foes in range; upgrades add knockback.',
     cost: 58,
     unlockWave: 15,
+    unlockFlag: 'gust_from_wave_1',
+    unlockFlagMinWave: 1,
+    category: 'magic',
     color: '#4db6ac',
     icon: '◎',
     baseStats: {
@@ -74,6 +81,8 @@ export const TOWER_TYPES = {
     description: 'Burns enemies over time — strong vs armored foes.',
     cost: 62,
     unlockWave: 25,
+    unlockFlag: 'ember_early',
+    unlockFlagBypassWave: true,
     color: '#e65100',
     icon: '✧',
     baseStats: {
@@ -85,5 +94,48 @@ export const TOWER_TYPES = {
     },
     projectileColor: '#ff7043',
     projectileSpeed: 10,
+  },
+
+  thorn: {
+    id: 'thorn',
+    name: 'Thorn Launcher',
+    description: 'Armor-piercing bolts — excels vs elites and bosses, weak vs swarms.',
+    cost: 76,
+    unlockWave: 18,
+    category: 'military',
+    color: '#558b2f',
+    icon: '✦',
+    baseStats: {
+      damage: 24,
+      range: 4.2,
+      attackSpeed: 0.38,
+      armorPen: 0.28,
+      bossDamageMult: 1.4,
+      eliteDamageMult: 1.3,
+    },
+    projectileColor: '#7cb342',
+    projectileSpeed: 11,
+  },
+
+  frost: {
+    id: 'frost',
+    name: 'Frost Spire',
+    description: 'Strong chill aura and slowing shots — low damage, elite crowd control.',
+    cost: 58,
+    unlockWave: 20,
+    category: 'magic',
+    color: '#29b6f6',
+    icon: '❄',
+    baseStats: {
+      damage: 5,
+      range: 3.3,
+      attackSpeed: 0.52,
+      auraSlow: 0.32,
+      slowPercent: 0.38,
+      slowDuration: 2.2,
+    },
+    projectileColor: '#81d4fa',
+    projectileSpeed: 9,
+    isAuraTower: true,
   },
 };

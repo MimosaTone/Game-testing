@@ -35,14 +35,14 @@ export const BUILD_CATEGORIES = {
     name: 'Magic',
     icon: '✧',
     description: 'Arcane towers and research',
-    items: ['prism', 'ember', 'gust', 'research_lab', 'crystal_extractor'],
+    items: ['prism', 'ember', 'gust', 'frost', 'research_lab', 'crystal_extractor'],
   },
   military: {
     id: 'military',
     name: 'Military',
     icon: '◆',
     description: 'Heavy offense and fortification',
-    items: ['needle', 'boulder', 'forge', 'repair_station'],
+    items: ['needle', 'boulder', 'thorn', 'forge', 'repair_station'],
   },
 };
 
