@@ -101,10 +101,10 @@ export class Game {
 
   getChallengeRewardMult() {
     const base = this.challengeManager.getRewardMultiplier();
-    const prestige = this.prestigeManager.getModifiers().challengeRewardMult ?? 1;
+    const prestige = this.prestigeManager.getModifiers();
     const research = this.researchManager.getModifiers().challengeRewardMult ?? 1;
-    const tier = this.getWorldTierRewardMult();
-    return base * prestige * research * tier;
+    const tier = this.getWorldTierRewardMult() * (prestige.worldTierRewardMult ?? 1);
+    return base * (prestige.challengeRewardMult ?? 1) * research * tier;
   }
 
   isTowerUnlocked(typeId) {
@@ -147,8 +147,11 @@ export class Game {
   applyResearchStructureMods(structure) {
     if (!structure || structure.destroyed) return;
     const rm = this.researchManager.getModifiers();
-    let healthMult = rm.structureHealthMult ?? 1;
-    if (structure.type === 'tower') healthMult *= rm.towerHealthMult ?? 1;
+    const pm = this.prestigeManager.getModifiers();
+    let healthMult = (rm.structureHealthMult ?? 1) * (pm.structureHealthMult ?? 1);
+    if (structure.type === 'tower') {
+      healthMult *= (rm.towerHealthMult ?? 1) * (pm.towerHealthMult ?? 1);
+    }
 
     if (structure._baseMaxHealth === undefined) {
       structure._baseMaxHealth = Math.max(1, Math.round(structure.maxHealth / healthMult));
@@ -202,6 +205,7 @@ export class Game {
       attackSpeedMult: mods.attackSpeedMult ?? 1,
       rangeMult: mods.rangeMult ?? 1,
       goldEarnedMult: mods.goldEarnedMult ?? 1,
+      killGoldMult: mods.killGoldMult ?? 1,
       crystalMult: mods.crystalMult ?? 1,
       researchMult: mods.researchMult ?? 1,
       bossRewardMult: mods.bossRewardMult ?? 1,
@@ -261,6 +265,7 @@ export class Game {
 
   _applyPrestigeToTowers() {
     const mods = this.prestigeManager.getModifiers();
+    this.structureCombat.setDamageTakenMult(mods.structureDamageTakenMult ?? 1);
     for (const tower of this.placementSystem.towers) {
       tower.prestigeMods = mods;
       tower.supportMods = this.supportEffects.getTowerMods(
@@ -687,12 +692,14 @@ export class Game {
     this._refreshSupportEffects();
     this.investmentManager.onWaveComplete(this);
     const researchMods = this.researchManager.getModifiers();
+    const prestigeMods = this.prestigeManager.getModifiers();
     if (researchMods.passiveGoldPerWave > 0) {
       this.economy.earn(researchMods.passiveGoldPerWave, { skipMultiplier: true });
     }
-    if (researchMods.passiveRepairPerWave > 0) {
+    const repairBonus = (researchMods.passiveRepairPerWave ?? 0) + (prestigeMods.passiveRepairPerWave ?? 0);
+    if (repairBonus > 0) {
       for (const s of [...this.placementSystem.towers, ...this.placementSystem.farms, ...this.placementSystem.supports]) {
-        if (!s.destroyed) s.health = Math.min(s.maxHealth, s.health + researchMods.passiveRepairPerWave);
+        if (!s.destroyed) s.health = Math.min(s.maxHealth, s.health + repairBonus);
       }
     }
     this.prestigeManager.onRunWaveComplete();

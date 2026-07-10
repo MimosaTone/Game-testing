@@ -124,6 +124,7 @@ export class SupportEffectManager {
       this.global.attackSpeedMult *= prestigeMods.attackSpeedMult ?? 1;
       this.global.farmIncomeMult *= prestigeMods.farmIncomeMult ?? 1;
       this.global.goldEarnedMult *= prestigeMods.goldEarnedMult ?? 1;
+      this.global.killGoldMult *= prestigeMods.killGoldMult ?? 1;
       this.global.bossRewardMult *= prestigeMods.bossRewardMult ?? 1;
       this.global.crystalMult *= prestigeMods.crystalMult ?? 1;
       this.global.researchMult *= prestigeMods.researchMult ?? 1;

@@ -73,12 +73,32 @@ export class Tower {
     );
 
     const masteryMods = getMasteryModifiers(this.masteryLevel, this.masterUnlocked, this.typeId);
+    const prestigeCombat = this._getPrestigeCombatMods();
     const combined = {
       ...masteryMods,
+      ...prestigeCombat,
       ...(this.supportMods || {}),
       ...(this.investmentMods || {}),
     };
     return applyExternalMods(base, combined);
+  }
+
+  _getPrestigeCombatMods() {
+    const p = this.prestigeMods;
+    if (!p) return {};
+    const out = {};
+    const keys = [
+      'armorPen', 'eliteDamageMult', 'splashRadiusMult', 'slowDurationMult',
+      'burnDPSAdd', 'bossDamageMult', 'damageMult', 'attackSpeedMult', 'rangeMult',
+    ];
+    for (const key of keys) {
+      const val = p[key];
+      if (val === undefined) continue;
+      if (key.includes('Mult') && val === 1) continue;
+      if (!key.includes('Mult') && val === 0) continue;
+      out[key] = val;
+    }
+    return out;
   }
 
   getAbilityLabels() {

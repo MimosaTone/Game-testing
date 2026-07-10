@@ -199,6 +199,7 @@ export class PrestigeMenu {
           this._saveMeta();
           this.game._refreshSupportEffects();
           this.game._applyPrestigeToTowers();
+          this.game._applyResearchToAllStructures();
           this.render();
         }
         break;
@@ -385,6 +386,8 @@ export class PrestigeMenu {
             </div>
             <p class="node-desc">${node.description}</p>
             ${node.prerequisites.length ? `<p class="node-prereq">Requires: ${node.prerequisites.map((p) => PRESTIGE_TREE_NODES[p]?.name || p).join(', ')}</p>` : ''}
+            ${node.requiresMaxed?.length ? `<p class="node-prereq">Requires maxed: ${node.requiresMaxed.map((p) => PRESTIGE_TREE_NODES[p]?.name || p).join(', ')}</p>` : ''}
+            ${node.unlockPrestigeLevel ? `<p class="node-prereq">Unlocks at Prestige Level ${node.unlockPrestigeLevel}</p>` : ''}
             ${state !== 'maxed' && state !== 'locked'
               ? `<button type="button" class="node-buy-btn" data-prestige-action="buy-tree" data-id="${node.id}"
                   ${canBuy ? '' : 'disabled'}>${node.cost} ✿</button>`
@@ -394,7 +397,7 @@ export class PrestigeMenu {
       html += '</div></div>';
     }
     html += '</div></div>';
-    html += `<p class="hint-text prestige-tree-hint">Scroll horizontally to browse all five branches. Tokens: ✿ ${pm.shards}</p>`;
+    html += `<p class="hint-text prestige-tree-hint">Scroll horizontally to browse all ${PRESTIGE_BRANCH_ORDER.length} branches. Tokens: ✿ ${pm.shards}</p>`;
     this.bodyEl.innerHTML = html;
   }
 

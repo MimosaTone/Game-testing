@@ -191,8 +191,7 @@ export class PrestigeManager {
     const rank = this.getTreeRank(nodeId);
     if (rank >= def.maxRank) return 'maxed';
     if (rank > 0) return 'owned';
-    const prereqsMet = def.prerequisites.every((p) => this.getTreeRank(p) >= 1);
-    if (!prereqsMet) return 'locked';
+    if (!this._areNodeRequirementsMet(def)) return 'locked';
     if (this.data.shards >= def.cost) return 'available';
     return 'unaffordable';
   }
@@ -201,8 +200,24 @@ export class PrestigeManager {
     const def = PRESTIGE_TREE_NODES[nodeId];
     if (!def) return false;
     if (this.getTreeRank(nodeId) >= def.maxRank) return false;
-    if (!def.prerequisites.every((p) => this.getTreeRank(p) >= 1)) return false;
+    if (!this._areNodeRequirementsMet(def)) return false;
     return this.data.shards >= def.cost;
+  }
+
+  _areNodeRequirementsMet(def) {
+    if (def.unlockPrestigeLevel && this.prestigeLevel < def.unlockPrestigeLevel) {
+      return false;
+    }
+    if (!def.prerequisites.every((p) => this.getTreeRank(p) >= 1)) {
+      return false;
+    }
+    if (def.requiresMaxed?.length) {
+      return def.requiresMaxed.every((p) => {
+        const prereq = PRESTIGE_TREE_NODES[p];
+        return prereq && this.getTreeRank(p) >= prereq.maxRank;
+      });
+    }
+    return true;
   }
 
   purchaseTreeNode(nodeId) {
@@ -254,6 +269,16 @@ export class PrestigeManager {
       prestigeBossShardMult: 1,
       wonderCostMult: 1,
       bonusRpPerWave: 0,
+      armorPen: 0,
+      eliteDamageMult: 1,
+      splashRadiusMult: 1,
+      slowDurationMult: 1,
+      burnDPSAdd: 0,
+      killGoldMult: 1,
+      towerHealthMult: 1,
+      passiveRepairPerWave: 0,
+      structureDamageTakenMult: 1,
+      worldTierRewardMult: 1,
     };
 
     for (const [nodeId, rank] of Object.entries(this.data.tree)) {

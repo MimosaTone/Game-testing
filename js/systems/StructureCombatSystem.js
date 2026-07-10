@@ -10,6 +10,11 @@ export class StructureCombatSystem {
     this.eventBus = eventBus;
     this.placementSystem = null;
     this.supportEffects = null;
+    this.damageTakenMult = 1;
+  }
+
+  setDamageTakenMult(mult) {
+    this.damageTakenMult = Math.max(0.5, mult ?? 1);
   }
 
   setPlacementSystem(ps) {
@@ -130,7 +135,8 @@ export class StructureCombatSystem {
   }
 
   _damageStructure(structure, damage) {
-    const destroyed = damageStructure(structure, damage);
+    const adjusted = damage * this.damageTakenMult;
+    const destroyed = damageStructure(structure, adjusted);
     this.eventBus.emit(Events.STRUCTURE_DAMAGED, structure);
     if (destroyed) {
       this._handleDestroyed(structure);
