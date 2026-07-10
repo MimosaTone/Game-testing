@@ -407,6 +407,7 @@ export class Game {
     });
 
     this.eventBus.on(Events.CHALLENGE_CHANGED, () => {
+      this._clearAutoStartTimer();
       this._applyChallengeEffects();
       this._refreshSupportEffects();
       if (this.phase === Phase.PLANNING && this.waveManager.waveNumber === 0) {

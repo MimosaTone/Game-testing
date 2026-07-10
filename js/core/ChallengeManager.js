@@ -1,4 +1,4 @@
-import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710f';
+import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js?v=20260710g';
 import { Events } from './EventBus.js';
 
 /**
@@ -15,7 +15,7 @@ export class ChallengeManager {
   loadFromRun(data) {
     this.active = new Set(data?.active ?? []);
     this.presetId = data?.presetId ?? 'custom';
-    this.locked = !!data?.locked;
+    this.locked = false;
     if (this.active.size === 0) this.presetId = 'normal';
     else if (!this.presetId) this.presetId = 'custom';
   }
@@ -24,7 +24,7 @@ export class ChallengeManager {
     return {
       active: [...this.active],
       presetId: this.presetId,
-      locked: this.locked,
+      locked: false,
     };
   }
 
@@ -36,15 +36,15 @@ export class ChallengeManager {
   }
 
   lockForRun() {
-    if (this.active.size > 0) this.locked = true;
+    // Legacy no-op — challenges stay editable for the whole run.
   }
 
-  canEdit(phasePlanning = true) {
-    return phasePlanning && !this.locked;
+  canEdit(gamePhase = 'planning') {
+    return gamePhase !== 'game_over';
   }
 
-  applyPreset(presetId, phasePlanning = true) {
-    if (!this.canEdit(phasePlanning)) return false;
+  applyPreset(presetId, gamePhase = 'planning') {
+    if (!this.canEdit(gamePhase)) return false;
     const preset = CHALLENGE_PRESETS[presetId];
     if (!preset) return false;
     this.active.clear();
@@ -54,8 +54,8 @@ export class ChallengeManager {
     return true;
   }
 
-  toggleModifier(id, phasePlanning = true) {
-    if (!this.canEdit(phasePlanning)) return false;
+  toggleModifier(id, gamePhase = 'planning') {
+    if (!this.canEdit(gamePhase)) return false;
     const mod = CHALLENGE_MODIFIERS[id];
     if (!mod) return false;
 

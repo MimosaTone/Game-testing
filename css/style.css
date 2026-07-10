@@ -309,6 +309,42 @@ body {
   margin-bottom: 8px;
 }
 
+.challenge-preset-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.challenge-preset-select-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.challenge-preset-select {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid rgba(120, 140, 160, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.challenge-preset-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.challenge-preset-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .challenge-preset-btn {
   padding: 5px 10px;
   font-size: 11px;

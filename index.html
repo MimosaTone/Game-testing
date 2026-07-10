@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meadow Defense</title>
-  <link rel="stylesheet" href="css/style.css?v=20260710c">
+  <link rel="stylesheet" href="css/style.css?v=20260710g">
 </head>
 <body>
   <div id="game-container">
@@ -89,6 +89,10 @@
         <section class="panel-section">
           <h2 class="section-title">Challenges</h2>
           <p class="hint-text" id="challenge-hint">Optional modifiers for bonus rewards</p>
+          <label class="challenge-preset-select-wrap" for="challenge-preset-select">
+            <span class="challenge-preset-select-label">Difficulty preset</span>
+            <select id="challenge-preset-select" class="challenge-preset-select"></select>
+          </label>
           <div id="challenge-presets" class="challenge-presets"></div>
           <div id="challenge-active-list" class="challenge-active-list"></div>
           <div id="challenge-reward" class="challenge-reward-badge">Total Bonus: 1.0×</div>
@@ -214,6 +218,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=20260710f"></script>
+  <script type="module" src="js/main.js?v=20260710g"></script>
 </body>
 </html>
