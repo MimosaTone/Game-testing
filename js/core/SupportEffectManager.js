@@ -41,7 +41,7 @@ export class SupportEffectManager {
     };
   }
 
-  recalculate(supports, researchMods, investMods) {
+  recalculate(supports, researchMods, investMods, prestigeMods) {
     this.global = this._emptyGlobal();
     this._nearbyCache.clear();
 
@@ -93,6 +93,17 @@ export class SupportEffectManager {
       this.global.researchMult *= investMods.researchMult ?? 1;
       this.global.critChance += investMods.critChance ?? 0;
       this.global.chainCountAdd += investMods.chainCountAdd ?? 0;
+    }
+
+    if (prestigeMods) {
+      this.global.damageMult *= prestigeMods.damageMult ?? 1;
+      this.global.rangeMult *= prestigeMods.rangeMult ?? 1;
+      this.global.attackSpeedMult *= prestigeMods.attackSpeedMult ?? 1;
+      this.global.farmIncomeMult *= prestigeMods.farmIncomeMult ?? 1;
+      this.global.goldEarnedMult *= prestigeMods.goldEarnedMult ?? 1;
+      this.global.bossRewardMult *= prestigeMods.bossRewardMult ?? 1;
+      this.global.crystalMult *= prestigeMods.crystalMult ?? 1;
+      this.global.researchMult *= prestigeMods.researchMult ?? 1;
     }
   }
 

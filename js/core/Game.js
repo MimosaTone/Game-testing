@@ -61,6 +61,8 @@ export class Game {
     this.hoveredCell = null;
     this.lastTime = 0;
     this.running = false;
+    this.menuPaused = false;
+    this.prestigeMenu = null;
     this.pendingHarvestEffects = [];
     this.autoStartTimer = null;
     this.wavesSinceRepair = 0;
@@ -78,7 +80,9 @@ export class Game {
   }
 
   getChallengeRewardMult() {
-    return this.challengeManager.getRewardMultiplier();
+    const base = this.challengeManager.getRewardMultiplier();
+    const prestige = this.prestigeManager.getModifiers().challengeRewardMult ?? 1;
+    return base * prestige;
   }
 
   _startingGold() {
@@ -93,10 +97,31 @@ export class Game {
     return Math.max(5, base - reduction);
   }
 
+  setMenuPaused(paused) {
+    this.menuPaused = paused;
+    if (paused) this._clearAutoStartTimer();
+  }
+
+  _getPrestigeRunMods() {
+    const mods = this.prestigeManager.getModifiers();
+    return {
+      farmIncomeMult: mods.farmIncomeMult ?? 1,
+      damageMult: mods.damageMult ?? 1,
+      attackSpeedMult: mods.attackSpeedMult ?? 1,
+      rangeMult: mods.rangeMult ?? 1,
+      goldEarnedMult: mods.goldEarnedMult ?? 1,
+      crystalMult: mods.crystalMult ?? 1,
+      researchMult: mods.researchMult ?? 1,
+      bossRewardMult: mods.bossRewardMult ?? 1,
+      challengeRewardMult: mods.challengeRewardMult ?? 1,
+    };
+  }
+
   _refreshSupportEffects() {
     const researchMods = this.researchManager.getModifiers();
     const investMods = this.investmentManager.getCombinedMods();
-    this.supportEffects.recalculate(this.placementSystem.supports, researchMods, investMods);
+    const prestigeMods = this._getPrestigeRunMods();
+    this.supportEffects.recalculate(this.placementSystem.supports, researchMods, investMods, prestigeMods);
     this.economy.setSupportsForBank(this.placementSystem.supports);
 
     for (const tower of this.placementSystem.towers) {
@@ -190,6 +215,9 @@ export class Game {
       const rewardMult = this.getChallengeRewardMult();
       const earned = this.economy.earn(enemy.goldReward, { isBoss, rewardMult });
       this.economy.trackKillGold(earned);
+      this.prestigeManager.trackLifetime('enemiesKilled');
+      this.prestigeManager.trackLifetime('goldEarned', earned);
+      if (isBoss) this.prestigeManager.trackLifetime('bossesDefeated');
       this.waveManager.removeEnemy(enemy);
 
       if (killerTower && !killerTower.destroyed) {
@@ -215,12 +243,14 @@ export class Game {
     });
 
     this.eventBus.on(Events.TOWER_PLACED, () => {
+      this.prestigeManager.trackLifetime('towersBuilt');
       this._applyPrestigeToTowers();
       this.combatSystem.setTowers(this.placementSystem.towers);
       this.saveGame();
     });
 
     this.eventBus.on(Events.FARM_PLACED, () => {
+      this.prestigeManager.trackLifetime('farmsBuilt');
       this._refreshSupportEffects();
       this.saveGame();
     });
@@ -455,7 +485,7 @@ export class Game {
   }
 
   startWave() {
-    if (this.phase !== Phase.PLANNING) return;
+    if (this.phase !== Phase.PLANNING || this.menuPaused) return;
     this._clearAutoStartTimer();
     this.investmentManager.onWaveStart(this);
     this.waveManager.startNextWave();
@@ -469,6 +499,8 @@ export class Game {
 
     const rawDt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
+    if (this.menuPaused) return;
+
     const dt = this.speedController.applyToDt(rawDt);
 
     for (const farm of this.placementSystem.farms) {
@@ -520,6 +552,7 @@ export class Game {
     }
     if (crystalGain > 0) {
       this.economy.addCrystals(crystalGain);
+      this.prestigeManager.trackLifetime('crystalsEarned', crystalGain);
     }
 
     this.structureCombat.processRepairs(1, false);
@@ -539,11 +572,14 @@ export class Game {
     this.economy.setWaveNumber(wave);
     this._refreshSupportEffects();
     this.investmentManager.onWaveComplete(this);
+    this.prestigeManager.onRunWaveComplete();
+    this.prestigeManager.trackLifetime('wavesCleared');
 
     const rpMult = this.supportEffects.global.researchMult ?? 1;
     const rpGain = Math.round(this.supportEffects.getRpPerWave(this.placementSystem.supports) * rewardMult * rpMult);
     if (rpGain > 0) {
       this.researchManager.addPoints(rpGain);
+      this.prestigeManager.trackLifetime('researchEarned', rpGain);
     }
 
     this.saveGame();

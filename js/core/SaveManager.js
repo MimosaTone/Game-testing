@@ -64,10 +64,30 @@ function migrateV3ToV4(data) {
   return data;
 }
 
+function migrateV4ToV5(data) {
+  if (data.version !== 4) return data;
+  if (data.meta) {
+    data.meta.tree = data.meta.tree || {};
+    for (const [id, level] of Object.entries(data.meta.upgrades || {})) {
+      if (!data.meta.tree[id]) data.meta.tree[id] = level;
+    }
+    data.meta.perks = data.meta.perks || [];
+    data.meta.milestones = data.meta.milestones || { claimed: [] };
+    data.meta.artifacts = data.meta.artifacts || { owned: [], equipped: [null, null, null] };
+    data.meta.shop = data.meta.shop || { purchased: [], activeTheme: null };
+    data.meta.worldLegacy = data.meta.worldLegacy || { ranks: {} };
+    data.meta.lifetime = data.meta.lifetime || {};
+    data.meta.worldEvents = data.meta.worldEvents || { unlocked: [], active: null, wavesLeft: 0 };
+  }
+  data.version = 5;
+  return data;
+}
+
 function migrateSave(data) {
   if (data.version === 1) data = migrateV1ToV2(data);
   if (data.version === 2) data = migrateV2ToV3(data);
   if (data.version === 3) data = migrateV3ToV4(data);
+  if (data.version === 4) data = migrateV4ToV5(data);
   return data;
 }
 
@@ -220,6 +240,7 @@ export class SaveManager {
       upgrades: { ...pm.data.upgrades },
       totalPrestiges: pm.data.totalPrestiges,
       bestWave: pm.data.bestWave,
+      ...pm.toMetaExtras(),
       settings: {
         autoStartWaves: pm.autoStartWaves,
         preferredSpeed: game.speedController.preferredSpeed,

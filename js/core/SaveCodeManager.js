@@ -12,15 +12,48 @@ function decodeBase64Utf8(encoded) {
 }
 
 function normalizeMeta(meta) {
-  return {
-    shards: meta?.shards ?? 0,
-    upgrades: { ...(meta?.upgrades ?? {}) },
-    totalPrestiges: meta?.totalPrestiges ?? 0,
-    bestWave: meta?.bestWave ?? 0,
+  const base = {
+    shards: 0,
+    upgrades: {},
+    totalPrestiges: 0,
+    bestWave: 0,
+    tree: {},
+    perks: [],
+    milestones: { claimed: [] },
+    artifacts: { owned: [], equipped: [null, null, null] },
+    shop: { purchased: [], activeTheme: null },
+    worldLegacy: { ranks: {} },
+    lifetime: {},
+    worldEvents: { unlocked: [], active: null, wavesLeft: 0 },
     settings: {
-      autoStartWaves: meta?.settings?.autoStartWaves ?? false,
-      preferredSpeed: meta?.settings?.preferredSpeed ?? 1,
+      autoStartWaves: false,
+      preferredSpeed: 1,
     },
+  };
+  if (!meta) return base;
+  return {
+    ...base,
+    ...meta,
+    upgrades: { ...base.upgrades, ...(meta.upgrades ?? {}) },
+    tree: { ...base.tree, ...(meta.tree ?? {}) },
+    perks: [...(meta.perks ?? [])],
+    milestones: { claimed: [...(meta.milestones?.claimed ?? [])] },
+    artifacts: {
+      owned: [...(meta.artifacts?.owned ?? [])],
+      equipped: [...(meta.artifacts?.equipped ?? [null, null, null])],
+    },
+    shop: {
+      purchased: [...(meta.shop?.purchased ?? [])],
+      activeTheme: meta.shop?.activeTheme ?? null,
+    },
+    worldLegacy: { ranks: { ...(meta.worldLegacy?.ranks ?? {}) } },
+    lifetime: { ...(meta.lifetime ?? {}) },
+    worldEvents: {
+      unlocked: [...(meta.worldEvents?.unlocked ?? [])],
+      active: meta.worldEvents?.active ?? null,
+      wavesLeft: meta.worldEvents?.wavesLeft ?? 0,
+    },
+    settings: { ...base.settings, ...(meta.settings ?? {}) },
   };
 }
 

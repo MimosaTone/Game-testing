@@ -1340,6 +1340,442 @@ body {
   background: rgba(212, 138, 255, 0.08);
 }
 
+/* ── Prestige HUD button ── */
+.prestige-menu-open-btn {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 138, 255, 0.5);
+  background: linear-gradient(135deg, rgba(212, 138, 255, 0.2), rgba(240, 192, 64, 0.15));
+  color: var(--shard);
+  cursor: pointer;
+}
+
+.prestige-menu-open-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* ── Full-screen Prestige Menu ── */
+.prestige-menu-overlay,
+.prestige-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(8, 12, 20, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.prestige-menu-overlay.hidden,
+.prestige-confirm-overlay.hidden {
+  display: none;
+}
+
+.prestige-menu {
+  width: min(1100px, 100%);
+  max-height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #1a2230 0%, #121820 100%);
+  border: 1px solid rgba(212, 138, 255, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.prestige-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(120, 140, 160, 0.2);
+  flex-shrink: 0;
+}
+
+.prestige-menu-title-wrap h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--shard);
+}
+
+.prestige-menu-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.prestige-menu-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.3);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.prestige-menu-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(120, 140, 160, 0.15);
+}
+
+.prestige-menu-tab {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.prestige-menu-tab.active {
+  color: var(--shard);
+  border-color: rgba(212, 138, 255, 0.4);
+  background: rgba(212, 138, 255, 0.12);
+}
+
+.prestige-menu-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 18px;
+  min-height: 0;
+}
+
+.prestige-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.prestige-stat-card {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(120, 140, 160, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prestige-stat-card .label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.prestige-stat-card .value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.prestige-overview-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.prestige-info-panel {
+  padding: 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(120, 140, 160, 0.12);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.prestige-info-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--gold);
+}
+
+.prestige-overview-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.prestige-action-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(120, 140, 160, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.prestige-action-btn.primary {
+  border-color: rgba(212, 138, 255, 0.5);
+  background: rgba(212, 138, 255, 0.18);
+  color: var(--shard);
+}
+
+.prestige-action-btn.danger {
+  border-color: rgba(220, 80, 80, 0.45);
+  color: #f08080;
+}
+
+.prestige-action-btn.small {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.prestige-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.prestige-tree-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+}
+
+.prestige-tree-grid {
+  display: flex;
+  gap: 16px;
+  min-width: max-content;
+}
+
+.prestige-tree-branch {
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.prestige-branch-title {
+  font-size: 14px;
+  margin: 0 0 10px;
+  color: var(--gold);
+}
+
+.prestige-tree-node {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.prestige-tree-node.state-available { border-color: rgba(76, 175, 80, 0.45); }
+.prestige-tree-node.state-owned { border-color: rgba(100, 181, 246, 0.4); }
+.prestige-tree-node.state-maxed { border-color: rgba(212, 138, 255, 0.4); opacity: 0.85; }
+.prestige-tree-node.state-locked { opacity: 0.55; }
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.node-name { font-weight: 700; font-size: 13px; }
+.node-rank { font-size: 11px; color: var(--text-muted); }
+.node-desc { font-size: 11px; color: var(--text-muted); margin: 0 0 6px; }
+.node-prereq { font-size: 10px; color: var(--text-muted); margin: 0 0 6px; }
+
+.node-buy-btn {
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 138, 255, 0.4);
+  background: rgba(212, 138, 255, 0.12);
+  color: var(--shard);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.prestige-perks-grid,
+.prestige-shop-grid,
+.world-legacy-grid,
+.world-events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.prestige-perk-card,
+.shop-item-card,
+.legacy-stage-card,
+.world-event-card,
+.artifact-card {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.prestige-perk-card.owned,
+.shop-item-card.owned { border-color: rgba(212, 138, 255, 0.35); }
+.prestige-perk-card.locked { opacity: 0.55; }
+
+.prestige-milestones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prestige-milestone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.15);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.milestone-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  margin: 6px 0 4px;
+  overflow: hidden;
+}
+
+.milestone-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--shard), var(--gold));
+  border-radius: 3px;
+}
+
+.artifact-slots { margin-bottom: 20px; }
+.artifact-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.artifact-slot {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed rgba(120, 140, 160, 0.3);
+  min-height: 90px;
+}
+
+.artifact-slot.locked-slot { opacity: 0.5; }
+
+.legacy-hall-scroll { max-height: 100%; }
+.legacy-hall-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.legacy-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+}
+
+.world-event-active-banner {
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(240, 192, 64, 0.45);
+  background: rgba(240, 192, 64, 0.1);
+}
+
+.prestige-confirm-card {
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 12px;
+  background: #1a2230;
+  border: 1px solid rgba(212, 138, 255, 0.4);
+}
+
+.prestige-confirm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.prestige-confirm-col h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.prestige-confirm-col ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.prestige-confirm-col.remain h4 { color: var(--shard); }
+.prestige-confirm-reward {
+  text-align: center;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: rgba(212, 138, 255, 0.12);
+}
+
+.prestige-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.prestige-confirm-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(120, 140, 160, 0.35);
+}
+
+.prestige-confirm-btn.primary {
+  background: rgba(212, 138, 255, 0.2);
+  color: var(--shard);
+  border-color: rgba(212, 138, 255, 0.45);
+}
+
+body.theme-twilight {
+  --panel-bg: #1a1528;
+  --gold: #e8b4ff;
+  --shard: #d4a5ff;
+}
+
+body.theme-emerald {
+  --panel-bg: #0f1f18;
+  --gold: #7dcea0;
+  --shard: #58d68d;
+}
+
+@media (max-width: 700px) {
+  .prestige-overview-panels,
+  .prestige-confirm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Responsive ── */
 @media (max-width: 1300px) {
   :root {

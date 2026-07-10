@@ -14,7 +14,6 @@ import {
   estimatePaybackWaves,
   ECONOMY_CONFIG,
 } from '../config/economyConfig.js';
-import { PRESTIGE_UPGRADES, PRESTIGE_CONFIG } from '../config/prestigeConfig.js';
 import { isBossWave } from '../config/waveConfig.js';
 import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
@@ -51,11 +50,9 @@ export class HUD {
       researchHint: document.getElementById('research-hint'),
       researchUpgrades: document.getElementById('research-upgrades'),
       prestigeCount: document.getElementById('prestige-count'),
-      prestigeHint: document.getElementById('prestige-hint'),
-      prestigeBtn: document.getElementById('prestige-btn'),
-      prestigeUpgrades: document.getElementById('prestige-upgrades'),
+      openPrestigeMenuBtn: document.getElementById('open-prestige-menu-btn'),
       autoStartToggle: document.getElementById('auto-start-toggle'),
-      resetSaveBtn: document.getElementById('reset-save-btn'),
+      resetSaveBtn: null,
       speedBtn: document.getElementById('speed-btn'),
       repairAllBtn: document.getElementById('repair-all-btn'),
       sellModeBtn: document.getElementById('sell-mode-btn'),
@@ -76,9 +73,8 @@ export class HUD {
     this._renderHotbar();
     this._renderResearchUpgrades();
     this._renderChallengePanel();
-    this._renderPrestigeUpgrades();
     this._updateStartButton();
-    this._updatePrestigeUI();
+    this._updatePrestigeSummary();
     this._updateStatusPanel();
     this.elements.autoStartToggle.checked = this.game.autoStartWaves;
   }
@@ -141,19 +137,10 @@ export class HUD {
       this.game.speedController.cycleSpeed();
     });
 
-    this.elements.resetSaveBtn.addEventListener('click', () => {
-      const confirmed = confirm(
-        'Reset all save data?\n\nThis clears your current run, Bloom Shards, prestige upgrades, and settings. This cannot be undone.'
-      );
-      if (confirmed) {
-        this.game.clearAllSaveData();
-        this._renderPrestigeUpgrades();
-        this._updatePrestigeUI();
-        this._updateStartButton();
-        this._hideWaveSummary();
-        this._hideUpgradePanel();
-        this.elements.autoStartToggle.checked = false;
-      }
+    this.elements.resetSaveBtn = null;
+
+    this.elements.openPrestigeMenuBtn.addEventListener('click', () => {
+      this.game.prestigeMenu?.open();
     });
 
     this.elements.repairAllBtn.addEventListener('click', () => {
@@ -217,23 +204,6 @@ export class HUD {
       this._hideUpgradePanel();
     });
 
-    this.elements.prestigeBtn.addEventListener('click', () => {
-      if (this.game.phase === Phase.WAVE) return;
-      const wave = this.game.waveManager.waveNumber;
-      if (wave < PRESTIGE_CONFIG.unlockWave) return;
-      const shards = this.game.prestigeManager.calculateShardsForWave(wave);
-      const confirmed = confirm(
-        `Prestige at Wave ${wave}?\n\nReset your run and earn ${shards} Bloom Shards for permanent upgrades.`
-      );
-      if (confirmed) {
-        this.game.prestige();
-        this._updatePrestigeUI();
-        this._renderPrestigeUpgrades();
-        this._updateStartButton();
-        this._hideWaveSummary();
-        this._hideUpgradePanel();
-      }
-    });
   }
 
   _subscribe() {
@@ -277,7 +247,11 @@ export class HUD {
 
     bus.on(Events.WAVE_CHANGED, (wave) => {
       this.elements.wave.textContent = wave;
-      this._updatePrestigeUI();
+      this._updatePrestigeSummary();
+    });
+
+    bus.on(Events.PRESTIGE_CHANGED, () => {
+      this._updatePrestigeSummary();
     });
 
     bus.on(Events.INCOME_CHANGED, (data) => {
@@ -319,22 +293,17 @@ export class HUD {
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
       this._refreshBuildPanelHints();
-      this._updatePrestigeUI();
+      this._updatePrestigeSummary();
       this._renderResearchUpgrades();
     });
 
     bus.on(Events.GAME_OVER, () => {
       this._updateStartButton();
-      this._updatePrestigeUI();
-    });
-
-    bus.on(Events.PRESTIGE_CHANGED, () => {
-      this._updatePrestigeUI();
-      this._renderPrestigeUpgrades();
+      this._updatePrestigeSummary();
     });
 
     bus.on(Events.PRESTIGE_COMPLETED, ({ earned }) => {
-      alert(`Prestige complete! You earned ${earned} Bloom Shards.`);
+      alert(`Prestige complete! You earned ${earned} Prestige Tokens (✿).`);
     });
 
     bus.on(Events.AUTO_WAVE_STARTED, () => {
@@ -347,8 +316,7 @@ export class HUD {
       this._renderSupportPanel();
       this._renderHotbar();
       this._renderResearchUpgrades();
-      this._renderPrestigeUpgrades();
-      this._updatePrestigeUI();
+      this._updatePrestigeSummary();
       this._updateStartButton();
       this._updateBuildAffordability();
       this._updateStatusPanel();
@@ -751,76 +719,10 @@ export class HUD {
     }
   }
 
-  _updatePrestigeUI() {
+  _updatePrestigeSummary() {
     const pm = this.game.prestigeManager;
-    const wave = this.game.waveManager.waveNumber;
     this.elements.shards.textContent = pm.shards;
-    this.elements.prestigeCount.textContent = `Prestige ×${pm.totalPrestiges} · Best W${pm.bestWave}`;
-
-    const canPrestige = this.game.canPrestige();
-    const btn = this.elements.prestigeBtn;
-    btn.classList.toggle('hidden', !canPrestige && pm.totalPrestiges === 0 && wave < PRESTIGE_CONFIG.unlockWave - 5);
-
-    if (canPrestige) {
-      const shards = pm.calculateShardsForWave(wave);
-      btn.disabled = this.game.phase === Phase.WAVE;
-      btn.textContent = `Prestige (+${shards} Shards)`;
-      this.elements.prestigeHint.textContent = `Wave ${wave} — reset run for permanent bonuses`;
-    } else if (this.game.phase === Phase.GAME_OVER && wave >= PRESTIGE_CONFIG.unlockWave) {
-      btn.disabled = false;
-      const shards = pm.calculateShardsForWave(wave);
-      btn.textContent = `Prestige (+${shards} Shards)`;
-      this.elements.prestigeHint.textContent = `Run ended at Wave ${wave}`;
-    } else {
-      btn.disabled = true;
-      btn.textContent = 'Prestige Run';
-      const remaining = PRESTIGE_CONFIG.unlockWave - wave;
-      this.elements.prestigeHint.textContent = remaining > 0
-        ? `Reach Wave ${PRESTIGE_CONFIG.unlockWave} to unlock (${remaining} to go)`
-        : 'Keep pushing — prestige unlocks at Wave 50';
-    }
-  }
-
-  _renderPrestigeUpgrades() {
-    const container = this.elements.prestigeUpgrades;
-    container.innerHTML = '';
-    const pm = this.game.prestigeManager;
-
-    for (const upgrade of Object.values(PRESTIGE_UPGRADES)) {
-      const level = pm.getUpgradeLevel(upgrade.id);
-      const maxed = level >= upgrade.maxLevel;
-      const row = document.createElement('div');
-      row.className = 'prestige-upgrade-row';
-      row.innerHTML = `
-        <div class="prestige-upgrade-info">
-          <span class="prestige-upgrade-name">${upgrade.name} (${level}/${upgrade.maxLevel})</span>
-          <span class="prestige-upgrade-desc">${upgrade.description}</span>
-        </div>
-      `;
-
-      if (!maxed) {
-        const buyBtn = document.createElement('button');
-        buyBtn.className = 'prestige-upgrade-btn';
-        buyBtn.textContent = `${upgrade.cost} ✿`;
-        buyBtn.disabled = !pm.canPurchaseUpgrade(upgrade.id);
-        buyBtn.addEventListener('click', () => {
-          if (pm.purchaseUpgrade(upgrade.id)) {
-            this.game._applyPrestigeToTowers();
-            this.game._refreshFarmIncome();
-            this._renderPrestigeUpgrades();
-            this._updatePrestigeUI();
-          }
-        });
-        row.appendChild(buyBtn);
-      } else {
-        const maxLabel = document.createElement('span');
-        maxLabel.className = 'prestige-maxed';
-        maxLabel.textContent = 'MAX';
-        row.appendChild(maxLabel);
-      }
-
-      container.appendChild(row);
-    }
+    this.elements.prestigeCount.textContent = `Lv ${pm.prestigeLevel} · ×${pm.totalPrestiges} · Best W${pm.bestWave}`;
   }
 
   _showWaveSummary({ wave, killGold, farmIncome, waveBonus, bankInterest, rpGain, crystalGain, total }) {
