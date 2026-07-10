@@ -3,6 +3,7 @@ export const ENEMY_TYPES = {
   mote: {
     id: 'mote',
     name: 'Mote',
+    faction: 'swarm',
     color: '#7e57c2',
     baseHealth: 26,
     speed: 1.7,
@@ -13,6 +14,7 @@ export const ENEMY_TYPES = {
   drift: {
     id: 'drift',
     name: 'Drift',
+    faction: 'swarm',
     color: '#26a69a',
     baseHealth: 16,
     speed: 3.0,
@@ -23,6 +25,7 @@ export const ENEMY_TYPES = {
   husk: {
     id: 'husk',
     name: 'Husk',
+    faction: 'bastion',
     color: '#6d4c41',
     baseHealth: 72,
     speed: 1.0,
@@ -33,6 +36,7 @@ export const ENEMY_TYPES = {
   titan: {
     id: 'titan',
     name: 'Titan',
+    faction: 'bastion',
     color: '#ad1457',
     baseHealth: 185,
     speed: 0.65,
@@ -43,6 +47,7 @@ export const ENEMY_TYPES = {
   ward: {
     id: 'ward',
     name: 'Ward',
+    faction: 'bastion',
     color: '#546e7a',
     baseHealth: 55,
     speed: 1.4,
@@ -54,6 +59,7 @@ export const ENEMY_TYPES = {
   rime: {
     id: 'rime',
     name: 'Rime',
+    faction: 'frostbound',
     color: '#4fc3f7',
     baseHealth: 120,
     speed: 0.85,
@@ -66,6 +72,7 @@ export const ENEMY_TYPES = {
   boss_briar: {
     id: 'boss_briar',
     name: 'Briar Colossus',
+    faction: 'ancients',
     color: '#2e7d32',
     baseHealth: 900,
     speed: 0.45,
@@ -80,6 +87,7 @@ export const ENEMY_TYPES = {
   boss_gale: {
     id: 'boss_gale',
     name: 'Gale Sovereign',
+    faction: 'ancients',
     color: '#00838f',
     baseHealth: 650,
     speed: 0.9,
@@ -93,6 +101,7 @@ export const ENEMY_TYPES = {
   boss_mire: {
     id: 'boss_mire',
     name: 'Mire Ancient',
+    faction: 'ancients',
     color: '#4e342e',
     baseHealth: 1100,
     speed: 0.4,
@@ -107,6 +116,7 @@ export const ENEMY_TYPES = {
   siege: {
     id: 'siege',
     name: 'Siege Mauler',
+    faction: 'raiders',
     color: '#5d4037',
     baseHealth: 95,
     speed: 0.75,
@@ -123,6 +133,7 @@ export const ENEMY_TYPES = {
   bomber: {
     id: 'bomber',
     name: 'Bomber',
+    faction: 'raiders',
     color: '#ff6f00',
     baseHealth: 42,
     speed: 1.5,
@@ -137,6 +148,7 @@ export const ENEMY_TYPES = {
   saboteur: {
     id: 'saboteur',
     name: 'Saboteur',
+    faction: 'raiders',
     color: '#6a1b9a',
     baseHealth: 38,
     speed: 2.2,
@@ -153,6 +165,7 @@ export const ENEMY_TYPES = {
   skyrift: {
     id: 'skyrift',
     name: 'Skyrift',
+    faction: 'raiders',
     color: '#0288d1',
     baseHealth: 65,
     speed: 2.0,
@@ -169,6 +182,7 @@ export const ENEMY_TYPES = {
   ancient_rime: {
     id: 'ancient_rime',
     name: 'Ancient Rime',
+    faction: 'frostbound',
     color: '#01579b',
     baseHealth: 150,
     speed: 0.9,
@@ -183,6 +197,7 @@ export const ENEMY_TYPES = {
   legendary_titan: {
     id: 'legendary_titan',
     name: 'Legendary Titan',
+    faction: 'bastion',
     color: '#6a1b4a',
     baseHealth: 280,
     speed: 0.7,

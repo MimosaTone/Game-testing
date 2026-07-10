@@ -1,5 +1,10 @@
 import { Enemy } from '../entities/Enemy.js';
-import { generateWave, getWaveScaling, isBossWave } from '../config/waveConfig.js';
+import {
+  generateWave,
+  getWaveFactionMeta,
+  getWaveScaling,
+  isBossWave,
+} from '../config/waveConfig.js';
 import { Events } from './EventBus.js';
 
 /**
@@ -15,6 +20,7 @@ export class WaveManager {
     this.waveElapsedMs = 0;
     this.active = false;
     this.scaling = getWaveScaling(1);
+    this.factionMeta = getWaveFactionMeta(1);
     this.challengeFx = {};
     this.tierFx = {};
 
@@ -39,14 +45,21 @@ export class WaveManager {
     return { ...this.challengeFx, tier: this.tierFx };
   }
 
+  /** Preview the next wave's faction identity during planning. */
+  getNextWaveFactionMeta() {
+    const merged = this._getMergedFx();
+    return getWaveFactionMeta(this.waveNumber + 1, merged);
+  }
+
   startNextWave() {
     this.waveNumber++;
     const merged = this._getMergedFx();
-    this.scaling = getWaveScaling(this.waveNumber, merged);
+    this.factionMeta = getWaveFactionMeta(this.waveNumber, merged);
+    this.scaling = getWaveScaling(this.waveNumber, merged, this.factionMeta);
     this.spawnQueue = [];
     this.waveElapsedMs = 0;
 
-    const groups = generateWave(this.waveNumber, merged);
+    const { waves: groups } = generateWave(this.waveNumber, merged, this.factionMeta);
     let spawnAt = 0;
     let first = true;
     for (const group of groups) {
@@ -59,13 +72,17 @@ export class WaveManager {
 
     this.active = true;
     this.eventBus.emit(Events.WAVE_CHANGED, this.waveNumber);
-    this.eventBus.emit(Events.WAVE_STARTED, this.waveNumber);
+    this.eventBus.emit(Events.WAVE_STARTED, {
+      wave: this.waveNumber,
+      faction: this.factionMeta,
+    });
 
     if (isBossWave(this.waveNumber)) {
       this.eventBus.emit(Events.BOSS_WAVE, {
         wave: this.waveNumber,
         tier: this.tierFx,
         scaling: this.scaling,
+        faction: this.factionMeta,
       });
     }
   }
@@ -124,5 +141,6 @@ export class WaveManager {
     this.spawnQueue = [];
     this.waveElapsedMs = 0;
     this.active = false;
+    this.factionMeta = getWaveFactionMeta(1);
   }
 }

@@ -365,9 +365,10 @@ export class Game {
     });
 
     this.eventBus.on(Events.WAVE_STARTED, (wave) => {
-      this.economy.setWaveNumber(wave);
+      const waveNum = typeof wave === 'object' ? wave.wave : wave;
+      this.economy.setWaveNumber(waveNum);
       this.economy.resetWaveKillGold();
-      this.prestigeManager.recordWave(wave);
+      this.prestigeManager.recordWave(waveNum);
       this._clearAutoStartTimer();
     });
 

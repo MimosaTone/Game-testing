@@ -231,6 +231,37 @@ body {
 
 .wave-summary-box.hidden { display: none; }
 
+.faction-preview-box {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.25);
+  background: rgba(20, 30, 40, 0.35);
+}
+
+.faction-preview-box.hidden { display: none; }
+
+.faction-preview-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.faction-preview-warning {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.faction-preview-strength {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.85;
+  margin-top: 3px;
+}
+
 .summary-title {
   font-size: 13px;
   font-weight: 700;

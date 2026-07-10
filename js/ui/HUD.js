@@ -43,6 +43,7 @@ export class HUD {
       upgradeButtons: document.getElementById('upgrade-buttons'),
       sellBtn: document.getElementById('sell-btn'),
       waveSummary: document.getElementById('wave-summary'),
+      factionPreview: document.getElementById('faction-preview'),
       shards: document.getElementById('shards-value'),
       crystals: document.getElementById('crystals-value'),
       research: document.getElementById('research-value'),
@@ -74,6 +75,7 @@ export class HUD {
     this._renderChallengePanel();
     this._updateStartButton();
     this._updatePrestigeSummary();
+    this._updateFactionPreview();
     this._updateStatusPanel();
     this.elements.autoStartToggle.checked = this.game.autoStartWaves;
   }
@@ -254,6 +256,7 @@ export class HUD {
     bus.on(Events.WAVE_CHANGED, (wave) => {
       this.elements.wave.textContent = wave;
       this._updatePrestigeSummary();
+      this._updateFactionPreview();
     });
 
     bus.on(Events.PRESTIGE_CHANGED, () => {
@@ -267,6 +270,7 @@ export class HUD {
         <p class="mastery-alert-text">Tier ${next.roman} — <strong>${next.name}</strong>. The meadow grows more dangerous… and more rewarding.</p>
       `;
       this._updatePrestigeSummary();
+      this._updateFactionPreview();
     });
 
     bus.on(Events.INCOME_CHANGED, (data) => {
@@ -294,6 +298,7 @@ export class HUD {
 
     bus.on(Events.WAVE_STARTED, () => {
       this._updateStartButton();
+      this._hideFactionPreview();
       this._hideUpgradePanel();
       this._hideWaveSummary();
       this.game.placementSystem.clearSelection();
@@ -307,6 +312,7 @@ export class HUD {
 
     bus.on(Events.WAVE_COMPLETED, () => {
       this._updateStartButton();
+      this._updateFactionPreview();
       this._refreshBuildPanelHints();
       this._updatePrestigeSummary();
       this._renderResearchUpgrades();
@@ -314,6 +320,7 @@ export class HUD {
 
     bus.on(Events.GAME_OVER, () => {
       this._updateStartButton();
+      this._hideFactionPreview();
       this._updatePrestigeSummary();
     });
 
@@ -332,6 +339,7 @@ export class HUD {
       this._renderHotbar();
       this._renderResearchUpgrades();
       this._updatePrestigeSummary();
+      this._updateFactionPreview();
       this._updateStartButton();
       this._updateBuildAffordability();
       this._updateStatusPanel();
@@ -346,13 +354,18 @@ export class HUD {
     bus.on(Events.BOSS_WAVE, (data) => {
       const wave = typeof data === 'number' ? data : data.wave;
       const scaling = typeof data === 'object' ? data.scaling : null;
+      const faction = typeof data === 'object' ? data.faction?.display : null;
       const tierNote = scaling?.bossTierMechanic || scaling?.bossTierModifier
         ? `<p class="boss-alert-text">Boss modifier: ${scaling.bossTierMechanic || ''} ${scaling.bossTierModifier || ''}</p>`
+        : '';
+      const factionNote = faction
+        ? `<p class="boss-alert-text" style="color: ${faction.color}">Faction: ${faction.displayName} — ${faction.warning}</p>`
         : '';
       this.elements.waveSummary.classList.remove('hidden');
       this.elements.waveSummary.innerHTML = `
         <div class="summary-title boss-alert">⚠ Boss Wave ${wave}</div>
         <p class="boss-alert-text">A powerful invader approaches. Prepare your defenses!</p>
+        ${factionNote}
         ${tierNote}
       `;
     });
@@ -381,6 +394,7 @@ export class HUD {
 
     bus.on(Events.CHALLENGE_CHANGED, (state) => {
       this._renderChallengePanel();
+      this._updateFactionPreview();
     });
 
     bus.on(Events.STRUCTURE_DESTROYED, () => {
@@ -699,6 +713,34 @@ export class HUD {
       btn.disabled = true;
       btn.textContent = 'Game Over — click map to restart';
     }
+  }
+
+  _updateFactionPreview() {
+    if (this.game.phase !== Phase.PLANNING) {
+      this._hideFactionPreview();
+      return;
+    }
+
+    const nextWave = this.game.waveManager.waveNumber + 1;
+    const meta = this.game.waveManager.getNextWaveFactionMeta();
+    const display = meta.display;
+    const el = this.elements.factionPreview;
+    const bossTag = isBossWave(nextWave) ? ' ★' : '';
+
+    el.classList.remove('hidden');
+    el.style.borderColor = `${display.color}55`;
+    el.style.background = `${display.color}14`;
+    el.innerHTML = `
+      <div class="faction-preview-title" style="color: ${display.color}">
+        Incoming: ${display.displayName.toUpperCase()}${bossTag}
+      </div>
+      <p class="faction-preview-warning">${display.warning}</p>
+      <div class="faction-preview-strength">${display.strength}</div>
+    `;
+  }
+
+  _hideFactionPreview() {
+    this.elements.factionPreview.classList.add('hidden');
   }
 
   _updatePrestigeSummary() {
