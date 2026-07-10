@@ -224,6 +224,24 @@ export const WORLD_EVENTS = {
     effect: { goldEarnedMult: 0.2 },
     activationCost: 12,
   },
+  ancient_awakening: {
+    id: 'ancient_awakening',
+    name: 'Ancient Awakening',
+    description: '+30% tower damage for 4 waves when activated.',
+    durationWaves: 4,
+    unlockRequirement: { worldTier: 4 },
+    effect: { damageMult: 0.3 },
+    activationCost: 15,
+  },
+  cataclysm_fury: {
+    id: 'cataclysm_fury',
+    name: 'Cataclysm Fury',
+    description: '+50% all rewards for 3 waves when activated.',
+    durationWaves: 3,
+    unlockRequirement: { worldTier: 6 },
+    effect: { goldEarnedMult: 0.5, crystalMult: 0.5 },
+    activationCost: 20,
+  },
 };
 
 export const PRESTIGE_RESET_LIST = {

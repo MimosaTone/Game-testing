@@ -67,5 +67,6 @@ export const Events = {
   STRUCTURE_REBUILT: 'structure_rebuilt',
   STRUCTURE_SOLD: 'structure_sold',
   INVESTMENT_CHANGED: 'investment_changed',
+  WORLD_TIER_CHANGED: 'world_tier_changed',
   GROUND_BURN: 'ground_burn',
 };

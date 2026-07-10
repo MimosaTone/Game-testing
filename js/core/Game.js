@@ -20,6 +20,7 @@ import { ECONOMY_CONFIG } from '../config/economyConfig.js';
 import { STRUCTURE_REINFORCEMENTS, BUILD_EXPANSION } from '../config/investmentConfig.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { SUPPORT_TYPES } from '../config/supportConfig.js';
+import { getWorldTierEffects, getWorldTierRewardMult, getNextWorldTier } from '../config/worldTierConfig.js';
 
 /** Game phases. */
 export const Phase = {
@@ -74,6 +75,7 @@ export class Game {
 
     this._setupEventHandlers();
     this._applyChallengeEffects();
+    this._applyWorldTierEffects();
     this._refreshSupportEffects();
   }
 
@@ -84,11 +86,25 @@ export class Game {
     this.economy.setChallengeEffects(fx, this.challengeManager.getRewardMultiplier());
   }
 
+  _applyWorldTierEffects() {
+    const tierFx = getWorldTierEffects(this.prestigeManager.totalPrestiges);
+    this.waveManager.setTierEffects(tierFx);
+  }
+
+  getWorldTier() {
+    return getWorldTierEffects(this.prestigeManager.totalPrestiges);
+  }
+
+  getWorldTierRewardMult() {
+    return getWorldTierRewardMult(this.prestigeManager.totalPrestiges);
+  }
+
   getChallengeRewardMult() {
     const base = this.challengeManager.getRewardMultiplier();
     const prestige = this.prestigeManager.getModifiers().challengeRewardMult ?? 1;
     const research = this.researchManager.getModifiers().challengeRewardMult ?? 1;
-    return base * prestige * research;
+    const tier = this.getWorldTierRewardMult();
+    return base * prestige * research * tier;
   }
 
   isTowerUnlocked(typeId) {
@@ -113,7 +129,8 @@ export class Game {
   }
 
   _isEliteEnemy(enemy) {
-    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan'].includes(enemy.typeId);
+    if (enemy.isLegendary || enemy.isAncient) return true;
+    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan', 'ancient_rime', 'legendary_titan'].includes(enemy.typeId);
   }
 
   getRepairCostMult(structure = null) {
@@ -474,6 +491,7 @@ export class Game {
     this.challengeManager.loadFromRun(run.challenge);
     this.investmentManager.loadFromRun(run.investments);
     this._applyChallengeEffects();
+    this._applyWorldTierEffects();
     this.waveManager.reset();
     this.waveManager.waveNumber = run.wave;
     this.combatSystem.reset();
@@ -510,6 +528,7 @@ export class Game {
     this.researchManager.reset();
     this.challengeManager.reset();
     this._applyChallengeEffects();
+    this._applyWorldTierEffects();
     this.saveManager.clearAll();
     this.resetRun();
     this.eventBus.emit(Events.SAVE_CLEARED);
@@ -558,6 +577,7 @@ export class Game {
     if (!this.canPrestige()) return false;
     const wave = this.waveManager.waveNumber;
     const earned = this.prestigeManager.prestige(wave);
+    this._applyWorldTierEffects();
     const rewardMult = this.getChallengeRewardMult();
     if (rewardMult > 1) {
       const bonus = Math.round(earned * (rewardMult - 1));
@@ -814,6 +834,7 @@ export class Game {
     this.investmentManager.reset();
     this.challengeManager.reset();
     this._applyChallengeEffects();
+    this._applyWorldTierEffects();
     this.economy.gold = this._startingGold();
     this.economy.crystals = 0;
     this.economy.incomePerWave = 0;

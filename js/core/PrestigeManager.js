@@ -1,5 +1,6 @@
 import { PRESTIGE_CONFIG, PRESTIGE_UPGRADES } from '../config/prestigeConfig.js';
 import { PRESTIGE_TREE_NODES } from '../config/prestigeTreeConfig.js';
+import { getWorldTier, getNextWorldTier } from '../config/worldTierConfig.js';
 import {
   ASCENSION_PERKS,
   PRESTIGE_MILESTONES,
@@ -140,6 +141,14 @@ export class PrestigeManager {
 
   get prestigeLevel() {
     return this.data.totalPrestiges;
+  }
+
+  getWorldTier() {
+    return getWorldTier(this.data.totalPrestiges);
+  }
+
+  getNextWorldTier() {
+    return getNextWorldTier(this.data.totalPrestiges);
   }
 
   get autoStartWaves() {
@@ -302,12 +311,17 @@ export class PrestigeManager {
   }
 
   prestige(waveReached) {
+    const prevTier = getWorldTier(this.data.totalPrestiges);
     const earned = this.calculateShardsForWave(waveReached);
     this.data.shards += earned;
     this.data.totalPrestiges++;
     this.data.lifetime.prestigesCompleted++;
     this.recordWave(waveReached);
     this._autoUnlockMilestones(true);
+    const newTier = getWorldTier(this.data.totalPrestiges);
+    if (newTier.tier !== prevTier.tier) {
+      this.eventBus.emit(Events.WORLD_TIER_CHANGED, { prev: prevTier, next: newTier });
+    }
     this.eventBus.emit(Events.PRESTIGE_COMPLETED, { earned, total: this.data.shards });
     this.eventBus.emit(Events.PRESTIGE_CHANGED, this.data);
     return earned;
@@ -363,8 +377,10 @@ export class PrestigeManager {
     }
     for (const [eventId, ev] of Object.entries(WORLD_EVENTS)) {
       const req = ev.unlockRequirement;
+      const tier = getWorldTier(this.data.totalPrestiges);
       const unlocked = (!req.bestWave || this.data.bestWave >= req.bestWave)
-        && (!req.totalPrestiges || this.data.totalPrestiges >= req.totalPrestiges);
+        && (!req.totalPrestiges || this.data.totalPrestiges >= req.totalPrestiges)
+        && (!req.worldTier || tier.tier >= req.worldTier);
       if (unlocked && !this.data.worldEvents.unlocked.includes(eventId)) {
         this.data.worldEvents.unlocked.push(eventId);
         changed = true;

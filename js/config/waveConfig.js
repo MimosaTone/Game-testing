@@ -1,52 +1,120 @@
 import { BOSS_ROTATION } from './enemyTypes.js';
+import {
+  BOSS_TIER_MECHANICS,
+  BOSS_TIER_MODIFIERS,
+} from './worldTierConfig.js';
 
 /** Boss waves occur every 15 rounds. */
 export function isBossWave(waveNumber) {
   return waveNumber > 0 && waveNumber % 15 === 0;
 }
 
+function mergeEffects(challengeFx = {}) {
+  const tier = challengeFx.tier ?? {};
+  return {
+    ...challengeFx,
+    enemyHealthMult: (challengeFx.enemyHealthMult ?? 1) * (tier.enemyHealthMult ?? 1),
+    enemySpeedMult: (challengeFx.enemySpeedMult ?? 1) * (tier.enemySpeedMult ?? 1),
+    eliteSpawnMult: (challengeFx.eliteSpawnMult ?? 1) * (tier.eliteSpawnMult ?? 1),
+  };
+}
+
+function computeBossTierFx(waveNumber, fx) {
+  const tier = fx.tier ?? {};
+  const cycle = Math.floor(waveNumber / 15) - 1;
+  let bossTierMechanic = null;
+  let bossTierModifier = null;
+  let bossMultiPhase = false;
+  let bossEmpowered = fx.bossEmpowered ?? false;
+
+  if (tier.bossExtraMechanic) {
+    bossTierMechanic = BOSS_TIER_MECHANICS[cycle % BOSS_TIER_MECHANICS.length];
+  }
+  if (tier.bossRandomModifier) {
+    bossTierModifier = BOSS_TIER_MODIFIERS[(cycle + waveNumber) % BOSS_TIER_MODIFIERS.length];
+    if (bossTierModifier === 'armored') bossEmpowered = true;
+  }
+  if (tier.eliteBossChance > 0 && cycle % 3 === 2) {
+    bossEmpowered = true;
+  }
+  if (tier.multiPhaseBoss) {
+    bossMultiPhase = true;
+  }
+
+  return { bossTierMechanic, bossTierModifier, bossMultiPhase, bossEmpowered };
+}
+
 /**
  * Boss wave composition — one unique boss plus supporting minions.
- * @param {object} challengeFx - optional challenge effects
+ * @param {object} challengeFx - challenge + world tier effects
  */
 export function generateBossWave(waveNumber, challengeFx = {}) {
+  const fx = mergeEffects(challengeFx);
+  const tier = fx.tier ?? {};
   const cycle = Math.floor(waveNumber / 15) - 1;
   const bossType = BOSS_ROTATION[cycle % BOSS_ROTATION.length];
-  const escort = 3 + Math.floor(waveNumber / 15) * 2;
+  let escort = 3 + Math.floor(waveNumber / 15) * 2;
   const waves = [];
 
-  if (challengeFx.doubleBoss) {
+  const bossFx = computeBossTierFx(waveNumber, fx);
+  if (bossFx.bossTierModifier === 'splitting') escort = Math.ceil(escort * 1.5);
+
+  if (fx.doubleBoss) {
     waves.push({ type: bossType, count: 2, spawnDelayMs: 0, isBoss: true });
   } else {
     waves.push({ type: bossType, count: 1, spawnDelayMs: 0, isBoss: true });
   }
 
+  const escortDelay = tier.coordinatedWaves ? 500 : 700;
   waves.push(
-    { type: 'drift', count: escort, spawnDelayMs: 700 },
-    { type: 'husk', count: Math.floor(escort / 2), spawnDelayMs: 1100 },
+    { type: 'drift', count: escort, spawnDelayMs: escortDelay },
+    { type: 'husk', count: Math.floor(escort / 2), spawnDelayMs: escortDelay + 400 },
   );
+
+  if (tier.coordinatedWaves) {
+    waves.push({ type: 'ward', count: Math.ceil(escort / 3), spawnDelayMs: escortDelay + 200 });
+  }
 
   return waves;
 }
 
-/** Inject special structure-attacking enemies based on wave and challenges. */
+/** Inject special structure-attacking enemies based on wave, challenges, and tier. */
 function injectSpecialEnemies(waves, waveNumber, challengeFx) {
-  if (waveNumber < 6 && !challengeFx.spawnSpecialEnemies) return waves;
+  const tier = challengeFx.tier ?? {};
+  const offset = tier.specialWaveOffset ?? 0;
+  if (waveNumber < 6 - offset && !challengeFx.spawnSpecialEnemies) return waves;
 
   const mult = challengeFx.eliteSpawnMult ?? 1;
   const extra = [];
 
-  if (waveNumber >= 6 || challengeFx.spawnSpecialEnemies) {
+  if (waveNumber >= 6 - offset || challengeFx.spawnSpecialEnemies) {
     extra.push({ type: 'bomber', count: Math.ceil(1 * mult), spawnDelayMs: 1200 });
   }
-  if (waveNumber >= 9 || challengeFx.spawnSpecialEnemies) {
+  if (waveNumber >= 9 - offset || challengeFx.spawnSpecialEnemies) {
     extra.push({ type: 'saboteur', count: Math.ceil(1 * mult), spawnDelayMs: 1400 });
   }
-  if (waveNumber >= 12) {
+  if (waveNumber >= 12 - offset) {
     extra.push({ type: 'siege', count: Math.ceil(1 * mult), spawnDelayMs: 2000 });
   }
-  if (waveNumber >= 15) {
+  if (waveNumber >= 15 - offset) {
     extra.push({ type: 'skyrift', count: Math.ceil(1 * mult), spawnDelayMs: 1600 });
+  }
+
+  return [...waves, ...extra];
+}
+
+/** Inject ancient and legendary enemies at higher world tiers. */
+function injectTierEnemies(waves, waveNumber, challengeFx) {
+  const tier = challengeFx.tier ?? {};
+  const extra = [];
+
+  if (tier.ancientChance > 0 && waveNumber >= 8) {
+    const count = Math.max(1, Math.floor((waveNumber / 10) * tier.ancientChance * 2));
+    extra.push({ type: 'ancient_rime', count, spawnDelayMs: 1800 });
+  }
+
+  if (tier.legendaryChance > 0 && waveNumber >= 12 && waveNumber % 7 === 0) {
+    extra.push({ type: 'legendary_titan', count: 1, spawnDelayMs: 3000 });
   }
 
   return [...waves, ...extra];
@@ -61,12 +129,28 @@ function scaleWaveGroups(waves, challengeFx) {
   }));
 }
 
+function applyCoordinatedSpawns(waves, challengeFx) {
+  const tier = challengeFx.tier ?? {};
+  if (!tier.coordinatedWaves) return waves;
+  return waves.map((g) => ({
+    ...g,
+    spawnDelayMs: Math.max(300, Math.round(g.spawnDelayMs * 0.65)),
+  }));
+}
+
 /**
  * Wave composition generator.
+ * @param {object} challengeFx - merged challenge + tier effects (challengeFx.tier)
  */
 export function generateWave(waveNumber, challengeFx = {}) {
+  const fx = mergeEffects(challengeFx);
+
   if (isBossWave(waveNumber)) {
-    return scaleWaveGroups(generateBossWave(waveNumber, challengeFx), challengeFx);
+    const bossWaves = generateBossWave(waveNumber, fx);
+    return scaleWaveGroups(
+      injectSpecialEnemies(bossWaves, waveNumber, fx),
+      fx
+    );
   }
 
   let waves = [];
@@ -116,11 +200,17 @@ export function generateWave(waveNumber, challengeFx = {}) {
     );
   }
 
-  return scaleWaveGroups(injectSpecialEnemies(waves.filter((g) => g.count > 0), waveNumber, challengeFx), challengeFx);
+  waves = waves.filter((g) => g.count > 0);
+  waves = injectSpecialEnemies(waves, waveNumber, fx);
+  waves = injectTierEnemies(waves, waveNumber, fx);
+  waves = applyCoordinatedSpawns(waves, fx);
+  return scaleWaveGroups(waves, fx);
 }
 
-/** Scaling curve with optional challenge multipliers. */
+/** Scaling curve with optional challenge and world tier multipliers. */
 export function getWaveScaling(waveNumber, challengeFx = {}) {
+  const fx = mergeEffects(challengeFx);
+  const tier = fx.tier ?? {};
   let healthMultiplier;
   let speedMultiplier;
 
@@ -152,14 +242,22 @@ export function getWaveScaling(waveNumber, challengeFx = {}) {
     waveNumber >= 12 ? 2 :
     waveNumber >= 9 ? 0.8 : 0;
 
+  const bossFx = isBossWave(waveNumber) ? computeBossTierFx(waveNumber, fx) : {};
+
   return {
-    healthMultiplier: healthMultiplier * bossHealthMult * (challengeFx.enemyHealthMult ?? 1),
-    speedMultiplier: speedMultiplier * (challengeFx.enemySpeedMult ?? 1),
-    goldMultiplier: (1 + (waveNumber - 1) * 0.075) * (challengeFx.killGoldMult ?? 1),
-    bossGoldMult: challengeFx.bossGoldMult ?? 1,
+    healthMultiplier: healthMultiplier * bossHealthMult * (fx.enemyHealthMult ?? 1),
+    speedMultiplier: speedMultiplier * (fx.enemySpeedMult ?? 1),
+    goldMultiplier: (1 + (waveNumber - 1) * 0.075) * (fx.killGoldMult ?? 1),
+    bossGoldMult: fx.bossGoldMult ?? 1,
     armor,
     regenPerSec,
     isBossWave: isBossWave(waveNumber),
-    bossEmpowered: challengeFx.bossEmpowered ?? false,
+    bossEmpowered: bossFx.bossEmpowered ?? fx.bossEmpowered ?? false,
+    bossTierMechanic: bossFx.bossTierMechanic ?? null,
+    bossTierModifier: bossFx.bossTierModifier ?? null,
+    bossMultiPhase: bossFx.bossMultiPhase ?? false,
+    tierTraitChance: tier.enemyTraitChance ?? 0,
+    worldTier: tier.tier ?? 1,
+    worldTierName: tier.name ?? 'Peaceful Meadows',
   };
 }

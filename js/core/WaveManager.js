@@ -16,6 +16,7 @@ export class WaveManager {
     this.active = false;
     this.scaling = getWaveScaling(1);
     this.challengeFx = {};
+    this.tierFx = {};
 
     this.eventBus.on(Events.BOSS_SPAWN_MINIONS, (data) => {
       this._spawnBossMinions(data);
@@ -30,13 +31,22 @@ export class WaveManager {
     this.challengeFx = fx || {};
   }
 
+  setTierEffects(fx) {
+    this.tierFx = fx || {};
+  }
+
+  _getMergedFx() {
+    return { ...this.challengeFx, tier: this.tierFx };
+  }
+
   startNextWave() {
     this.waveNumber++;
-    this.scaling = getWaveScaling(this.waveNumber, this.challengeFx);
+    const merged = this._getMergedFx();
+    this.scaling = getWaveScaling(this.waveNumber, merged);
     this.spawnQueue = [];
     this.waveElapsedMs = 0;
 
-    const groups = generateWave(this.waveNumber, this.challengeFx);
+    const groups = generateWave(this.waveNumber, merged);
     let spawnAt = 0;
     let first = true;
     for (const group of groups) {
@@ -52,7 +62,11 @@ export class WaveManager {
     this.eventBus.emit(Events.WAVE_STARTED, this.waveNumber);
 
     if (isBossWave(this.waveNumber)) {
-      this.eventBus.emit(Events.BOSS_WAVE, this.waveNumber);
+      this.eventBus.emit(Events.BOSS_WAVE, {
+        wave: this.waveNumber,
+        tier: this.tierFx,
+        scaling: this.scaling,
+      });
     }
   }
 

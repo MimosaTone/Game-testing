@@ -188,7 +188,8 @@ export class Projectile {
   }
 
   _isElite(enemy) {
-    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan'].includes(enemy.typeId);
+    if (enemy.isLegendary || enemy.isAncient) return true;
+    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan', 'ancient_rime', 'legendary_titan'].includes(enemy.typeId);
   }
 
   _findChainTargets(origin, enemies, count) {

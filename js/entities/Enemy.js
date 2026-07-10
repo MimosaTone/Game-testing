@@ -1,9 +1,11 @@
 import { ENEMY_TYPES } from '../config/enemyTypes.js';
+import { ENEMY_TIER_TRAITS } from '../config/worldTierConfig.js';
 import { Events } from '../core/EventBus.js';
 
 let nextEnemyId = 1;
 
 const BOSS_SPAWN_THRESHOLDS = [0.8, 0.6, 0.4, 0.2];
+const BOSS_MULTI_PHASE_THRESHOLDS = [0.5, 0.25];
 
 /**
  * Enemy entity — follows path, takes damage, awards gold on death.
@@ -49,11 +51,54 @@ export class Enemy {
     this.shieldActive = false;
     this.attackCooldown = 0;
     this.siegePaused = false;
+    this.tierTrait = null;
+    this.enraged = false;
+    this.spawnThresholds = BOSS_SPAWN_THRESHOLDS;
 
     if (scaling.bossEmpowered && def.isBoss) {
       this.maxHealth = Math.round(this.maxHealth * 1.25);
       this.health = this.maxHealth;
       this.regenPerSec *= 1.3;
+    }
+
+    this._applyTierTraits(scaling, def);
+    this._applyBossTierEffects(scaling, def);
+
+    if (scaling.bossMultiPhase && def.isBoss) {
+      this.spawnThresholds = [...BOSS_SPAWN_THRESHOLDS, ...BOSS_MULTI_PHASE_THRESHOLDS];
+    }
+  }
+
+  _applyTierTraits(scaling, def) {
+    if (def.isBoss || !scaling.tierTraitChance) return;
+    const roll = (this.id * 17 + 13) % 100 / 100;
+    if (roll >= scaling.tierTraitChance) return;
+
+    this.tierTrait = ENEMY_TIER_TRAITS[this.id % ENEMY_TIER_TRAITS.length];
+    if (this.tierTrait === 'resilient') {
+      this.maxHealth = Math.round(this.maxHealth * 1.15);
+      this.health = this.maxHealth;
+    } else if (this.tierTrait === 'swift') {
+      this.baseSpeed *= 1.2;
+    } else if (this.tierTrait === 'armored') {
+      this.armor = Math.min(0.5, this.armor + 0.08);
+    }
+  }
+
+  _applyBossTierEffects(scaling, def) {
+    if (!def.isBoss) return;
+
+    if (scaling.bossTierMechanic === 'armored' || scaling.bossTierModifier === 'armored') {
+      this.armor = Math.min(0.5, this.armor + 0.12);
+    }
+    if (scaling.bossTierMechanic === 'regen_burst') {
+      this.regenPerSec += 4;
+    }
+    if (scaling.bossTierModifier === 'frenzy') {
+      this.baseSpeed *= 1.25;
+    }
+    if (scaling.bossTierMechanic === 'enrage') {
+      this.enrageThreshold = 0.3;
     }
   }
 
@@ -92,7 +137,8 @@ export class Enemy {
     }
 
     const surgeMult = this.surgeActive ? 1.75 : 1;
-    this.speed = this.baseSpeed * this.slowFactor * surgeMult;
+    const enrageMult = this.enraged ? 1.35 : 1;
+    this.speed = this.baseSpeed * this.slowFactor * surgeMult * enrageMult;
     this.distance += this.speed * dt;
 
     if (this.distance >= this.path.totalLength) {
@@ -168,7 +214,7 @@ export class Enemy {
 
     if (this.definition.bossAbility === 'spawn_minions' && this.eventBus) {
       const pct = this.health / this.maxHealth;
-      for (const threshold of BOSS_SPAWN_THRESHOLDS) {
+      for (const threshold of this.spawnThresholds) {
         const wasAbove = healthBefore / this.maxHealth > threshold;
         const isBelow = pct <= threshold;
         if (wasAbove && isBelow && !this.bossPhaseSpawned.has(threshold)) {
@@ -180,6 +226,10 @@ export class Enemy {
           });
         }
       }
+    }
+
+    if (this.enrageThreshold && !this.enraged && this.health / this.maxHealth <= this.enrageThreshold) {
+      this.enraged = true;
     }
 
     if (this.health <= 0) {
@@ -204,6 +254,14 @@ export class Enemy {
 
   get isSlowed() {
     return this.slowTimer > 0;
+  }
+
+  get isLegendary() {
+    return !!this.definition.isLegendary;
+  }
+
+  get isAncient() {
+    return !!this.definition.isAncient;
   }
 
   get isFlying() {

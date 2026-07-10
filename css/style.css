@@ -1975,6 +1975,89 @@ body.theme-emerald {
   color: var(--text-muted);
 }
 
+/* ── World Tier ── */
+.world-tier-banner {
+  padding: 16px 18px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(120, 140, 160, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.world-tier-banner.tier-1 { border-color: rgba(129, 199, 132, 0.35); }
+.world-tier-banner.tier-2 { border-color: rgba(255, 183, 77, 0.35); }
+.world-tier-banner.tier-3 { border-color: rgba(171, 71, 188, 0.35); }
+.world-tier-banner.tier-4 { border-color: rgba(79, 195, 247, 0.35); }
+.world-tier-banner.tier-5 { border-color: rgba(239, 83, 80, 0.4); }
+.world-tier-banner.tier-6 { border-color: rgba(255, 215, 64, 0.5); background: rgba(80, 40, 0, 0.15); }
+
+.world-tier-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.world-tier-roman {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--gold);
+  min-width: 48px;
+}
+
+.world-tier-name {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.world-tier-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.world-tier-reward {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.world-tier-features {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.world-tier-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.world-tier-step {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.world-tier-step.unlocked { opacity: 0.85; }
+.world-tier-step.current {
+  opacity: 1;
+  background: rgba(123, 156, 255, 0.12);
+  border: 1px solid rgba(123, 156, 255, 0.3);
+}
+
+.world-tier-step .step-roman { font-weight: 800; color: var(--gold); }
+.world-tier-step .step-bonus { color: var(--income); font-weight: 600; }
+.world-tier-step .step-req { color: var(--text-muted); }
+
 /* ── Responsive ── */
 @media (max-width: 1300px) {
   :root {

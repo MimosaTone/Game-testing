@@ -164,6 +164,33 @@ export const ENEMY_TYPES = {
     attackInterval: 1.8,
     isFlying: true,
   },
+
+  /** Ancient — tier IV+ corrupted variant with high regen. */
+  ancient_rime: {
+    id: 'ancient_rime',
+    name: 'Ancient Rime',
+    color: '#01579b',
+    baseHealth: 150,
+    speed: 0.9,
+    goldReward: 65,
+    size: 18,
+    innateRegen: 5,
+    innateArmor: 0.1,
+    isAncient: true,
+  },
+
+  /** Legendary — tier V+ rare elite with massive health and bounty. */
+  legendary_titan: {
+    id: 'legendary_titan',
+    name: 'Legendary Titan',
+    color: '#6a1b4a',
+    baseHealth: 280,
+    speed: 0.7,
+    goldReward: 140,
+    size: 24,
+    innateArmor: 0.15,
+    isLegendary: true,
+  },
 };
 
 /** Boss types cycle every 15 waves. */

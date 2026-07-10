@@ -260,6 +260,15 @@ export class HUD {
       this._updatePrestigeSummary();
     });
 
+    bus.on(Events.WORLD_TIER_CHANGED, ({ next }) => {
+      this.elements.waveSummary.classList.remove('hidden');
+      this.elements.waveSummary.innerHTML = `
+        <div class="summary-title mastery-alert">☠ World Threat Rising</div>
+        <p class="mastery-alert-text">Tier ${next.roman} — <strong>${next.name}</strong>. The meadow grows more dangerous… and more rewarding.</p>
+      `;
+      this._updatePrestigeSummary();
+    });
+
     bus.on(Events.INCOME_CHANGED, (data) => {
       const income = typeof data === 'number' ? data : data.total;
       const farmCount = typeof data === 'number' ? 0 : data.farmCount;
@@ -334,11 +343,17 @@ export class HUD {
       this.elements.autoStartToggle.checked = false;
     });
 
-    bus.on(Events.BOSS_WAVE, (wave) => {
+    bus.on(Events.BOSS_WAVE, (data) => {
+      const wave = typeof data === 'number' ? data : data.wave;
+      const scaling = typeof data === 'object' ? data.scaling : null;
+      const tierNote = scaling?.bossTierMechanic || scaling?.bossTierModifier
+        ? `<p class="boss-alert-text">Boss modifier: ${scaling.bossTierMechanic || ''} ${scaling.bossTierModifier || ''}</p>`
+        : '';
       this.elements.waveSummary.classList.remove('hidden');
       this.elements.waveSummary.innerHTML = `
         <div class="summary-title boss-alert">⚠ Boss Wave ${wave}</div>
         <p class="boss-alert-text">A powerful invader approaches. Prepare your defenses!</p>
+        ${tierNote}
       `;
     });
 
@@ -689,12 +704,18 @@ export class HUD {
   _updatePrestigeSummary() {
     const pm = this.game.prestigeManager;
     this.elements.shards.textContent = pm.shards;
-    this.elements.prestigeCount.textContent = `Lv ${pm.prestigeLevel} · ×${pm.totalPrestiges} · Best W${pm.bestWave}`;
+    const tier = this.game.getWorldTier();
+    const rewardPct = Math.round(tier.rewardBonus * 100);
+    this.elements.prestigeCount.textContent = `Tier ${tier.roman} ${tier.name} · Lv ${pm.prestigeLevel} · Best W${pm.bestWave}${rewardPct > 0 ? ` · +${rewardPct}% rewards` : ''}`;
   }
 
-  _showWaveSummary({ wave, killGold, farmIncome, waveBonus, bankInterest, rpGain, crystalGain, total }) {
+  _showWaveSummary({ wave, killGold, farmIncome, waveBonus, bankInterest, rpGain, crystalGain, total, rewardMult }) {
     const el = this.elements.waveSummary;
     const insight = this.game.researchManager.getModifiers().waveRewardInsight ?? 0;
+    const tier = this.game.getWorldTier();
+    const tierBonus = tier.rewardBonus > 0
+      ? `<div class="summary-row"><span>World Tier ${tier.roman} bonus</span><span>+${Math.round(tier.rewardBonus * 100)}%</span></div>`
+      : '';
     const insightNote = insight > 0
       ? `<div class="summary-row summary-insight"><span>Scout estimate</span><span>~${this.game.getEstimatedWaveReward()}g next wave</span></div>`
       : '';
@@ -708,6 +729,7 @@ export class HUD {
         ${bankInterest > 0 ? `<div class="summary-row"><span>Bank interest</span><span class="gold-text">+${bankInterest}g</span></div>` : ''}
         ${rpGain > 0 ? `<div class="summary-row"><span>Research gained</span><span class="research-text">+${rpGain} RP</span></div>` : ''}
         ${crystalGain > 0 ? `<div class="summary-row"><span>Crystals mined</span><span class="crystal-text">+${crystalGain} ◆</span></div>` : ''}
+        ${tierBonus}
         <div class="summary-row summary-total"><span>Total earned</span><span>+${total}g</span></div>
         ${insightNote}
       </div>

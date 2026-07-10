@@ -18,6 +18,7 @@ import {
   PRESTIGE_BRANCH_ORDER,
   PRESTIGE_TREE_NODES,
 } from '../config/prestigeTreeConfig.js';
+import { WORLD_TIERS } from '../config/worldTierConfig.js';
 
 /**
  * Full-screen Prestige hub — separate from gameplay sidebars.
@@ -303,11 +304,29 @@ export class PrestigeMenu {
     );
     const est = pm.estimatePrestigeReward(wave, this.game.economy.crystals);
     const rewardMult = this.game.getChallengeRewardMult?.() ?? 1;
+    const tier = this.game.getWorldTier();
+    const nextTier = pm.getNextWorldTier();
+    const nextTierNote = nextTier
+      ? `<p class="hint-text">Next tier at Prestige ${nextTier.minPrestiges}: <strong>Tier ${nextTier.roman} — ${nextTier.name}</strong></p>`
+      : '<p class="hint-text">Maximum World Threat reached — Cataclysm tier.</p>';
 
     this.bodyEl.innerHTML = `
       <div class="prestige-overview">
+        <div class="world-tier-banner tier-${tier.tier}">
+          <div class="world-tier-head">
+            <span class="world-tier-roman">Tier ${tier.roman}</span>
+            <div>
+              <h3 class="world-tier-name">${tier.name}</h3>
+              <p class="world-tier-subtitle">${tier.subtitle}</p>
+            </div>
+          </div>
+          <p class="world-tier-reward">Reward bonus: <strong>+${Math.round(tier.rewardBonus * 100)}%</strong> on all run rewards</p>
+          <ul class="world-tier-features">${tier.features.map((f) => `<li>${f}</li>`).join('')}</ul>
+          ${nextTierNote}
+        </div>
         <div class="prestige-stat-grid">
           <div class="prestige-stat-card"><span class="label">Prestige Level</span><span class="value">${pm.prestigeLevel}</span></div>
+          <div class="prestige-stat-card"><span class="label">World Threat</span><span class="value">Tier ${tier.roman}</span></div>
           <div class="prestige-stat-card"><span class="label">Prestige Tokens</span><span class="value gold-text">✿ ${pm.shards}</span></div>
           <div class="prestige-stat-card"><span class="label">Est. on Prestige</span><span class="value">+${est.total} ✿</span></div>
           <div class="prestige-stat-card"><span class="label">Highest Wave (Run)</span><span class="value">W${wave}</span></div>
@@ -316,14 +335,20 @@ export class PrestigeMenu {
         </div>
         <div class="prestige-overview-panels">
           <div class="prestige-info-panel">
-            <h3>What happens when you Prestige?</h3>
-            <p>Prestige resets your <strong>current run</strong> but keeps all permanent upgrades, artifacts, and lifetime progress. Earn Prestige Tokens to grow stronger across every future run.</p>
-            <p class="hint-text">Prestige unlocks at Wave ${PRESTIGE_CONFIG.unlockWave}+.</p>
+            <h3>World Tier Progression</h3>
+            <p>Every Prestige raises the World's Threat Level. Higher tiers bring deadlier enemies, new mechanics, and bigger rewards.</p>
+            <div class="world-tier-ladder">${WORLD_TIERS.map((t) => `
+              <div class="world-tier-step ${t.tier === tier.tier ? 'current' : ''} ${pm.prestigeLevel >= t.minPrestiges ? 'unlocked' : 'locked'}">
+                <span class="step-roman">${t.roman}</span>
+                <span class="step-name">${t.name}</span>
+                <span class="step-req">P${t.minPrestiges}+</span>
+                <span class="step-bonus">+${Math.round(t.rewardBonus * 100)}%</span>
+              </div>`).join('')}</div>
           </div>
           <div class="prestige-info-panel">
-            <h3>Quick Summary</h3>
-            <p><strong>Resets:</strong> wave, gold, structures, run research, temporary buffs.</p>
-            <p><strong>Keeps:</strong> tokens, tree, perks, artifacts, shop unlocks, legacy, stats.</p>
+            <h3>What happens when you Prestige?</h3>
+            <p>Prestige resets your <strong>current run</strong> but keeps all permanent upgrades, artifacts, and lifetime progress. The world grows more dangerous — and more rewarding — with each ascension.</p>
+            <p class="hint-text">Prestige unlocks at Wave ${PRESTIGE_CONFIG.unlockWave}+.</p>
           </div>
         </div>
         <div class="prestige-overview-actions">
