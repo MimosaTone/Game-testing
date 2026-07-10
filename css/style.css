@@ -1673,6 +1673,9 @@ body {
 .node-rank { font-size: 11px; color: var(--text-muted); }
 .node-desc { font-size: 11px; color: var(--text-muted); margin: 0 0 6px; }
 .node-prereq { font-size: 10px; color: var(--text-muted); margin: 0 0 6px; }
+.node-prereq.req-met { color: #81c784; }
+.node-prereq.req-unmet { color: #ffb74d; }
+.node-req-list { margin-bottom: 4px; }
 
 .node-buy-btn {
   width: 100%;

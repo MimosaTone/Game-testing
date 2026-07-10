@@ -371,7 +371,8 @@ export class PrestigeMenu {
     let html = `
       <p class="prestige-tree-intro">
         <strong>Tier II expansion active</strong> — ${v2Count} late-game nodes.
-        Scroll right for the <strong>World</strong> branch and Tier II upgrades past each capstone.
+        Capstone nodes must be <strong>fully maxed</strong> before Tier II unlocks (e.g. Golden Fields 3/3).
+        Scroll right for the <strong>World</strong> branch.
         <span class="build-tag">Build ${BUILD_VERSION}</span>
       </p>
       <div class="prestige-tree-scroll"><div class="prestige-tree-grid">`;
@@ -393,6 +394,8 @@ export class PrestigeMenu {
         const rank = pm.getTreeRank(node.id);
         const state = pm.getNodeState(node.id);
         const canBuy = pm.canPurchaseTreeNode(node.id);
+        const reqLines = pm.getNodeRequirementLines(node.id);
+        const lockReason = state === 'locked' ? pm.getNodeLockReason(node.id) : null;
         html += `
           <div class="prestige-tree-node state-${state}" style="--row:${node.row};--col:${node.col}">
             <div class="node-header">
@@ -400,13 +403,13 @@ export class PrestigeMenu {
               <span class="node-rank">${rank}/${node.maxRank}</span>
             </div>
             <p class="node-desc">${node.description}</p>
-            ${node.prerequisites.length ? `<p class="node-prereq">Requires: ${node.prerequisites.map((p) => PRESTIGE_TREE_NODES[p]?.name || p).join(', ')}</p>` : ''}
-            ${node.requiresMaxed?.length ? `<p class="node-prereq">Requires maxed: ${node.requiresMaxed.map((p) => PRESTIGE_TREE_NODES[p]?.name || p).join(', ')}</p>` : ''}
-            ${node.unlockPrestigeLevel ? `<p class="node-prereq">Unlocks at Prestige Level ${node.unlockPrestigeLevel}</p>` : ''}
+            ${reqLines.length ? `<div class="node-req-list">${reqLines.map((line) =>
+              `<p class="node-prereq ${line.met ? 'req-met' : 'req-unmet'}">${line.text}</p>`
+            ).join('')}</div>` : ''}
             ${state !== 'maxed' && state !== 'locked'
               ? `<button type="button" class="node-buy-btn" data-prestige-action="buy-tree" data-id="${node.id}"
                   ${canBuy ? '' : 'disabled'}>${node.cost} ✿</button>`
-              : `<span class="node-status">${state === 'maxed' ? 'MAX' : 'LOCKED'}</span>`}
+              : `<span class="node-status">${state === 'maxed' ? 'MAX' : `LOCKED${lockReason ? ` — ${lockReason}` : ''}`}</span>`}
           </div>`;
       }
       html += '</div></div>';

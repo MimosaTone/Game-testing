@@ -205,19 +205,78 @@ export class PrestigeManager {
   }
 
   _areNodeRequirementsMet(def) {
+    return this.getNodeLockReasons(def).length === 0;
+  }
+
+  /** Human-readable list of unmet requirements for a node definition. */
+  getNodeLockReasons(def) {
+    const reasons = [];
     if (def.unlockPrestigeLevel && this.prestigeLevel < def.unlockPrestigeLevel) {
-      return false;
+      reasons.push(`Prestige Level ${def.unlockPrestigeLevel} (you are ${this.prestigeLevel})`);
     }
-    if (!def.prerequisites.every((p) => this.getTreeRank(p) >= 1)) {
-      return false;
+    for (const prereqId of def.prerequisites) {
+      if (this.getTreeRank(prereqId) < 1) {
+        const name = PRESTIGE_TREE_NODES[prereqId]?.name || prereqId;
+        reasons.push(`Purchase ${name} first`);
+      }
     }
-    if (def.requiresMaxed?.length) {
-      return def.requiresMaxed.every((p) => {
-        const prereq = PRESTIGE_TREE_NODES[p];
-        return prereq && this.getTreeRank(p) >= prereq.maxRank;
+    for (const prereqId of def.requiresMaxed ?? []) {
+      const prereq = PRESTIGE_TREE_NODES[prereqId];
+      if (!prereq) continue;
+      const rank = this.getTreeRank(prereqId);
+      if (rank < prereq.maxRank) {
+        reasons.push(`Max ${prereq.name} (${rank}/${prereq.maxRank})`);
+      }
+    }
+    return reasons;
+  }
+
+  getNodeLockReason(nodeId) {
+    const def = PRESTIGE_TREE_NODES[nodeId];
+    if (!def) return 'Unknown node';
+    const reasons = this.getNodeLockReasons(def);
+    return reasons[0] ?? null;
+  }
+
+  getNodeRequirementLines(nodeId) {
+    const def = PRESTIGE_TREE_NODES[nodeId];
+    if (!def) return [];
+    const lines = [];
+
+    if (def.unlockPrestigeLevel) {
+      const met = this.prestigeLevel >= def.unlockPrestigeLevel;
+      lines.push({
+        met,
+        text: met
+          ? `✓ Prestige Level ${def.unlockPrestigeLevel} reached`
+          : `Prestige Level ${def.unlockPrestigeLevel} required (you are ${this.prestigeLevel})`,
       });
     }
-    return true;
+
+    for (const prereqId of def.prerequisites) {
+      const name = PRESTIGE_TREE_NODES[prereqId]?.name || prereqId;
+      const rank = this.getTreeRank(prereqId);
+      const met = rank >= 1;
+      lines.push({
+        met,
+        text: met ? `✓ Requires ${name}` : `Purchase ${name} first`,
+      });
+    }
+
+    for (const prereqId of def.requiresMaxed ?? []) {
+      const prereq = PRESTIGE_TREE_NODES[prereqId];
+      if (!prereq) continue;
+      const rank = this.getTreeRank(prereqId);
+      const met = rank >= prereq.maxRank;
+      lines.push({
+        met,
+        text: met
+          ? `✓ ${prereq.name} maxed`
+          : `Max ${prereq.name} (${rank}/${prereq.maxRank})`,
+      });
+    }
+
+    return lines;
   }
 
   purchaseTreeNode(nodeId) {
