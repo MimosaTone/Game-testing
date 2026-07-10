@@ -7,6 +7,7 @@ import { StartModal } from './ui/StartModal.js';
 import { SaveCodeModal } from './ui/SaveCodeModal.js';
 import { InvestmentPanel } from './ui/InvestmentPanel.js';
 import { PrestigeMenu } from './ui/PrestigeMenu.js';
+import { ResearchMenu } from './ui/ResearchMenu.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -19,6 +20,7 @@ let startModal;
 let saveCodeModal;
 let investmentPanel;
 let prestigeMenu;
+let researchMenu;
 
 try {
   game = new Game();
@@ -26,11 +28,13 @@ try {
   hud = new HUD(game);
   investmentPanel = new InvestmentPanel(game);
   prestigeMenu = new PrestigeMenu(game);
+  researchMenu = new ResearchMenu(game);
   game.prestigeMenu = prestigeMenu;
+  game.researchMenu = researchMenu;
   saveCodeModal = new SaveCodeModal(game, hud);
   saveCodeModal.updateButtons();
 
-  for (const evt of [Events.WAVE_STARTED, Events.WAVE_COMPLETED, Events.GAME_OVER, Events.SAVE_LOADED, Events.SAVE_CLEARED, Events.GOLD_CHANGED, Events.INVESTMENT_CHANGED, Events.PRESTIGE_CHANGED]) {
+  for (const evt of [Events.WAVE_STARTED, Events.WAVE_COMPLETED, Events.GAME_OVER, Events.SAVE_LOADED, Events.SAVE_CLEARED, Events.GOLD_CHANGED, Events.INVESTMENT_CHANGED, Events.PRESTIGE_CHANGED, Events.RESEARCH_CHANGED]) {
     game.eventBus.on(evt, () => {
       saveCodeModal.updateButtons();
       if (investmentPanel && (evt === Events.GOLD_CHANGED || evt === Events.INVESTMENT_CHANGED || evt === Events.WAVE_COMPLETED || evt === Events.WAVE_STARTED || evt === Events.SAVE_LOADED)) {
@@ -38,6 +42,9 @@ try {
       }
       if (prestigeMenu?.isOpen && (evt === Events.PRESTIGE_CHANGED || evt === Events.GOLD_CHANGED || evt === Events.SAVE_LOADED)) {
         prestigeMenu.render();
+      }
+      if (researchMenu?.isOpen && (evt === Events.RESEARCH_CHANGED || evt === Events.GOLD_CHANGED || evt === Events.SAVE_LOADED)) {
+        researchMenu.render();
       }
     });
   }

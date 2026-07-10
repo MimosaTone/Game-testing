@@ -8,9 +8,10 @@ const NOTIFICATION_SLOW_MS = 3500;
  * Controls game speed multiplier with auto-slow during important events.
  */
 export class SpeedController {
-  constructor(eventBus, prestigeManager) {
+  constructor(eventBus, prestigeManager, researchManager = null) {
     this.eventBus = eventBus;
     this.prestigeManager = prestigeManager;
+    this.researchManager = researchManager;
     this.speed = 1;
     this.preferredSpeed = 1;
     this.forcedNormalUntil = 0;
@@ -29,12 +30,17 @@ export class SpeedController {
   canUse8x() {
     return (
       this.prestigeManager.totalPrestiges >= 1 ||
-      this.prestigeManager.bestWave >= 30
+      this.prestigeManager.bestWave >= 30 ||
+      (this.researchManager?.getModifiers().extraSpeedTier ?? 0) >= 1
     );
   }
 
   getAvailableSpeeds() {
-    return this.canUse8x() ? GAME_SPEEDS : GAME_SPEEDS.filter((s) => s <= 4);
+    let speeds = this.canUse8x() ? [...GAME_SPEEDS] : GAME_SPEEDS.filter((s) => s <= 4);
+    if ((this.researchManager?.getModifiers().extraSpeedTier ?? 0) >= 1) {
+      speeds = [...speeds, 16];
+    }
+    return speeds;
   }
 
   _clampSpeed(s) {

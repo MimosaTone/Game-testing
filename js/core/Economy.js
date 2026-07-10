@@ -59,6 +59,14 @@ export class Economy {
       if (options.rewardMult) {
         final = Math.round(final * options.rewardMult);
       }
+      if (options.isKill) {
+        const killMult = this.supportEffects?.global.killGoldMult ?? 1;
+        final = Math.round(final * killMult);
+        if (options.isElite) {
+          const eliteMult = this.supportEffects?.global.eliteGoldMult ?? 1;
+          final = Math.round(final * eliteMult);
+        }
+      }
     }
     this.gold += final;
     this.eventBus.emit(Events.GOLD_CHANGED, this.gold);
@@ -84,8 +92,8 @@ export class Economy {
   }
 
   /** Recalculate total farm income including support and research bonuses. */
-  recalculateIncome(farms, supportModsFn = null) {
-    const mods = this.prestigeManager.getModifiers();
+  recalculateIncome(farms, supportModsFn = null, farmMods = null) {
+    const mods = { ...this.prestigeManager.getModifiers(), ...(farmMods || {}) };
     let total = 0;
 
     if (supportModsFn) {

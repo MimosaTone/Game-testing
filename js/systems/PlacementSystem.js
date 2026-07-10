@@ -99,9 +99,15 @@ export class PlacementSystem {
   }
 
   isSupportUnlocked(typeId) {
+    if (this.game?.isSupportUnlocked) return this.game.isSupportUnlocked(typeId);
     const def = SUPPORT_TYPES[typeId];
     if (!def?.unlockAfterWave) return true;
     return this.bossesDefeated > 0;
+  }
+
+  isTowerUnlocked(typeId) {
+    if (this.game?.isTowerUnlocked) return this.game.isTowerUnlocked(typeId);
+    return true;
   }
 
   getBuildCost(typeId) {
@@ -179,15 +185,18 @@ export class PlacementSystem {
     }
 
     this.occupied.set(key, structure);
+    this.game?.applyResearchStructureMods(structure);
     this.eventBus.emit(Events.STRUCTURE_REBUILT, structure);
     return true;
   }
 
   _placeTower(typeId, gridX, gridY) {
+    if (!this.isTowerUnlocked(typeId)) return false;
     const cost = this.getBuildCost(typeId);
     if (!this.economy.spend(cost)) return false;
 
     const tower = new Tower(typeId, gridX, gridY);
+    this.game?.applyResearchStructureMods(tower);
     this.towers.push(tower);
     this.occupied.set(`${gridX},${gridY}`, tower);
     this.eventBus.emit(Events.TOWER_PLACED, tower);
@@ -198,6 +207,7 @@ export class PlacementSystem {
     if (!this.economy.spend(FARM_CONFIG.cost)) return false;
 
     const farm = new Farm(gridX, gridY);
+    this.game?.applyResearchStructureMods(farm);
     this.farms.push(farm);
     this.occupied.set(`${gridX},${gridY}`, farm);
     this.economy.recalculateIncome(this.farms);
@@ -211,6 +221,7 @@ export class PlacementSystem {
     if (!this.economy.spend(def.cost)) return false;
 
     const support = new Support(typeId, gridX, gridY);
+    this.game?.applyResearchStructureMods(support);
     this.supports.push(support);
     this.occupied.set(`${gridX},${gridY}`, support);
     this.eventBus.emit(Events.SUPPORT_PLACED, support);
@@ -218,7 +229,9 @@ export class PlacementSystem {
   }
 
   manualRepair(structure) {
-    const mult = this.economy._investmentManager?.getStructureRepairCostMult?.(structure) ?? 1;
+    const mult = this.game?.getRepairCostMult?.(structure)
+      ?? this.economy._investmentManager?.getStructureRepairCostMult?.(structure)
+      ?? 1;
     const cost = getRepairCost(structure, mult);
     if (cost === null || cost <= 0) return false;
     if (!this.economy.spend(cost)) return false;
@@ -232,9 +245,11 @@ export class PlacementSystem {
       (s) => !s.destroyed && s.health < s.maxHealth
     );
     let totalCost = 0;
-    const im = this.economy._investmentManager;
     for (const s of structures) {
-      const mult = im?.getStructureRepairCostMult?.(s) ?? im?.getRepairCostMult?.() ?? 1;
+      const mult = this.game?.getRepairCostMult?.(s)
+        ?? this.economy._investmentManager?.getStructureRepairCostMult?.(s)
+        ?? this.economy._investmentManager?.getRepairCostMult?.()
+        ?? 1;
       totalCost += getRepairCost(s, mult) || 0;
     }
     return totalCost;

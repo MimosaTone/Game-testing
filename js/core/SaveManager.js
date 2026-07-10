@@ -83,11 +83,24 @@ function migrateV4ToV5(data) {
   return data;
 }
 
+function migrateV5ToV6(data) {
+  if (data.version !== 5) return data;
+  if (data.meta) {
+    data.meta.researchMeta = data.meta.researchMeta || { unlocks: {}, levels: {} };
+  }
+  if (data.run?.research) {
+    data.run.research.endless = data.run.research.endless || {};
+  }
+  data.version = 6;
+  return data;
+}
+
 function migrateSave(data) {
   if (data.version === 1) data = migrateV1ToV2(data);
   if (data.version === 2) data = migrateV2ToV3(data);
   if (data.version === 3) data = migrateV3ToV4(data);
   if (data.version === 4) data = migrateV4ToV5(data);
+  if (data.version === 5) data = migrateV5ToV6(data);
   return data;
 }
 
@@ -241,6 +254,7 @@ export class SaveManager {
       totalPrestiges: pm.data.totalPrestiges,
       bestWave: pm.data.bestWave,
       ...pm.toMetaExtras(),
+      researchMeta: game.researchManager.toMetaData(),
       settings: {
         autoStartWaves: pm.autoStartWaves,
         preferredSpeed: game.speedController.preferredSpeed,

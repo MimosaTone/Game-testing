@@ -274,6 +274,9 @@ export function applyExternalMods(combat, mods) {
   if (mods.armorPen) combat.armorPen = (combat.armorPen || 0) + mods.armorPen;
   if (mods.burnDPSAdd) combat.burnDPS += mods.burnDPSAdd;
   if (mods.slowPercentAdd) combat.slowPercent = Math.max(combat.slowPercent, mods.slowPercentAdd);
+  if (mods.slowDurationMult && combat.slowDuration > 0) {
+    combat.slowDuration *= mods.slowDurationMult;
+  }
   if (mods.chainCountAdd) combat.chainCount += Math.floor(mods.chainCountAdd);
   if (mods.chainCount) combat.chainCount += mods.chainCount;
   if (mods.splashRadiusMult) combat.splashRadius *= mods.splashRadiusMult;
@@ -289,6 +292,8 @@ export function applyExternalMods(combat, mods) {
   if (mods.groundBurn) combat.groundBurn = mods.groundBurn;
   if (mods.burnDPS) combat.burnDPS = Math.max(combat.burnDPS, mods.burnDPS);
   if (mods.burnDuration) combat.burnDuration = Math.max(combat.burnDuration, mods.burnDuration);
+  if (mods.bossDamageMult) combat.bossDamageMult = mods.bossDamageMult;
+  if (mods.eliteDamageMult) combat.eliteDamageMult = mods.eliteDamageMult;
 
   return finalizeCombatStats(combat);
 }

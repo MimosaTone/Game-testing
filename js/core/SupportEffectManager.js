@@ -38,6 +38,11 @@ export class SupportEffectManager {
       bankInterestMult: 1,
       crystalMult: 1,
       researchMult: 1,
+      killGoldMult: 1,
+      slowDurationMult: 1,
+      repairSpeedMult: 1,
+      repairCostMult: 1,
+      eliteGoldMult: 1,
     };
   }
 
@@ -70,13 +75,31 @@ export class SupportEffectManager {
     }
 
     if (researchMods) {
-      this.global.damageMult *= researchMods.damageMult;
-      this.global.rangeMult *= researchMods.rangeMult;
-      this.global.attackSpeedMult *= researchMods.attackSpeedMult;
-      this.global.farmIncomeMult *= researchMods.farmIncomeMult;
-      this.global.buildCostMult *= researchMods.buildCostMult;
-      this.global.sellValueMult *= researchMods.sellValueMult;
-      this.global.bossRewardMult *= researchMods.bossRewardMult;
+      this.global.damageMult *= researchMods.damageMult ?? 1;
+      this.global.rangeMult *= researchMods.rangeMult ?? 1;
+      this.global.attackSpeedMult *= researchMods.attackSpeedMult ?? 1;
+      this.global.farmIncomeMult *= researchMods.farmIncomeMult ?? 1;
+      this.global.buildCostMult *= researchMods.buildCostMult ?? 1;
+      this.global.upgradeCostMult *= researchMods.upgradeCostMult ?? 1;
+      this.global.sellValueMult *= researchMods.sellValueMult ?? 1;
+      this.global.bossRewardMult *= researchMods.bossRewardMult ?? 1;
+      this.global.bankInterestMult *= researchMods.bankInterestMult ?? 1;
+      this.global.goldEarnedMult *= researchMods.goldEarnedMult ?? 1;
+      this.global.killGoldMult *= researchMods.killGoldMult ?? 1;
+      this.global.crystalMult *= researchMods.crystalMult ?? 1;
+      this.global.researchMult *= researchMods.researchMult ?? 1;
+      this.global.critChance += researchMods.critChance ?? 0;
+      this.global.projectileSpeedMult *= researchMods.projectileSpeedMult ?? 1;
+      this.global.chainCountAdd += Math.floor(researchMods.chainCountAdd ?? 0);
+      this.global.burnDPSAdd += researchMods.burnDPSAdd ?? 0;
+      this.global.slowPercentAdd = Math.max(this.global.slowPercentAdd, researchMods.slowPercentAdd ?? 0);
+      this.global.armorPen += researchMods.armorPen ?? 0;
+      this.global.bossDamageMult = (this.global.bossDamageMult ?? 1) * (researchMods.bossDamageMult ?? 1);
+      this.global.eliteDamageMult = (this.global.eliteDamageMult ?? 1) * (researchMods.eliteDamageMult ?? 1);
+      this.global.slowDurationMult *= researchMods.slowDurationMult ?? 1;
+      this.global.repairSpeedMult *= researchMods.repairSpeedMult ?? 1;
+      this.global.repairCostMult *= researchMods.repairCostMult ?? 1;
+      this.global.eliteGoldMult *= researchMods.eliteGoldMult ?? 1;
     }
 
     if (investMods) {
@@ -194,10 +217,11 @@ export class SupportEffectManager {
   getStructureRepairStats(support) {
     const def = SUPPORT_TYPES.repair_station;
     const idx = support.level - 1;
+    const speed = this.global.repairSpeedMult ?? 1;
     return {
       radius: def.perLevel.radius[idx],
-      waveRepairAmount: def.perLevel.waveRepairAmount[idx],
-      combatRepairPerSec: def.perLevel.combatRepairPerSec[idx],
+      waveRepairAmount: def.perLevel.waveRepairAmount[idx] * speed,
+      combatRepairPerSec: def.perLevel.combatRepairPerSec[idx] * speed,
       maxSimultaneous: def.perLevel.maxSimultaneous[idx],
     };
   }

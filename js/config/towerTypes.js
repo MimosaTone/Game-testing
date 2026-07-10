@@ -54,6 +54,7 @@ export const TOWER_TYPES = {
     name: 'Gust Totem',
     description: 'Slows foes in range; upgrades add knockback.',
     cost: 58,
+    unlockWave: 15,
     color: '#4db6ac',
     icon: '◎',
     baseStats: {
@@ -72,6 +73,7 @@ export const TOWER_TYPES = {
     name: 'Ember Hearth',
     description: 'Burns enemies over time — strong vs armored foes.',
     cost: 62,
+    unlockWave: 25,
     color: '#e65100',
     icon: '✧',
     baseStats: {

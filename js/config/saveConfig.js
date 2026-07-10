@@ -1,7 +1,7 @@
 /** Save file configuration. */
 export const SAVE_CONFIG = {
   storageKey: 'meadow-defense-save',
-  version: 5,
+  version: 6,
 
   /** Save code prefix — identifies Meadow Defense export strings. */
   saveCodePrefix: 'MDSAVE:',

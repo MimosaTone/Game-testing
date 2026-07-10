@@ -131,6 +131,12 @@ export class Projectile {
 
       dmg *= this._rollCrit();
 
+      if (enemy.isBoss && this.tower.getStats().bossDamageMult) {
+        dmg *= this.tower.getStats().bossDamageMult;
+      } else if (this._isElite(enemy) && this.tower.getStats().eliteDamageMult) {
+        dmg *= this.tower.getStats().eliteDamageMult;
+      }
+
       if (this.slowPercent > 0) {
         enemy.applySlow(this.slowPercent, this.slowDuration);
       }
@@ -179,6 +185,10 @@ export class Projectile {
     if (this.critChance <= 0) return 1;
     if (Math.random() < this.critChance) return this.critDamageMult;
     return 1;
+  }
+
+  _isElite(enemy) {
+    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan'].includes(enemy.typeId);
   }
 
   _findChainTargets(origin, enemies, count) {

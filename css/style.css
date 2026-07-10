@@ -1776,6 +1776,205 @@ body.theme-emerald {
   }
 }
 
+/* ── Research Menu ── */
+.research-menu-open-btn {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid rgba(123, 156, 255, 0.5);
+  background: linear-gradient(135deg, rgba(123, 156, 255, 0.2), rgba(76, 175, 80, 0.1));
+  color: var(--research);
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.research-menu-open-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.research-section-compact {
+  padding-bottom: 12px;
+}
+
+.research-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(8, 12, 20, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.research-menu-overlay.hidden {
+  display: none;
+}
+
+.research-menu {
+  width: min(1100px, 100%);
+  max-height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #1a2230 0%, #121820 100%);
+  border: 1px solid rgba(123, 156, 255, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.research-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(120, 140, 160, 0.2);
+  flex-shrink: 0;
+}
+
+.research-menu-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--research);
+}
+
+.research-menu-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.research-menu-rp {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--research);
+  padding-right: 8px;
+}
+
+.research-menu-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.3);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.research-menu-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(120, 140, 160, 0.15);
+}
+
+.research-menu-tab {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.research-menu-tab.active {
+  color: var(--research);
+  border-color: rgba(123, 156, 255, 0.4);
+  background: rgba(123, 156, 255, 0.12);
+}
+
+.research-menu-tab.endless-tab {
+  color: var(--gold);
+}
+
+.research-menu-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 16px 18px;
+}
+
+.research-branch-header h3 {
+  margin: 0 0 6px;
+  color: var(--research);
+}
+
+.research-node-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.research-node-card {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 160, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.research-node-card.state-available { border-color: rgba(76, 175, 80, 0.45); }
+.research-node-card.state-owned { border-color: rgba(123, 156, 255, 0.4); }
+.research-node-card.state-maxed { border-color: rgba(123, 156, 255, 0.35); opacity: 0.85; }
+.research-node-card.state-locked { opacity: 0.55; }
+
+.research-node-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.research-node-name { font-weight: 700; font-size: 13px; }
+.research-node-rank { font-size: 11px; color: var(--text-muted); }
+.research-node-desc { font-size: 11px; color: var(--text-muted); margin: 0 0 6px; }
+.research-node-prereq { font-size: 10px; color: var(--text-muted); margin: 0 0 6px; }
+
+.research-meta-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.research-buy-btn {
+  width: 100%;
+  padding: 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(123, 156, 255, 0.4);
+  background: rgba(123, 156, 255, 0.12);
+  color: var(--research);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.research-buy-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.research-node-status {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.research-endless-hint {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ── */
 @media (max-width: 1300px) {
   :root {

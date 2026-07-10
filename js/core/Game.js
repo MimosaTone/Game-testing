@@ -17,7 +17,9 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
 import { isBossWave } from '../config/waveConfig.js';
 import { ECONOMY_CONFIG } from '../config/economyConfig.js';
-import { STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
+import { STRUCTURE_REINFORCEMENTS, BUILD_EXPANSION } from '../config/investmentConfig.js';
+import { TOWER_TYPES } from '../config/towerTypes.js';
+import { SUPPORT_TYPES } from '../config/supportConfig.js';
 
 /** Game phases. */
 export const Phase = {
@@ -40,9 +42,10 @@ export class Game {
     this.prestigeManager = new PrestigeManager(this.eventBus);
     this.prestigeManager.loadFromMeta(this.saveManager.meta);
     this.researchManager = new ResearchManager(this.eventBus);
+    this.researchManager.loadFromMeta(this.saveManager.meta);
     this.investmentManager = new InvestmentManager(this.eventBus);
     this.challengeManager = new ChallengeManager(this.eventBus);
-    this.speedController = new SpeedController(this.eventBus, this.prestigeManager);
+    this.speedController = new SpeedController(this.eventBus, this.prestigeManager, this.researchManager);
     this.speedController.loadFromSettings(this.saveManager.meta.settings);
     this.supportEffects = new SupportEffectManager();
     this.economy = new Economy(this.eventBus, this.prestigeManager);
@@ -51,6 +54,7 @@ export class Game {
     this.waveManager = new WaveManager(this.eventBus, this.path);
     this.combatSystem = new CombatSystem(this.eventBus);
     this.placementSystem = new PlacementSystem(this.eventBus, this.economy);
+    this.placementSystem.game = this;
     this.structureCombat = new StructureCombatSystem(this.eventBus);
     this.structureCombat.setPlacementSystem(this.placementSystem);
     this.structureCombat.setSupportEffects(this.supportEffects);
@@ -63,6 +67,7 @@ export class Game {
     this.running = false;
     this.menuPaused = false;
     this.prestigeMenu = null;
+    this.researchMenu = null;
     this.pendingHarvestEffects = [];
     this.autoStartTimer = null;
     this.wavesSinceRepair = 0;
@@ -82,7 +87,74 @@ export class Game {
   getChallengeRewardMult() {
     const base = this.challengeManager.getRewardMultiplier();
     const prestige = this.prestigeManager.getModifiers().challengeRewardMult ?? 1;
-    return base * prestige;
+    const research = this.researchManager.getModifiers().challengeRewardMult ?? 1;
+    return base * prestige * research;
+  }
+
+  isTowerUnlocked(typeId) {
+    const def = TOWER_TYPES[typeId];
+    if (!def?.unlockWave) return true;
+    const wave = this.waveManager.waveNumber;
+    if (typeId === 'gust' && this.researchManager.hasMetaUnlock('gust_from_wave_1')) return true;
+    if (typeId === 'ember' && this.researchManager.hasMetaUnlock('ember_early')) return true;
+    return wave >= def.unlockWave;
+  }
+
+  isSupportUnlocked(typeId) {
+    const def = SUPPORT_TYPES[typeId];
+    if (!def) return false;
+    if (def.unlockAfterWave) return this.placementSystem.bossesDefeated > 0;
+    const wave = this.waveManager.waveNumber;
+    if (typeId === 'bank' && this.researchManager.hasMetaUnlock('bank_wave_5')) {
+      return wave >= 5;
+    }
+    if (def.unlockWave) return wave >= def.unlockWave;
+    return true;
+  }
+
+  _isEliteEnemy(enemy) {
+    return !enemy.isBoss && ['husk', 'drift', 'ward', 'rime', 'titan'].includes(enemy.typeId);
+  }
+
+  getRepairCostMult(structure = null) {
+    const invest = structure
+      ? (this.investmentManager.getStructureRepairCostMult?.(structure) ?? 1)
+      : (this.investmentManager.getRepairCostMult?.() ?? 1);
+    const repair = this.supportEffects?.global.repairCostMult ?? 1;
+    return Math.max(0.2, invest * repair);
+  }
+
+  applyResearchStructureMods(structure) {
+    if (!structure || structure.destroyed) return;
+    const rm = this.researchManager.getModifiers();
+    let healthMult = rm.structureHealthMult ?? 1;
+    if (structure.type === 'tower') healthMult *= rm.towerHealthMult ?? 1;
+
+    if (structure._baseMaxHealth === undefined) {
+      structure._baseMaxHealth = Math.max(1, Math.round(structure.maxHealth / healthMult));
+      const armorReduction = (rm.structureArmor ?? 0)
+        + (structure.type === 'tower' ? (rm.towerArmorAdd ?? 0) : 0);
+      structure._baseArmor = Math.max(0, (structure.armor || 0) - armorReduction);
+    }
+
+    const newMax = Math.max(1, Math.round(structure._baseMaxHealth * healthMult));
+    const ratio = structure.maxHealth > 0 ? structure.health / structure.maxHealth : 1;
+    structure.maxHealth = newMax;
+    structure.health = Math.max(1, Math.round(newMax * ratio));
+
+    let armor = structure._baseArmor + (rm.structureArmor ?? 0);
+    if (structure.type === 'tower') armor += rm.towerArmorAdd ?? 0;
+    structure.armor = Math.min(0.75, armor);
+  }
+
+  _applyResearchToAllStructures() {
+    for (const s of [
+      ...this.placementSystem.towers,
+      ...this.placementSystem.farms,
+      ...this.placementSystem.supports,
+    ]) {
+      this.applyResearchStructureMods(s);
+    }
   }
 
   _startingGold() {
@@ -213,7 +285,12 @@ export class Game {
       this.structureCombat.onEnemyKilled(enemy);
 
       const rewardMult = this.getChallengeRewardMult();
-      const earned = this.economy.earn(enemy.goldReward, { isBoss, rewardMult });
+      const earned = this.economy.earn(enemy.goldReward, {
+        isBoss,
+        rewardMult,
+        isKill: true,
+        isElite: this._isEliteEnemy(enemy),
+      });
       this.economy.trackKillGold(earned);
       this.prestigeManager.trackLifetime('enemiesKilled');
       this.prestigeManager.trackLifetime('goldEarned', earned);
@@ -222,7 +299,8 @@ export class Game {
 
       if (killerTower && !killerTower.destroyed) {
         const baseXp = isBoss ? MASTERY_CONFIG.xpPerBossKill : MASTERY_CONFIG.xpPerKill;
-        const xpMult = this.investmentManager.getPassiveMods().masteryXpMult;
+        const xpMult = this.investmentManager.getPassiveMods().masteryXpMult
+          * (this.researchManager.getModifiers().masteryXpMult ?? 1);
         const xp = Math.round(baseXp * rewardMult * xpMult);
         const result = killerTower.awardMasteryXP(xp);
         if (result.newLevel > result.prevLevel || result.unlockedMaster) {
@@ -306,13 +384,22 @@ export class Game {
     });
   }
 
+  getFarmIncomeMods() {
+    const prestige = this.prestigeManager.getModifiers();
+    const research = this.researchManager.getModifiers();
+    return {
+      farmIncomeMult: prestige.farmIncomeMult ?? 1,
+      farmWaveScalingMult: research.farmWaveScalingMult ?? 1,
+    };
+  }
+
   _refreshFarmIncome() {
     const fn = (gx, gy) => {
       let mult = this.supportEffects.getFarmMods(this.placementSystem.supports, gx, gy);
       mult *= this.challengeManager.getEffects().farmIncomeMult ?? 1;
       return mult;
     };
-    this.economy.recalculateIncome(this.placementSystem.farms, fn);
+    this.economy.recalculateIncome(this.placementSystem.farms, fn, this.getFarmIncomeMods());
   }
 
   _clearAutoStartTimer() {
@@ -351,6 +438,7 @@ export class Game {
     }
 
     this.prestigeManager.loadFromMeta(payload.meta);
+    this.researchManager.loadFromMeta(payload.meta);
     this.autoStartWaves = payload.meta.settings?.autoStartWaves ?? false;
     this.speedController.loadFromSettings(payload.meta.settings);
     this.resetRun();
@@ -370,6 +458,7 @@ export class Game {
   _applyRunState(run, meta) {
     this._clearAutoStartTimer();
     this.prestigeManager.loadFromMeta(meta);
+    this.researchManager.loadFromMeta(meta);
     this.autoStartWaves = meta.settings?.autoStartWaves ?? false;
 
     this.phase = Phase.PLANNING;
@@ -401,6 +490,7 @@ export class Game {
     this.placementSystem.sellMode = false;
     this.investmentManager.applyExpansionSpots(this.placementSystem);
     this._refreshInvestmentEffects();
+    this._applyResearchToAllStructures();
 
     this._emitFullState();
     this.eventBus.emit(Events.SAVE_LOADED);
@@ -572,6 +662,15 @@ export class Game {
     this.economy.setWaveNumber(wave);
     this._refreshSupportEffects();
     this.investmentManager.onWaveComplete(this);
+    const researchMods = this.researchManager.getModifiers();
+    if (researchMods.passiveGoldPerWave > 0) {
+      this.economy.earn(researchMods.passiveGoldPerWave, { skipMultiplier: true });
+    }
+    if (researchMods.passiveRepairPerWave > 0) {
+      for (const s of [...this.placementSystem.towers, ...this.placementSystem.farms, ...this.placementSystem.supports]) {
+        if (!s.destroyed) s.health = Math.min(s.maxHealth, s.health + researchMods.passiveRepairPerWave);
+      }
+    }
     this.prestigeManager.onRunWaveComplete();
     this.prestigeManager.trackLifetime('wavesCleared');
 
@@ -599,7 +698,9 @@ export class Game {
 
     if (this.prestigeManager.autoStartWaves && this.lives > 0) {
       this._clearAutoStartTimer();
-      const delay = AUTO_START_DELAY_MS * (this.challengeManager.getEffects().autoStartDelayMult ?? 1);
+      const challengeDelay = this.challengeManager.getEffects().autoStartDelayMult ?? 1;
+      const researchDelay = this.researchManager.getModifiers().autoStartDelayMult ?? 1;
+      const delay = AUTO_START_DELAY_MS * challengeDelay * researchDelay;
       const scaledDelay = delay / this.speedController.getEffectiveSpeed();
       this.autoStartTimer = setTimeout(() => {
         if (this.phase === Phase.PLANNING && this.lives > 0) {
@@ -689,7 +790,16 @@ export class Game {
     const nextWave = this.waveManager.waveNumber + 1;
     const mods = this.prestigeManager.getModifiers();
     const base = Math.round(ECONOMY_CONFIG.waveClearBonus(nextWave) * mods.waveBonusMult);
-    return Math.round(base * this.getChallengeRewardMult());
+    const insight = this.researchManager.getModifiers().waveRewardInsight ?? 0;
+    const farmBonus = insight > 0
+      ? Math.round(this.economy.incomePerWave * (0.08 + insight * 0.02))
+      : 0;
+    return Math.round(base * this.getChallengeRewardMult()) + farmBonus;
+  }
+
+  getMaxBuildExpansions() {
+    const bonus = this.researchManager.getModifiers().bonusBuildExpansions ?? 0;
+    return BUILD_EXPANSION.maxPurchases + bonus;
   }
 
   restart() {

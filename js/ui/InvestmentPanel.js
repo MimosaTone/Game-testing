@@ -6,7 +6,6 @@ import {
   HQ_UPGRADES,
   ECONOMIC_INVESTMENTS,
   WORLD_WONDERS,
-  BUILD_EXPANSION,
   INVESTMENT_CATEGORY_ORDER,
 } from '../config/investmentConfig.js';
 
@@ -205,8 +204,8 @@ export class InvestmentPanel {
         }));
 
       case 'expansion': {
-        const cost = im.getExpansionCost();
-        const remaining = BUILD_EXPANSION.maxPurchases - im.buildExpansions;
+        const cost = im.getExpansionCost(this.game);
+        const remaining = this.game.getMaxBuildExpansions() - im.buildExpansions;
         return [{
           id: 'expand',
           name: 'Unlock Build Tile',

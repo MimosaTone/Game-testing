@@ -2,7 +2,6 @@ import { Events } from '../core/EventBus.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { FARM_CONFIG } from '../config/farmConfig.js';
 import { SUPPORT_TYPES, SUPPORT_BUILD_ORDER } from '../config/supportConfig.js';
-import { RESEARCH_UPGRADES } from '../config/researchConfig.js';
 import { CHALLENGE_MODIFIERS, CHALLENGE_PRESETS } from '../config/challengeConfig.js';
 import { MASTER_UPGRADES } from '../config/towerMasteryConfig.js';
 import { BUILD_CATEGORIES, BUILD_CATEGORY_ORDER, getBuildItemDef } from '../config/buildCategories.js';
@@ -48,7 +47,7 @@ export class HUD {
       crystals: document.getElementById('crystals-value'),
       research: document.getElementById('research-value'),
       researchHint: document.getElementById('research-hint'),
-      researchUpgrades: document.getElementById('research-upgrades'),
+      openResearchMenuBtn: document.getElementById('open-research-menu-btn'),
       prestigeCount: document.getElementById('prestige-count'),
       openPrestigeMenuBtn: document.getElementById('open-prestige-menu-btn'),
       autoStartToggle: document.getElementById('auto-start-toggle'),
@@ -143,6 +142,10 @@ export class HUD {
       this.game.prestigeMenu?.open();
     });
 
+    this.elements.openResearchMenuBtn.addEventListener('click', () => {
+      this.game.researchMenu?.open();
+    });
+
     this.elements.repairAllBtn.addEventListener('click', () => {
       if (this.game.phase !== Phase.PLANNING) return;
       this.game.placementSystem.repairAllDamaged();
@@ -224,6 +227,9 @@ export class HUD {
     bus.on(Events.RESEARCH_CHANGED, (state) => {
       this.elements.research.textContent = `${state.points} RP`;
       this._renderResearchUpgrades();
+      this._renderBuildPanel();
+      this._renderSupportPanel();
+      this._renderHotbarCards();
     });
 
     bus.on(Events.MASTERY_GAINED, ({ tower, unlockedMaster }) => {
@@ -429,7 +435,12 @@ export class HUD {
       if (!def) continue;
 
       const isSupport = def.category === 'support';
-      const unlocked = !isSupport || ps.isSupportUnlocked(typeId);
+      const isTower = !!TOWER_TYPES[typeId];
+      const unlocked = isTower
+        ? this.game.isTowerUnlocked(typeId)
+        : isSupport
+          ? this.game.isSupportUnlocked(typeId)
+          : true;
       const cost = isSupport ? def.cost : (typeId === FARM_CONFIG.id ? def.cost : ps.getBuildCost(typeId));
       const affordable = gold >= cost;
 
@@ -536,7 +547,7 @@ export class HUD {
 
     for (const typeId of SUPPORT_BUILD_ORDER) {
       const def = SUPPORT_TYPES[typeId];
-      const unlocked = ps.isSupportUnlocked(typeId);
+      const unlocked = this.game.isSupportUnlocked(typeId);
       const btn = document.createElement('button');
       btn.className = 'build-btn support-btn';
       btn.dataset.buildType = typeId;
@@ -544,7 +555,9 @@ export class HUD {
 
       const lockHint = def.unlockAfterWave
         ? `Unlocks after Boss (Wave ${def.unlockAfterWave})`
-        : def.description;
+        : def.unlockWave
+          ? `Unlocks at Wave ${def.unlockWave}`
+          : def.description;
 
       btn.innerHTML = `
         <span class="build-icon" style="color:${def.color}">${def.icon}</span>
@@ -559,68 +572,20 @@ export class HUD {
   }
 
   _renderResearchUpgrades() {
-    const container = this.elements.researchUpgrades;
-    container.innerHTML = '';
     const rm = this.game.researchManager;
     const rp = rm.points;
+    const ranks = rm.getTotalMainRanks();
 
     this.elements.researchHint.textContent = rp > 0
-      ? 'Spend Research Points on run-wide bonuses'
-      : 'Build Research Labs to earn Research Points';
-
-    for (const upgrade of Object.values(RESEARCH_UPGRADES)) {
-      const level = rm.getUpgradeLevel(upgrade.id);
-      const maxed = level >= upgrade.maxLevel;
-      const row = document.createElement('div');
-      row.className = 'research-upgrade-row';
-      row.innerHTML = `
-        <div class="research-upgrade-info">
-          <span class="research-upgrade-name">${upgrade.name} (${level}/${upgrade.maxLevel})</span>
-          <span class="research-upgrade-desc">${upgrade.description}</span>
-        </div>
-      `;
-
-      if (!maxed) {
-        const buyBtn = document.createElement('button');
-        buyBtn.type = 'button';
-        buyBtn.className = 'research-upgrade-btn';
-        buyBtn.textContent = `${upgrade.cost} RP`;
-        const canBuy = rm.canPurchase(upgrade.id) && this.game.phase === Phase.PLANNING;
-        buyBtn.disabled = !canBuy;
-        buyBtn.title = this.game.phase !== Phase.PLANNING
-          ? 'Research upgrades can only be purchased between waves'
-          : rm.points < upgrade.cost
-            ? `Need ${upgrade.cost} RP (you have ${rm.points})`
-            : `Purchase ${upgrade.name}`;
-        buyBtn.addEventListener('click', () => {
-          if (this.game.phase !== Phase.PLANNING) return;
-          if (rm.purchase(upgrade.id)) {
-            if (upgrade.id === 'golden_harvest' && upgrade.effects.bonusStartingGold) {
-              this.game.economy.earn(upgrade.effects.bonusStartingGold, { skipMultiplier: true });
-            }
-            this.game._refreshSupportEffects();
-            this.game._applyPrestigeToTowers();
-            this._renderResearchUpgrades();
-          }
-        });
-        row.appendChild(buyBtn);
-      } else {
-        const maxLabel = document.createElement('span');
-        maxLabel.className = 'research-maxed';
-        maxLabel.textContent = 'MAX';
-        row.appendChild(maxLabel);
-      }
-
-      container.appendChild(row);
-    }
+      ? `${rp} RP available · ${ranks} tree ranks · open Research Tree to specialize`
+      : 'Build Research Labs to earn RP, then open the Research Tree';
   }
 
   _projectedIncomeWithNewSunpatch() {
     const wave = this.game.waveManager.waveNumber;
     const fakeNew = { getBaseIncome: () => FARM_CONFIG.incomePerLevel[0] };
     const farms = [...this.game.placementSystem.farms, fakeNew];
-    const mods = this.game.prestigeManager.getModifiers();
-    return calculateFarmIncome(farms, wave, mods);
+    return calculateFarmIncome(farms, wave, this.game.getFarmIncomeMods());
   }
 
   _renderBuildPanel() {
@@ -631,14 +596,16 @@ export class HUD {
     const sunpatchPayback = estimatePaybackWaves(FARM_CONFIG.cost, projectedIncome);
 
     const items = [
-      ...Object.values(TOWER_TYPES).map((t) => ({
-        id: t.id,
-        name: t.name,
-        cost: t.cost,
-        icon: t.icon,
-        color: t.color,
-        hint: t.description,
-      })),
+      ...Object.values(TOWER_TYPES)
+        .filter((t) => this.game.isTowerUnlocked(t.id))
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          cost: t.cost,
+          icon: t.icon,
+          color: t.color,
+          hint: t.description,
+        })),
       {
         id: FARM_CONFIG.id,
         name: FARM_CONFIG.name,
@@ -727,6 +694,10 @@ export class HUD {
 
   _showWaveSummary({ wave, killGold, farmIncome, waveBonus, bankInterest, rpGain, crystalGain, total }) {
     const el = this.elements.waveSummary;
+    const insight = this.game.researchManager.getModifiers().waveRewardInsight ?? 0;
+    const insightNote = insight > 0
+      ? `<div class="summary-row summary-insight"><span>Scout estimate</span><span>~${this.game.getEstimatedWaveReward()}g next wave</span></div>`
+      : '';
     el.classList.remove('hidden');
     el.innerHTML = `
       <div class="summary-title">Wave ${wave} Harvest</div>
@@ -738,6 +709,7 @@ export class HUD {
         ${rpGain > 0 ? `<div class="summary-row"><span>Research gained</span><span class="research-text">+${rpGain} RP</span></div>` : ''}
         ${crystalGain > 0 ? `<div class="summary-row"><span>Crystals mined</span><span class="crystal-text">+${crystalGain} ◆</span></div>` : ''}
         <div class="summary-row summary-total"><span>Total earned</span><span>+${total}g</span></div>
+        ${insightNote}
       </div>
     `;
   }
@@ -914,7 +886,7 @@ export class HUD {
               : f
           ),
           wave,
-          this.game.prestigeManager.getModifiers()
+          this.game.getFarmIncomeMods()
         )
       : null;
     const incomeGain = projectedAfterUpgrade !== null

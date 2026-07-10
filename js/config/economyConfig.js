@@ -33,7 +33,8 @@ export function calculateFarmIncome(farms, waveNumber, prestigeMods = null) {
 
   const base = farms.reduce((sum, farm) => sum + farm.getBaseIncome(), 0);
   const networkMult = 1 + ECONOMY_CONFIG.farmNetworkBonus * (farms.length - 1);
-  const waveMult = 1 + waveNumber * ECONOMY_CONFIG.incomeWaveScaling;
+  const waveScaling = ECONOMY_CONFIG.incomeWaveScaling * (prestigeMods?.farmWaveScalingMult ?? 1);
+  const waveMult = 1 + waveNumber * waveScaling;
   const prestigeMult = prestigeMods?.farmIncomeMult ?? 1;
 
   return Math.round(base * networkMult * waveMult * prestigeMult);

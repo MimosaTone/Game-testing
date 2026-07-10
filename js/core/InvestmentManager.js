@@ -182,8 +182,9 @@ export class InvestmentManager {
     return scaledCost(def.baseCost, def.costGrowth, level);
   }
 
-  getExpansionCost() {
-    if (this.buildExpansions >= BUILD_EXPANSION.maxPurchases) return null;
+  getExpansionCost(game = null) {
+    const max = game?.getMaxBuildExpansions?.() ?? BUILD_EXPANSION.maxPurchases;
+    if (this.buildExpansions >= max) return null;
     return scaledCost(BUILD_EXPANSION.baseCost, BUILD_EXPANSION.costGrowth, this.buildExpansions);
   }
 
@@ -246,7 +247,8 @@ export class InvestmentManager {
     const def = WORLD_WONDERS[id];
     if (!def) return false;
     if (game.waveManager.waveNumber < def.unlockWave) return false;
-    if (!game.economy.spend(def.cost)) return false;
+    const wonderMult = game.researchManager.getWonderCostMult();
+    if (!game.economy.spend(Math.round(def.cost * wonderMult))) return false;
     this.wonder = id;
     if (def.effects.structureHealthMult) {
       game._applyWonderToStructures();
@@ -257,7 +259,7 @@ export class InvestmentManager {
   }
 
   purchaseExpansion(game) {
-    const cost = this.getExpansionCost();
+    const cost = this.getExpansionCost(game);
     if (cost === null || !game.economy.spend(cost)) return false;
     const next = BUILD_EXPANSION_POOL[this.buildExpansions];
     if (!next) return false;
@@ -325,7 +327,7 @@ export class InvestmentManager {
     if (this.legendary[tower.id]) return false;
     const def = LEGENDARY_UPGRADES[tower.typeId];
     if (!def) return false;
-    if (!game.economy.spend(def.cost)) return false;
+    if (!game.economy.spend(Math.round(def.cost * game.researchManager.getLegendaryCostMult()))) return false;
     this.legendary[tower.id] = def.id;
     this._emit();
     game._refreshInvestmentEffects();

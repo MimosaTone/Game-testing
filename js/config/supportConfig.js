@@ -37,6 +37,7 @@ export const SUPPORT_TYPES = {
     name: 'Bank',
     description: 'Store gold and earn interest each wave.',
     cost: 100,
+    unlockWave: 15,
     color: '#f9a825',
     icon: '¤',
     maxLevel: 5,

@@ -25,6 +25,7 @@ function normalizeMeta(meta) {
     worldLegacy: { ranks: {} },
     lifetime: {},
     worldEvents: { unlocked: [], active: null, wavesLeft: 0 },
+    researchMeta: { unlocks: {}, levels: {} },
     settings: {
       autoStartWaves: false,
       preferredSpeed: 1,
