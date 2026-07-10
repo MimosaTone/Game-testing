@@ -251,28 +251,28 @@ export const CHALLENGE_PRESETS = {
     id: 'normal',
     name: '🌿 Warm Up',
     traditionalName: 'Normal',
-    description: 'Standard meadow defense — no bonus rewards',
+    description: 'The meadow is still being kind.',
     modifiers: [],
   },
   veteran: {
     id: 'veteran',
     name: "⚔ Let's Get Started",
     traditionalName: 'Veteran',
-    description: 'Tougher foes with modest reward bonuses',
+    description: "Time to see what you've learned.",
     modifiers: ['reinforced_1', 'swift_assault'],
   },
   expert: {
     id: 'expert',
     name: "🔥 You're Playing the Actual Game Now",
     traditionalName: 'Expert',
-    description: 'Serious pressure for experienced commanders',
+    description: 'The training wheels are officially off.',
     modifiers: ['reinforced_2', 'elite_forces', 'endless_horde'],
   },
   nightmare: {
     id: 'nightmare',
     name: "🏋️ Let's Add Some More Weight",
     traditionalName: 'Nightmare',
-    description: 'Extreme challenge — massive rewards',
+    description: "You've got the fundamentals. Let's see if they hold up.",
     modifiers: [
       'reinforced_3',
       'boss_empowerment',
@@ -286,7 +286,7 @@ export const CHALLENGE_PRESETS = {
     id: 'apocalypse',
     name: '💪 Do You Even Lift?',
     traditionalName: 'Apocalypse',
-    description: 'Nightmare plus every remaining modifier — the meadow fights back',
+    description: 'The meadow has been putting in work too.',
     modifiers: [
       'reinforced_3',
       'boss_empowerment',
@@ -302,9 +302,9 @@ export const CHALLENGE_PRESETS = {
   },
   pain_lover: {
     id: 'pain_lover',
-    name: '😈 Pain Lover?',
-    traditionalName: 'Insanity',
-    description: 'Apocalypse, but worse — max-tier misery for max-tier rewards',
+    name: '🩸 Pain Is Weakness Leaving the Body',
+    traditionalName: 'Extreme',
+    description: "If it doesn't challenge you, it won't change you.",
     modifiers: [
       'reinforced_4',
       'boss_empowerment',
@@ -321,8 +321,8 @@ export const CHALLENGE_PRESETS = {
   who_hurt_you: {
     id: 'who_hurt_you',
     name: '💔 Who Hurt You?',
-    traditionalName: 'Impossible',
-    description: 'Pain Lover was not enough — absolute meadow cruelty for ~8× rewards',
+    traditionalName: 'Ultimate',
+    description: "...We're genuinely impressed you clicked this.",
     modifiers: [
       'reinforced_5',
       'boss_empowerment',
@@ -339,13 +339,22 @@ export const CHALLENGE_PRESETS = {
 };
 
 /** Resolve display labels for built-in or saved custom presets. */
+export function formatTraditionalLabel(name) {
+  return name ? `(${name})` : '';
+}
+
+export function formatFlavorQuote(description) {
+  if (!description) return '';
+  return `"${description}"`;
+}
+
 export function getPresetDisplay(presetId, customPresets = []) {
   const builtin = CHALLENGE_PRESETS[presetId];
   if (builtin) {
     return {
       title: builtin.name,
-      traditional: builtin.traditionalName ?? null,
-      description: builtin.description ?? '',
+      traditional: formatTraditionalLabel(builtin.traditionalName),
+      description: formatFlavorQuote(builtin.description),
       isBuiltin: true,
     };
   }

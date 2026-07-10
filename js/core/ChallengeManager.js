@@ -2,7 +2,7 @@ import {
   CHALLENGE_MODIFIERS,
   CHALLENGE_PRESETS,
   getPresetDisplay,
-} from '../config/challengeConfig.js?v=20260710k';
+} from '../config/challengeConfig.js?v=20260710l';
 import { Events } from './EventBus.js';
 
 /**
