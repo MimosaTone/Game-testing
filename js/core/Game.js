@@ -59,6 +59,7 @@ export class Game {
     this.structureCombat = new StructureCombatSystem(this.eventBus);
     this.structureCombat.setPlacementSystem(this.placementSystem);
     this.structureCombat.setSupportEffects(this.supportEffects);
+    this._setStructureDamageTakenMult(this.prestigeManager.getModifiers().structureDamageTakenMult ?? 1);
 
     this.phase = Phase.PLANNING;
     this.lives = this._startingLives();
@@ -263,9 +264,19 @@ export class Game {
     }
   }
 
+  _setStructureDamageTakenMult(mult) {
+    if (!this.structureCombat) return;
+    const value = Math.max(0.5, mult ?? 1);
+    if (typeof this.structureCombat.setDamageTakenMult === 'function') {
+      this.structureCombat.setDamageTakenMult(value);
+    } else {
+      this.structureCombat.damageTakenMult = value;
+    }
+  }
+
   _applyPrestigeToTowers() {
     const mods = this.prestigeManager.getModifiers();
-    this.structureCombat.setDamageTakenMult(mods.structureDamageTakenMult ?? 1);
+    this._setStructureDamageTakenMult(mods.structureDamageTakenMult ?? 1);
     for (const tower of this.placementSystem.towers) {
       tower.prestigeMods = mods;
       tower.supportMods = this.supportEffects.getTowerMods(

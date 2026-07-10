@@ -135,7 +135,8 @@ export class StructureCombatSystem {
   }
 
   _damageStructure(structure, damage) {
-    const adjusted = damage * this.damageTakenMult;
+    const mult = this.damageTakenMult ?? 1;
+    const adjusted = damage * mult;
     const destroyed = damageStructure(structure, adjusted);
     this.eventBus.emit(Events.STRUCTURE_DAMAGED, structure);
     if (destroyed) {
