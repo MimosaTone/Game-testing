@@ -128,27 +128,30 @@ export class Renderer {
       const [x, y] = key.split(',').map(Number);
       const occupied = placementSystem.isOccupied(x, y);
       const hovered = hoveredCell && hoveredCell.x === x && hoveredCell.y === y;
+      const isExpansion = placementSystem.isExpansionSpot(x, y);
       const cx = x * tileSize + tileSize / 2;
       const cy = y * tileSize + tileSize / 2;
 
       if (occupied) continue;
 
       ctx.fillStyle = hovered ? colors.buildSpotFill : colors.buildSpotFill;
-      ctx.globalAlpha = hovered ? 0.55 : 0.35;
+      ctx.globalAlpha = hovered ? 0.55 : isExpansion ? 0.48 : 0.35;
       ctx.fillRect(x * tileSize + 5, y * tileSize + 5, tileSize - 10, tileSize - 10);
       ctx.globalAlpha = 1;
 
-      ctx.strokeStyle = hovered ? colors.buildSpotHover : colors.buildSpotRing;
-      ctx.lineWidth = hovered ? 2.5 : 1.5;
-      ctx.setLineDash(hovered ? [] : [4, 4]);
+      ctx.strokeStyle = isExpansion
+        ? (hovered ? '#ffc857' : 'rgba(255, 193, 87, 0.8)')
+        : (hovered ? colors.buildSpotHover : colors.buildSpotRing);
+      ctx.lineWidth = isExpansion ? (hovered ? 3 : 2) : (hovered ? 2.5 : 1.5);
+      ctx.setLineDash(hovered || isExpansion ? [] : [4, 4]);
       ctx.strokeRect(x * tileSize + 6, y * tileSize + 6, tileSize - 12, tileSize - 12);
       ctx.setLineDash([]);
 
       if (!hovered) {
-        ctx.fillStyle = colors.buildSpotRing;
-        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = isExpansion ? 'rgba(255, 193, 87, 0.9)' : colors.buildSpotRing;
+        ctx.globalAlpha = isExpansion ? 0.85 : 0.6;
         ctx.beginPath();
-        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.arc(cx, cy, isExpansion ? 4 : 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
       }

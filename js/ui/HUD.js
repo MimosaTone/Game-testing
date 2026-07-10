@@ -13,7 +13,7 @@ import {
   ECONOMY_CONFIG,
 } from '../config/economyConfig.js';
 import { isBossWave } from '../config/waveConfig.js?v=20260710c';
-import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS } from '../config/investmentConfig.js';
+import { TOWER_OVERCLOCKS, STRUCTURE_REINFORCEMENTS, BUILD_EXPANSION } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
 
 /**
@@ -756,6 +756,11 @@ export class HUD {
     this.elements.sellBtn.classList.add('hidden');
   }
 
+  _appendPathsideBonus(structure) {
+    if (!this.game.placementSystem.isExpansionSpot(structure.gridX, structure.gridY)) return '';
+    return `<div class="pathside-bonus-hint">◎ Pathside expansion — ${BUILD_EXPANSION.pathsideBonusLabel}</div>`;
+  }
+
   _appendHealthStats(structure) {
     if (!structure?.maxHealth) return '';
     const pct = Math.round((structure.health / structure.maxHealth) * 100);
@@ -810,6 +815,7 @@ export class HUD {
     let statsHtml = `
       ${masteryHtml}
       ${this._appendHealthStats(tower)}
+      ${this._appendPathsideBonus(tower)}
       <div>Damage: <strong>${stats.damage}</strong></div>
       <div>Range: <strong>${stats.range.toFixed(1)}</strong></div>
       <div>Attack Speed: <strong>${stats.attackSpeed.toFixed(2)}/s</strong></div>
@@ -864,6 +870,7 @@ export class HUD {
     this.elements.upgradeTitle.textContent = `${FARM_CONFIG.name} (Level ${farm.level})`;
     this.elements.upgradeStats.innerHTML = `
       ${this._appendHealthStats(farm)}
+      ${this._appendPathsideBonus(farm)}
       <div>Your share: <strong>+${share}/wave</strong></div>
       <div>Total harvest: <strong>+${totalIncome}/wave</strong></div>
       ${farm.canUpgrade()

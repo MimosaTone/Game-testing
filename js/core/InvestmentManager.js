@@ -12,7 +12,10 @@ import {
   scaledCost,
 } from '../config/investmentConfig.js';
 import { LEGENDARY_UPGRADES, LEGENDARY_UNLOCK_WAVE } from '../config/legendaryConfig.js';
-import { BUILD_EXPANSION_POOL } from '../config/gameConfig.js';
+import {
+  getExpansionSpotAt,
+  getExpansionSpotKey,
+} from '../config/buildExpansionConfig.js';
 
 function emptyMods() {
   return {
@@ -188,6 +191,10 @@ export class InvestmentManager {
     return scaledCost(BUILD_EXPANSION.baseCost, BUILD_EXPANSION.costGrowth, this.buildExpansions);
   }
 
+  getNextExpansionSpot() {
+    return getExpansionSpotAt(this.buildExpansions);
+  }
+
   getReinforcementCost(structureKey, typeId) {
     const def = STRUCTURE_REINFORCEMENTS[typeId];
     if (!def) return null;
@@ -261,14 +268,16 @@ export class InvestmentManager {
   purchaseExpansion(game) {
     const cost = this.getExpansionCost(game);
     if (cost === null || !game.economy.spend(cost)) return false;
-    const next = BUILD_EXPANSION_POOL[this.buildExpansions];
+    const next = getExpansionSpotAt(this.buildExpansions);
     if (!next) return false;
-    const key = `${next.x},${next.y}`;
+    const key = getExpansionSpotKey(next);
     if (!game.placementSystem.buildSpots.has(key)) {
       game.placementSystem.buildSpots.add(key);
+      game.placementSystem.expansionSpots.add(key);
       this.unlockedSpots.push(key);
     }
     this.buildExpansions++;
+    game._applyExpansionBonuses();
     this._emit();
     return true;
   }
@@ -476,6 +485,7 @@ export class InvestmentManager {
   applyExpansionSpots(placementSystem) {
     for (const key of this.unlockedSpots) {
       placementSystem.buildSpots.add(key);
+      placementSystem.expansionSpots.add(key);
     }
   }
 }

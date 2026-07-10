@@ -18,6 +18,7 @@ import { MASTERY_CONFIG } from '../config/towerMasteryConfig.js';
 import { isBossWave } from '../config/waveConfig.js?v=20260710c';
 import { ECONOMY_CONFIG } from '../config/economyConfig.js';
 import { STRUCTURE_REINFORCEMENTS, BUILD_EXPANSION } from '../config/investmentConfig.js';
+import { PATHSIDE_EXPANSION_BONUS } from '../config/buildExpansionConfig.js';
 import { TOWER_TYPES } from '../config/towerTypes.js';
 import { SUPPORT_TYPES } from '../config/supportConfig.js';
 import { getWorldTierEffects, getWorldTierRewardMult, getNextWorldTier } from '../config/worldTierConfig.js';
@@ -234,8 +235,17 @@ export class Game {
 
   _refreshInvestmentEffects() {
     this._refreshSupportEffects();
+    this._applyExpansionBonuses();
     this._applyPrestigeToTowers();
     this.combatSystem.setTowers(this.placementSystem.towers);
+  }
+
+  _applyExpansionBonuses() {
+    const ps = this.placementSystem;
+    for (const farm of ps.farms) {
+      farm.pathsideBonus = ps.isExpansionSpot(farm.gridX, farm.gridY);
+    }
+    this._refreshFarmIncome();
   }
 
   _applyReinforcementPurchase(structure, typeId) {
@@ -289,7 +299,11 @@ export class Game {
       if (tower.definition.magicTowerBonus && this.investmentManager.getPassiveMods().magicTowerBonus && !leg.chainCount) {
         leg = { ...leg, chainCount: 2 };
       }
-      tower.investmentMods = this._mergeTowerInvestmentMods(oc, leg);
+      let invest = this._mergeTowerInvestmentMods(oc, leg);
+      if (this.placementSystem.isExpansionSpot(tower.gridX, tower.gridY)) {
+        invest = this._mergeTowerInvestmentMods(invest, PATHSIDE_EXPANSION_BONUS);
+      }
+      tower.investmentMods = invest;
     }
   }
 
@@ -358,6 +372,7 @@ export class Game {
 
     this.eventBus.on(Events.TOWER_PLACED, () => {
       this.prestigeManager.trackLifetime('towersBuilt');
+      this._applyExpansionBonuses();
       this._applyPrestigeToTowers();
       this.combatSystem.setTowers(this.placementSystem.towers);
       this.saveGame();
@@ -365,6 +380,7 @@ export class Game {
 
     this.eventBus.on(Events.FARM_PLACED, () => {
       this.prestigeManager.trackLifetime('farmsBuilt');
+      this._applyExpansionBonuses();
       this._refreshSupportEffects();
       this.saveGame();
     });

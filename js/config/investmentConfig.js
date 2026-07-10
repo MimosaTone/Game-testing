@@ -476,6 +476,8 @@ export const BUILD_EXPANSION = {
   baseCost: 250,
   costGrowth: 1.55,
   maxPurchases: 18,
+  /** Shown in investment UI — structures on unlocked expansion tiles receive these bonuses. */
+  pathsideBonusLabel: '+10% tower damage, +8% range, +12% Sunpatch income',
 };
 
 export const INVESTMENT_CATEGORY_ORDER = [

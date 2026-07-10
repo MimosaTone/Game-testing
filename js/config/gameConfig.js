@@ -112,15 +112,5 @@ export const BUILD_SPOTS = [
   { x: 23, y: 5 }, { x: 23, y: 7 }, { x: 23, y: 9 }, { x: 23, y: 12 }, { x: 23, y: 13 },
 ];
 
-/** Additional build tiles unlocked via gold investment during a run. */
-export const BUILD_EXPANSION_POOL = [
-  { x: 1, y: 5 }, { x: 1, y: 9 }, { x: 1, y: 11 },
-  { x: 7, y: 10 }, { x: 11, y: 6 }, { x: 13, y: 4 },
-  { x: 15, y: 8 }, { x: 17, y: 8 }, { x: 18, y: 8 },
-  { x: 19, y: 8 }, { x: 20, y: 8 }, { x: 20, y: 12 },
-  { x: 21, y: 8 }, { x: 21, y: 10 }, { x: 14, y: 2 },
-  { x: 15, y: 3 }, { x: 18, y: 11 }, { x: 2, y: 11 },
-];
-
 /** Shown in UI — bump when shipping gameplay/config changes. */
-export const BUILD_VERSION = '2026.07.10h';
+export const BUILD_VERSION = '2026.07.10p';

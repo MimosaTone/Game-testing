@@ -21,6 +21,7 @@ export class PlacementSystem {
     this.supports = [];
     this.allBuildSpots = BUILD_SPOTS.map((s) => `${s.x},${s.y}`);
     this.buildSpots = new Set(this.allBuildSpots);
+    this.expansionSpots = new Set();
     this.occupied = new Map();
     this.destroyedSpots = new Map();
     this.selectedBuildType = null;
@@ -67,6 +68,10 @@ export class PlacementSystem {
 
   isBuildSpot(gridX, gridY) {
     return this.buildSpots.has(`${gridX},${gridY}`);
+  }
+
+  isExpansionSpot(gridX, gridY) {
+    return this.expansionSpots.has(`${gridX},${gridY}`);
   }
 
   isOccupied(gridX, gridY) {
@@ -492,6 +497,7 @@ export class PlacementSystem {
     this.supports = [];
     this.occupied.clear();
     this.destroyedSpots.clear();
+    this.expansionSpots = new Set();
     this.selectedBuildType = null;
     this.selectedStructure = null;
     this.sellMode = false;

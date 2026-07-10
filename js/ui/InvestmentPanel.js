@@ -7,6 +7,7 @@ import {
   ECONOMIC_INVESTMENTS,
   WORLD_WONDERS,
   INVESTMENT_CATEGORY_ORDER,
+  BUILD_EXPANSION,
 } from '../config/investmentConfig.js';
 
 const CATEGORY_LABELS = {
@@ -206,10 +207,14 @@ export class InvestmentPanel {
       case 'expansion': {
         const cost = im.getExpansionCost(this.game);
         const remaining = this.game.getMaxBuildExpansions() - im.buildExpansions;
+        const next = im.getNextExpansionSpot();
+        const detail = next
+          ? `${next.name} (${next.x},${next.y}) — ${next.description}`
+          : `Reveal a pathside placement spot (${remaining} remaining)`;
         return [{
           id: 'expand',
-          name: 'Unlock Build Tile',
-          description: `Reveal a new placement spot (${remaining} remaining)`,
+          name: next ? `Unlock ${next.name}` : 'Unlock Build Tile',
+          description: `${detail}. Bonus: ${BUILD_EXPANSION.pathsideBonusLabel}`,
           cost,
           maxed: cost === null,
         }];

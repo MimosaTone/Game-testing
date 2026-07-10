@@ -1,4 +1,5 @@
 import { FARM_CONFIG } from '../config/farmConfig.js';
+import { PATHSIDE_EXPANSION_BONUS } from '../config/buildExpansionConfig.js';
 import { initStructureHealth } from './StructureHealth.js';
 
 let nextFarmId = 1;
@@ -20,7 +21,11 @@ export class Farm {
   }
 
   getBaseIncome() {
-    return FARM_CONFIG.incomePerLevel[this.level - 1] || 0;
+    const base = FARM_CONFIG.incomePerLevel[this.level - 1] || 0;
+    if (this.pathsideBonus) {
+      return Math.round(base * PATHSIDE_EXPANSION_BONUS.farmIncomeMult);
+    }
+    return base;
   }
 
   /** Legacy alias used by economy helpers. */

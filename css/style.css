@@ -1168,6 +1168,17 @@ body {
   font-weight: 600;
 }
 
+.pathside-bonus-hint {
+  margin: 6px 0 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 193, 87, 0.15);
+  border: 1px solid rgba(255, 193, 87, 0.45);
+  color: #9a6b12;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .tier-history {
   display: flex;
   flex-wrap: wrap;
